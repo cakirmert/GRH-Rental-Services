@@ -1,0 +1,228 @@
+//----------------------------------
+//  Datasource & Client
+//----------------------------------
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+//----------------------------------
+//  ENUMS (one value per line)
+//----------------------------------
+enum Role {
+  ADMIN
+  RENTAL
+  USER
+}
+
+enum ItemType {
+  ROOM
+  SPORTS
+  GAME
+  OTHER
+}
+
+enum BookingStatus {
+  REQUESTED        // user submitted, awaiting approval
+  DECLINED         // rejected by staff
+  ACCEPTED         // approved, waiting to be picked up / begun
+  BORROWED         // item handed over / room in use
+  COMPLETED        // finished & checked back in
+  CANCELLED        // cancelled by user or admin
+}
+
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_RESPONSE
+}
+
+enum LogType {
+  ADMIN
+  BOOKING
+}
+
+
+//----------------------------------
+//  MODELS
+//----------------------------------
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified  DateTime?
+  name          String?
+  role          Role     @default(USER)
+  passkeys      Json[]   @default([])
+
+  /* relations */
+  sessions         Session[]
+  bookings         Booking[]                     // own bookings
+  assignedBookings Booking[] @relation("AssignedTo")
+  responsibleItems Item[]    @relation("ResponsibleMembers")
+  notifications    Notification[]
+  pushSubscriptions PushSubscription[]
+  /* NEW back-relations */
+  chatMessages  BookingChatMessage[]   // messages this user sent
+  chatReads     BookingChatRead[]      // read receipts
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime @default(now())
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Item {
+  id              String   @id @default(cuid())
+  type            ItemType
+
+  /* localised titles / descriptions */
+  titleEn         String
+  titleDe         String?
+  descriptionEn   String?
+  descriptionDe   String?
+
+  /* per-item booking rules */
+  rulesEn         String?  
+  rulesDe         String?  
+  capacity        Int?
+  players         String?
+  imagesJson      String?
+  totalQuantity   Int      @default(1)
+  active          Boolean  @default(true)
+
+  /* relations */
+  bookings        Booking[]
+  responsibleMembers User[] @relation("ResponsibleMembers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// --------------  NEW MODELS -------------- ///
+
+model BookingChatThread {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  messages   BookingChatMessage[]
+
+  closedAt   DateTime?
+
+  createdAt  DateTime @default(now())
+}
+
+model BookingChatMessage {
+  id         String   @id @default(cuid())
+  threadId   String
+  thread     BookingChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  body       String              //  ← removed @db.Text
+  createdAt  DateTime @default(now())
+
+  reads      BookingChatRead[]
+
+  @@index([threadId, createdAt])
+}
+
+model BookingChatRead {
+  userId     String
+  messageId  String
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message    BookingChatMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  readAt     DateTime @default(now())
+
+  @@id([userId, messageId])
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  itemId       String
+  item         Item          @relation(fields: [itemId], references: [id])
+  quantity     Int           @default(1)
+  status       BookingStatus @default(REQUESTED)
+
+  assignedToId String?
+  assignedTo   User?         @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  startDate    DateTime
+  endDate      DateTime
+  notes        String?
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chatThread   BookingChatThread?
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bookingId String?
+  booking   Booking?         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint       String  @unique
+  expirationTime Int?
+  p256dh         String
+  auth           String
+
+  createdAt DateTime @default(now())
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  type      LogType
+  userId    String?
+  bookingId String?
+  message   String
+  createdAt DateTime @default(now())
+
+  // relation fields removed to simplify logging table
+
+  @@index([type, createdAt])
+}
