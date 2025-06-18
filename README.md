@@ -67,20 +67,20 @@ For production builds:
 npm run build
 npm run start
 ```
-
 ## 5. Directory Structure
 
 ```
 ├─ src/
-│  ├─ app/            # Next.js routes (app router)
-│  ├─ components/     # Reusable React components
-│  ├─ contexts/       # Shared React contexts (i18n, auth, views)
-│  ├─ hooks/          # Custom React hooks
-│  ├─ lib/            # Helpers (auth, Prisma client)
-│  ├─ server/         # TRPC routers and server setup
-│  └─ utils/          # Client-side utilities
-├─ prisma/            # Prisma schema and seed script
-├─ public/            # Static assets
+│  ├─ app/            # Next.js app router (pages, layouts, API routes)
+│  ├─ components/     # Reusable UI components (forms, modals, lists)
+│  ├─ contexts/       # React contexts (ViewContext, i18n provider)
+│  ├─ hooks/          # Custom React hooks for state management
+│  ├─ lib/            # Core utilities (auth config, Prisma client)
+│  ├─ server/         # tRPC routers and server-side logic
+│  └─ utils/          # Client helpers (tRPC setup, validation)
+├─ prisma/            # Database schema, migrations, and seed data
+├─ public/            # Static files (icons, images)
+├─ locales/           # Translation files (en.json, de.json)
 ```
 
 ### Key Files
