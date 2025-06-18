@@ -2,12 +2,10 @@
 
 import { Github } from "lucide-react"
 import { useI18n } from "@/locales/i18n"
-import { useView, View } from "@/contexts/ViewContext"
 import { Container } from "@/components/ui/container"
 
 export default function DevelopersPage() {
   const { t } = useI18n()
-  const { setView } = useView()
 
   return (
     <Container className="max-w-3xl py-8 md:py-12 space-y-6">
@@ -21,13 +19,15 @@ export default function DevelopersPage() {
 
       <h2 className="text-2xl font-semibold mt-6">{t("devPage.contribTitle")}</h2>
       <p>{t("devPage.contribDesc")}</p>
-      <button
-        onClick={() => setView(View.CONTACT)}
+      <a
+        href="https://github.com/cakirmert/GRH-Rental-Services"
+        target="_blank"
+        rel="noopener noreferrer"
         className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
       >
         <Github className="h-5 w-5" />
         {t("devPage.repoLink")}
-      </button>
+      </a>
     </Container>
   )
 }

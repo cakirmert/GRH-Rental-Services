@@ -1,6 +1,17 @@
-# GRH Booking System
+# GRH Rental Services
 
-Welcome to the codebase for the GRH Booking System, a Next.js application used to reserve rooms, equipment and games. This guide explains how to get the project running locally and highlights the main pieces of the codebase so you can dive in quickly.
+Welcome to the codebase for the GRH Rental Services, a Next.js application used to reserve rooms, equipment and games. This guide explains how to get the project running locally and highlights the main pieces of the codebase so you can dive in quickly.
+
+## Features
+
+- Single Page App (no full page reloads)
+- Multiple views for booking, dashboards, help pages and more
+- Realtime chat and push notifications
+- Passwordless email authentication
+- Admin and rental dashboards
+- Multi-language support (English & German)
+- Responsive UI built with Tailwind and shadcn/ui
+- Typed API via tRPC and Prisma ORM
 
 ## 1. Prerequisites
 

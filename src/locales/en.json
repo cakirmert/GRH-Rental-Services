@@ -501,14 +501,14 @@
   },
   "devPage": {
     "title": "Developer Information",
-    "intro": "This website was created in 2025 by volunteers from our dorm community. You can find and contact the developers on GitHub.",
+    "intro": "This website was created in 2025 by volunteers from our dorm community. The source code is now public on GitHub and we welcome contributions.",
     "techTitle": "Tech stack",
     "techDesc": "<ul class='list-disc pl-5 space-y-1'><li>Next.js & React</li><li>TypeScript</li><li>tRPC & Prisma</li><li>Tailwind CSS with shadcn/ui</li></ul>",
     "whyTitle": "Why we built it",
     "whyDesc": "To organise room and equipment reservations in one place for all residents.",
     "contribTitle": "How to contribute?",
-    "contribDesc": "The repository is currently private. Contact us if you want to contribute.",
-    "repoLink": "Contact us"
+    "contribDesc": "The repository is public. Feel free to fork it or open pull requests.",
+    "repoLink": "View this repo"
   },
   "privacy": {
     "title": "Privacy Policy",

@@ -499,14 +499,14 @@
   },
   "devPage": {
     "title": "Entwicklerinfos",
-    "intro": "Diese Website wurde 2025 von Freiwilligen aus unserer Hausgemeinschaft erstellt. Kontaktdaten findest du auf GitHub.",
+    "intro": "Diese Website wurde 2025 von Freiwilligen aus unserer Hausgemeinschaft erstellt. Der Quellcode ist jetzt öffentlich auf GitHub und Beiträge sind willkommen.",
     "techTitle": "Technik",
     "techDesc": "<ul class='list-disc pl-5 space-y-1'><li>Next.js & React</li><li>TypeScript</li><li>tRPC & Prisma</li><li>Tailwind CSS mit shadcn/ui</li></ul>",
     "whyTitle": "Warum das Ganze?",
     "whyDesc": "Damit alle Bewohner ihre Raum- und Gerätebuchungen zentral erledigen können.",
     "contribTitle": "Wie kannst du beitragen?",
-    "contribDesc": "Das Repository ist derzeit privat. Besuche das Link, um uns zu kontaktieren, wenn du mithelfen möchtest.",
-    "repoLink": "Kontaktieren Sie uns"
+    "contribDesc": "Das Repository ist öffentlich. Forke es gerne oder sende Pull Requests.",
+    "repoLink": "Dieses Repo ansehen"
   },
   "privacy": {
     "title": "Datenschutzerklärung",
