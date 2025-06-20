@@ -6,7 +6,7 @@ import { trpc } from "@/utils/trpc"
 import { SearchBar } from "@/components/SearchBar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { useI18n } from "@/locales/i18n"
 import { Container } from "@/components/ui/container"
 import { useSession, signIn } from "next-auth/react"
@@ -91,6 +91,48 @@ function mapDbItemToClient(it: DbItem, locale: string): Item {
 type ItemsQueryOutput = inferRouterOutputs<AppRouter>["items"]["all"]
 import AdminDashboardView from "@/components/AdminDashboardView"
 
+function BookingViewSkeleton() {
+  return (
+    <div className="space-y-8 mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Item Details Column */}
+        <div className="space-y-6 md:sticky md:top-24 md:self-start">
+          <Skeleton className="h-10 w-3/4 rounded-md md:h-12" />
+          <div className="space-y-2 mt-4">
+            <Skeleton className="h-4 w-full rounded-md" />
+            <Skeleton className="h-4 w-full rounded-md" />
+            <Skeleton className="h-4 w-5/6 rounded-md" />
+          </div>
+          <Skeleton className="aspect-video w-full mt-4 rounded-lg" />
+          <div className="flex flex-wrap items-center gap-2 text-sm mt-4">
+            <Skeleton className="h-7 w-24 rounded-md py-1 px-2" />
+            <Skeleton className="h-7 w-20 rounded-md py-1 px-2" />
+          </div>
+          <div className="p-4 border rounded-lg bg-muted/50 mt-6">
+            <Skeleton className="h-5 w-1/2 mb-3 rounded-md" />
+            <div className="space-y-1.5 pl-5">
+              <Skeleton className="h-4 w-full rounded-md" />
+              <Skeleton className="h-4 w-11/12 rounded-md" />
+            </div>
+          </div>
+        </div>
+        {/* Booking Form Column */}
+        <div className="space-y-6 w-full max-w-md mx-auto min-h-[600px]">
+          <Card className="bg-muted/50 shadow-sm">
+            <CardHeader>
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Define a more specific type for the view if not already in ViewContext
 // type AppView = "list" | "booking" | "myBookings" | "rentalDashboard" | "adminDashboard";
 
@@ -153,13 +195,18 @@ export default function HomePage() {
         ? localStorage.getItem(SELECTED_ITEM_KEY)
         : null
 
-  const { data: fetchedItem } = trpc.items.byId.useQuery(itemIdToFetch ?? "", {
-    enabled:
-      view === View.BOOKING &&
-      !selectedItem &&
-      !!itemIdToFetch &&
-      !items.find((it) => it.id === itemIdToFetch),
-  })
+  const { data: fetchedItem, isLoading: isFetchingItem } = trpc.items.byId.useQuery(
+    itemIdToFetch ?? "",
+    {
+      enabled:
+        view === View.BOOKING &&
+        !selectedItem &&
+        !!itemIdToFetch &&
+        !items.find((it) => it.id === itemIdToFetch),
+    },
+  )
+
+  const itemDetailsLoading = view === View.BOOKING && !selectedItem && (isLoading || isFetchingItem)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -401,6 +448,8 @@ export default function HomePage() {
           onBookingSuccess={onBooked}
           onLoginRequest={onLogin}
         />
+      ) : itemDetailsLoading ? (
+        <BookingViewSkeleton />
       ) : (
         <p className="text-center py-16 text-muted-foreground">
           {t("errors.loadingItemDetails")} {/* Changed key */}
