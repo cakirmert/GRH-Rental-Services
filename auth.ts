@@ -5,13 +5,19 @@ import CredentialsProvider from "next-auth/providers/credentials"
 
 const otpRequests = new Map<string, { count: number; ts: number }>()
 export const otpFailures = new Map<string, { count: number; locked: number }>()
-export { otpRequests } // Export for use in API routes
+export { otpRequests }
 
-// Store short-lived passkey login tokens
+/**
+ * In-memory storage for short-lived passkey login tokens
+ */
 export const passkeyTokens = new Map<string, { userId: string; expires: number }>()
 
+/**
+ * Generate a secure random token for passkey authentication
+ * @param userId - The user ID to associate with the token
+ * @returns A secure random token string
+ */
 export function generatePasskeyToken(userId: string) {
-  // Use Web Crypto API instead of Node.js crypto
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
   const token = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
@@ -21,6 +27,12 @@ export function generatePasskeyToken(userId: string) {
 import prisma from "./src/lib/prismadb"
 import { transporter, isDev, CONTACT_EMAIL } from "./src/lib/mail"
 
+/**
+ * Generate HMAC-SHA256 hash using Web Crypto API
+ * @param data - The data to hash
+ * @param secret - The secret key
+ * @returns Promise resolving to hex-encoded hash
+ */
 async function generateHmacSha256(data: string, secret: string): Promise<string> {
   const secretKey = await crypto.subtle.importKey(
     "raw",

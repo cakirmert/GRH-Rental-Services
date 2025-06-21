@@ -1,6 +1,6 @@
 // src/app/api/trpc/route.ts
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
-import { appRouter } from "@/server/routers/_app"
+import { appRouter } from "@/server/routers/appRouter"
 import { createContext } from "@/server/context"
 
 const ENDPOINT = "/api/trpc" // ← whatever path you mount this at

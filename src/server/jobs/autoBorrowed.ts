@@ -3,6 +3,10 @@ import prisma from "@/lib/prismadb"
 import { BookingStatus, NotificationType } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
 
+/**
+ * Automatically mark accepted bookings as borrowed when their start time approaches
+ * Runs every minute to check for bookings starting within 15 minutes
+ */
 export async function markUpcomingBookingsBorrowed() {
   const now = new Date()
   const soon = new Date(now.getTime() + 15 * 60 * 1000)

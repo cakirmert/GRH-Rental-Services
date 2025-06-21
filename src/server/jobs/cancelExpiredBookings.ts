@@ -3,6 +3,10 @@ import prisma from "@/lib/prismadb"
 import { BookingStatus, NotificationType } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
 
+/**
+ * Cancel bookings that have expired (end date has passed) but are still pending/accepted
+ * Runs every 30 minutes to clean up expired bookings
+ */
 export async function cancelExpiredBookings() {
   const now = new Date()
   const expired = await prisma.booking.findMany({

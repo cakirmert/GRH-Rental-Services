@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { renderHook, act } from "@testing-library/react"
-import { useMediaQuery } from "../use-media-query"
+import { useMediaQuery } from "../useMediaQuery"
 
 function mockMatchMedia(matches: boolean) {
   return vi.fn().mockImplementation((query: string) => ({

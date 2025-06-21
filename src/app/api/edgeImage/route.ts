@@ -3,6 +3,11 @@ import sharp from "sharp"
 
 export const config = { runtime: "edge" }
 
+/**
+ * Edge function for optimizing and serving images with format conversion
+ * @param request - The incoming request with image URL parameter
+ * @returns Optimized image response
+ */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const imageUrl = url.searchParams.get("url")

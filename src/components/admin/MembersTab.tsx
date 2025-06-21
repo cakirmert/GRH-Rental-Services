@@ -7,7 +7,7 @@ import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 
 import type { inferRouterOutputs } from "@trpc/server"
-import type { AppRouter } from "@/server/routers/_app"
+import type { AppRouter } from "@/server/routers/appRouter"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

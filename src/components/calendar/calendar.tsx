@@ -7,6 +7,10 @@ import { DayView } from "./calendar-views/day-view"
 import { useCalendar } from "./calendar-provider"
 import { BookingDialog } from "./booking-dialog"
 
+/**
+ * Main calendar component that renders different views (month, week, day) with header and dialog
+ * @returns Calendar component with view switching capability
+ */
 export function Calendar() {
   const { view } = useCalendar()
 

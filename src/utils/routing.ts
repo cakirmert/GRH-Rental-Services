@@ -1,20 +1,12 @@
-// src/utils/clientRouter.ts
+import type { AppRoute } from "@/types/routing"
 
-export type AppRoute =
-  | { view: "list" }
-  | { view: "booking"; itemId: string }
-  | { view: "my-bookings"; highlightId?: string }
-  | { view: "rental-dashboard" }
-  | { view: "admin-dashboard" }
-  | { view: "about" }
-  | { view: "contact" }
-  | { view: "developers" }
-  | { view: "faq" }
-  | { view: "imprint" }
-  | { view: "privacy" }
+// Re-export for backward compatibility
+export type { AppRoute }
 
 /**
  * Convert route object to URL path using search parameters
+ * @param route - The route object to convert
+ * @returns URL path string
  */
 export function routeToPath(route: AppRoute): string {
   switch (route.view) {
@@ -49,31 +41,29 @@ export function routeToPath(route: AppRoute): string {
 
 /**
  * Parse URL path to route object using search parameters
+ * @param pathname - The URL pathname
+ * @param searchParams - The URL search parameters
+ * @returns Parsed route object
  */
 export function pathToRoute(pathname: string, searchParams: URLSearchParams): AppRoute {
-  // Check for booking route
   const bookItemId = searchParams.get("book")
   if (bookItemId) {
     return { view: "booking", itemId: bookItemId }
   }
 
-  // Check for bookings dashboard
   if (searchParams.has("bookings")) {
     const highlightId = searchParams.get("highlight")
     return { view: "my-bookings", highlightId: highlightId || undefined }
   }
 
-  // Check for rental dashboard
   if (searchParams.has("rental")) {
     return { view: "rental-dashboard" }
   }
 
-  // Check for admin dashboard
   if (searchParams.has("admin")) {
     return { view: "admin-dashboard" }
   }
 
-  // Check for static pages
   if (searchParams.has("about")) {
     return { view: "about" }
   }
@@ -98,12 +88,13 @@ export function pathToRoute(pathname: string, searchParams: URLSearchParams): Ap
     return { view: "privacy" }
   }
 
-  // Default to list view
   return { view: "list" }
 }
 
 /**
  * Navigate to a route using History API (no page reload)
+ * @param route - The route to navigate to
+ * @param replace - Whether to replace the current history entry
  */
 export function navigateToRoute(route: AppRoute, replace = false): void {
   const path = routeToPath(route)
@@ -117,6 +108,7 @@ export function navigateToRoute(route: AppRoute, replace = false): void {
 
 /**
  * Get current route from browser URL
+ * @returns Current route object
  */
 export function getCurrentRoute(): AppRoute {
   if (typeof window === "undefined") {

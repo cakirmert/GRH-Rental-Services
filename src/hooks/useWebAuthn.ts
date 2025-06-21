@@ -1,5 +1,10 @@
 import { trpc } from "@/utils/trpc"
 
+/**
+ * Converts ArrayBuffer to base64 URL-safe string
+ * @param buffer - The ArrayBuffer to convert
+ * @returns Base64 URL-safe encoded string
+ */
 function arrayBufferToB64(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer)
   let str = ""
@@ -7,6 +12,10 @@ function arrayBufferToB64(buffer: ArrayBuffer) {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
+/**
+ * Hook that provides WebAuthn (passkey) authentication functionality
+ * @returns Object containing register and login functions with their respective mutations
+ */
 export function useWebAuthn() {
   const registerOptions = trpc.webauthn.registerOptions.useMutation()
   const registerFinish = trpc.webauthn.register.useMutation()

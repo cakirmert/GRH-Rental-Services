@@ -22,7 +22,7 @@ import ChatDialog from "@/components/ChatDialog"
 import { useView, View } from "@/contexts/ViewContext" // Import View type
 import type { Item } from "@/components/ItemCard" // Ensure this type path is correct
 import type { inferRouterOutputs } from "@trpc/server"
-import type { AppRouter } from "@/server/routers/_app"
+import type { AppRouter } from "@/server/routers/appRouter"
 
 // Import content components
 import AboutPage from "@/content/about/page"

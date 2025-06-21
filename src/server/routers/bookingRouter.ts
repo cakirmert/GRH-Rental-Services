@@ -2,7 +2,7 @@
 import { router, protectedProcedure, publicProcedure } from "@/lib/trpcServer"
 import type { Context } from "@/server/context"
 import { z } from "zod"
-import { BookingStatus, Prisma, NotificationType, LogType } from "@prisma/client"
+import { BookingStatus, Prisma, ItemType, NotificationType, LogType } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
 import { format, parseISO } from "date-fns" // format for notes
 import { logAction } from "@/lib/logger"
@@ -456,4 +456,39 @@ export const bookingsRouter = router({
 })
 
 // Updated type export to use correct Item fields
-export type { BookingForRentalTeam, CalendarBooking } from "@/types/booking"
+export type BookingForRentalTeam = Omit<
+  Prisma.BookingGetPayload<{
+    include: {
+      item: { select: { id: true; titleEn: true; titleDe: true; type: true; totalQuantity: true } }
+      user: { select: { id: true; name: true; email: true } }
+      assignedTo: { select: { id: true; name: true; email: true } }
+    }
+  }>,
+  "item"
+> & {
+  item: {
+    id: string
+    titleEn: string
+    titleDe: string | null
+    type: ItemType | null
+    totalQuantity: number
+  } | null
+}
+
+export type CalendarBooking = Omit<
+  Prisma.BookingGetPayload<{
+    include: {
+      item: { select: { id: true; titleEn: true; titleDe: true; type: true; totalQuantity: true } }
+      user: { select: { id: true; name: true; email: true } }
+    }
+  }>,
+  "item"
+> & {
+  item: {
+    id: string
+    titleEn: string
+    titleDe: string | null
+    type: ItemType | null
+    totalQuantity: number
+  } | null
+}

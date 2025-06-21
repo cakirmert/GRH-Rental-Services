@@ -14,6 +14,12 @@ import { NamePromptProvider } from "@/contexts/NamePromptContext"
 
 import type { Session } from "next-auth"
 
+/**
+ * Root providers component that wraps the entire application with necessary context providers
+ * @param children - Child components to wrap with providers
+ * @param session - NextAuth session data
+ * @returns Provider wrapper component
+ */
 export default function Providers({
   children,
   session,
@@ -39,8 +45,6 @@ export default function Providers({
           <QueryClientProvider client={queryClient}>
             <ThemeProvider>
               <AuthModalProvider>
-                {" "}
-                {/* Ensure AuthModalProvider wraps all other relevant providers */}
                 <NamePromptProvider>
                   <ViewProvider>{children}</ViewProvider>
                 </NamePromptProvider>

@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react"
 
+/**
+ * Hook that tracks whether a CSS media query matches the current viewport
+ * @param query - The CSS media query string to match
+ * @returns Boolean indicating whether the media query matches
+ */
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(false)
 
   useEffect(() => {
-    // Ensure window is defined (for SSR compatibility)
     if (typeof window === "undefined") {
       return
     }
@@ -15,17 +19,13 @@ export function useMediaQuery(query: string): boolean {
       setMatches(event.matches)
     }
 
-    // Set initial state
     setMatches(mediaQueryList.matches)
-
-    // Add listener using the recommended addEventListener method
     mediaQueryList.addEventListener("change", listener)
 
-    // Cleanup listener on component unmount
     return () => {
       mediaQueryList.removeEventListener("change", listener)
     }
-  }, [query]) // Re-run effect if query changes
+  }, [query])
 
   return matches
 }

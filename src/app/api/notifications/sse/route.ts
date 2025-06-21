@@ -12,6 +12,11 @@ interface NotificationData {
   createdAt: Date
 }
 
+/**
+ * Server-Sent Events endpoint for real-time notifications
+ * @param request - The incoming request
+ * @returns SSE response stream for notifications
+ */
 export async function GET(request: NextRequest) {
   const session = await auth()
   if (!session?.user) {
@@ -20,13 +25,17 @@ export async function GET(request: NextRequest) {
 
   const userId = session.user.id
 
-  // Create a readable stream for SSE
+  /**
+   * Create a readable stream for Server-Sent Events
+   */
   const stream = new ReadableStream({
     start(controller) {
-      // Send initial connection message
       controller.enqueue(`data: ${JSON.stringify({ type: "connected" })}\n\n`)
 
-      // Listen for new notifications for this user
+      /**
+       * Handle new notifications for the connected user
+       * @param notification - The notification data to send
+       */
       const onNotification = (notification: NotificationData) => {
         if (notification.userId === userId) {
           try {
@@ -44,17 +53,20 @@ export async function GET(request: NextRequest) {
 
       notificationEmitter.on("new", onNotification)
 
-      // Send keepalive messages every 30 seconds
+      /**
+       * Send keepalive messages every 30 seconds to maintain connection
+       */
       const keepAlive = setInterval(() => {
         try {
           controller.enqueue(`data: ${JSON.stringify({ type: "keepalive" })}\n\n`)
         } catch {
-          // Connection closed, stop keepalive
           clearInterval(keepAlive)
         }
       }, 30000)
 
-      // Clean up when connection closes
+      /**
+       * Clean up when connection closes
+       */
       request.signal.addEventListener("abort", () => {
         notificationEmitter.off("new", onNotification)
         clearInterval(keepAlive)

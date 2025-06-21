@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useMediaQuery } from "@/hooks/use-media-query"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/i18n"
 import TimeSelect from "@/components/TimeSelect"

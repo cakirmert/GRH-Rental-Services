@@ -3,29 +3,10 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react"
 import { setNavigatingBetweenViews } from "@/components/BookingFormView"
-import { getCurrentRoute, navigateToRoute, type AppRoute } from "@/utils/clientRouter"
+import { getCurrentRoute, navigateToRoute } from "@/utils/routing"
+import { View, type ViewContextType, type AppRoute } from "@/types"
 
-// Define the possible views in your application
-export enum View {
-  LIST = "list",
-  BOOKING = "booking",
-  MY_BOOKINGS = "myBookings",
-  RENTAL_DASHBOARD = "rentalDashboard",
-  ADMIN_DASHBOARD = "adminDashboard",
-  ABOUT = "about",
-  CONTACT = "contact",
-  DEVELOPERS = "developers",
-  FAQ = "faq",
-  IMPRINT = "imprint",
-  PRIVACY = "privacy",
-  // Add other views as needed
-}
-
-interface ViewContextType {
-  view: View
-  setView: (view: View, itemId?: string, highlightId?: string) => void
-  currentRoute: AppRoute
-}
+export { View }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined)
 

@@ -16,6 +16,10 @@ import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
 import type { CalendarBooking } from "../types"
 
+/**
+ * Calendar week view component displaying bookings in a time-based grid
+ * @returns Week view calendar component
+ */
 export function WeekView() {
   const { currentDate, setSelectedDate } = useCalendar()
   const { data: bookings = [] } = trpc.bookings.getBookings.useQuery({
@@ -34,6 +38,12 @@ export function WeekView() {
 
   const dayStart = (day: Date) => addHours(startOfDay(day), START_HOUR)
   const dayEnd = (day: Date) => addHours(startOfDay(day), END_HOUR)
+  
+  /**
+   * Get all bookings for a specific day within the week view time range
+   * @param day - The date to get bookings for
+   * @returns Array of bookings for the specified day, sorted by start time
+   */
   const getBookingsForDay = (day: Date) => {
     return bookings
       .filter((booking) => {

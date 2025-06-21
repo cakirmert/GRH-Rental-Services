@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
 import { transporter, isDev, CONTACT_EMAIL } from "@/lib/mail"
 
+/**
+ * Handle contact form submissions
+ * @param req - The incoming request with contact form data
+ * @returns JSON response indicating success
+ */
 export async function POST(req: Request) {
   const body = await req.json()
   const { name, email, room, issue, message } = body

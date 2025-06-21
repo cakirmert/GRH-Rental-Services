@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react"
 import { trpc } from "@/utils/trpc"
 
+/**
+ * Hook that manages notification fetching with visibility-based optimization
+ * @returns tRPC query result for notifications
+ */
 export function useNotifications() {
   const [visible, setVisible] = useState(
     typeof document === "undefined" ? true : document.visibilityState === "visible",

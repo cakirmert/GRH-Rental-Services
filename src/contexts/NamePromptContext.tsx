@@ -3,26 +3,27 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useSession } from "next-auth/react"
 import NamePrompt from "@/components/NamePrompt"
-
-interface NamePromptContextType {
-  openPrompt: () => void
-}
+import type { NamePromptContextType } from "@/types/view"
 
 const NamePromptContext = createContext<NamePromptContextType | undefined>(undefined)
 
+/**
+ * Provider for managing the name prompt dialog state
+ * @param children - React children components
+ * @returns NamePromptProvider component
+ */
 export function NamePromptProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const [isManuallyOpened, setIsManuallyOpened] = useState(false)
+  
   useEffect(() => {
-    // Only auto-close if not manually opened
     if (status !== "authenticated") {
       setOpen(false)
       setIsManuallyOpened(false)
       return
     }
 
-    // Don't auto-manage if manually opened
     if (isManuallyOpened) {
       return
     }
@@ -34,6 +35,9 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
     }
   }, [status, session, isManuallyOpened, open])
 
+  /**
+   * Manually open the name prompt dialog
+   */
   const openPrompt = () => {
     setIsManuallyOpened(true)
     setOpen(true)

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, ReactNode, FormEvent, useRef } from "react" // Changed from use-context-selector
+import React, { createContext, useContext, useState, ReactNode, FormEvent, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -24,26 +24,17 @@ import { trpc } from "@/utils/trpc"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { type AuthenticationResponseJSON } from "@simplewebauthn/types"
 
-// Simple passkey support check
+/**
+ * Check if passkey authentication is supported in the current browser
+ * @returns Boolean indicating passkey support
+ */
 function isPasskeySupported(): boolean {
   return (
     typeof window !== "undefined" && "credentials" in navigator && "create" in navigator.credentials
   )
 }
-type AuthModalView = "email" | "otp"
 
-interface AuthModalContextType {
-  authModalOpen: boolean
-  openAuthModal: (initialView?: AuthModalView, email?: string, onClose?: () => void) => void
-  closeAuthModal: () => void
-  authModalView: AuthModalView
-  email: string
-  setEmail: (email: string) => void
-  otp: string
-  setOtp: (otp: string) => void
-  isSubmittingAuth: boolean
-  authError: string | null
-}
+import type { AuthModalView, AuthModalContextType } from "@/types/auth"
 
 const AuthModalContext = createContext<AuthModalContextType | undefined>(undefined)
 

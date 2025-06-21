@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { renderHook, act } from "@testing-library/react"
-import { useIsMobile } from "../use-mobile"
+import { useIsMobile } from "../useMobile"
 
 function resizeTo(width: number) {
   Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: width })

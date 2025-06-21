@@ -26,6 +26,11 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 }
 
+/**
+ * Root layout component for the entire application
+ * @param children - Child components to render in the main content area
+ * @returns Root HTML structure with providers and layout components
+ */
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session: Session | null = await auth()
   return (

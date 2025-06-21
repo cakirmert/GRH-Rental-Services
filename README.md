@@ -73,20 +73,23 @@ npm run start
 ├─ src/
 │  ├─ app/            # Next.js app router (pages, layouts, API routes)
 │  ├─ components/     # Reusable UI components (forms, modals, lists)
+│  ├─ content/        # Static content pages (about, contact, FAQ, etc.)
 │  ├─ contexts/       # React contexts (ViewContext, i18n provider)
 │  ├─ hooks/          # Custom React hooks for state management
 │  ├─ lib/            # Core utilities (auth config, Prisma client)
+│  ├─ locales/        # Translation files (en.json, de.json)
 │  ├─ server/         # tRPC routers and server-side logic
+│  ├─ types/          # TypeScript type definitions
 │  └─ utils/          # Client helpers (tRPC setup, validation)
 ├─ prisma/            # Database schema, migrations, and seed data
-├─ public/            # Static files (icons, images)
-├─ locales/           # Translation files (en.json, de.json)
+├─ public/            # Static files (icons, images, service worker)
 ```
 
 ### Key Files
 
 - **`src/app/layout.tsx`** – global layout applying providers and styles
 - **`src/server/routers`** – TRPC routers handling bookings, items, chat, and admin actions
+- **`src/types`** – centralized TypeScript type definitions for consistent typing across the application
 - **`prisma/schema.prisma`** – database models for users, items, bookings, and notifications
 
 ## 6. Important Concepts

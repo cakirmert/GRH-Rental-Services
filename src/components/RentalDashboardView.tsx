@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { useDebounce } from "@/hooks/use-debounce"
+import { useDebounce } from "@/hooks/useDebounce"
 
 import { CalendarProvider } from "@/components/calendar/calendar-provider"
 import { Calendar } from "@/components/calendar/calendar"

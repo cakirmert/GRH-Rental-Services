@@ -8,25 +8,26 @@ import { CalendarDays, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card" // Added Card for homepage
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import {
   ArrowLeft,
   Package,
-  Users as UsersIcon, // Renamed to avoid conflict
+  Users as UsersIcon,
   ListChecks,
   Loader2,
 } from "lucide-react"
 
-// Import the tab components
-import ProfilesTab from "./admin/ProfilesTab" // Assuming you want to keep this for "Default Assignees"
+import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
 import MembersTab from "./admin/MembersTab"
 import CancelledByStaffTab from "./admin/CancelledByStaffTab"
 import { CalendarProvider } from "./calendar/calendar-provider"
-import { Calendar } from "./calendar/calendar" // Add Calendar import
+import { Calendar } from "./calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
 
-// Define the types for the views/tabs
+/**
+ * Available admin dashboard views/tabs
+ */
 export type AdminView = "home" | "assignees" | "items" | "members" | "calendar" | "cancellations"
 
 // Helper component for visually appealing action cards on the homepage

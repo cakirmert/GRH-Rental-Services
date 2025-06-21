@@ -16,6 +16,10 @@ import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
 import type { CalendarBooking } from "../types"
 
+/**
+ * Calendar month view component displaying bookings in a traditional calendar grid
+ * @returns Month view calendar component
+ */
 export function MonthView() {
   const { currentDate, setSelectedDate } = useCalendar()
   const { data: bookings = [] } = trpc.bookings.getBookings.useQuery({
@@ -30,6 +34,11 @@ export function MonthView() {
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
+  /**
+   * Get all bookings for a specific day
+   * @param day - The date to get bookings for
+   * @returns Array of bookings for the specified day
+   */
   const getBookingsForDay = (day: Date) => {
     return bookings.filter((booking) => isSameDay(new Date(booking.startDate), day))
   }

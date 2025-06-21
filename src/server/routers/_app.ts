@@ -1,5 +1,5 @@
 // src/server/routers/_app.ts
-import { router } from "@/server/trpcServer"
+import { router } from "@/lib/trpcServer"
 import { itemsRouter } from "./items"
 import { bookingsRouter } from "./bookings"
 import { adminRouter } from "./admin"
