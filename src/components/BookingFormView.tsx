@@ -9,6 +9,7 @@ import Image from "next/image"
 import { Calendar } from "@/components/ui/calendar"
 import TimeSelect from "@/components/TimeSelect"
 import { Textarea } from "@/components/ui/textarea"
+import { getOptimizedImageUrls } from "@/lib/imageUtils"
 import {
   Form,
   FormControl,
@@ -329,7 +330,7 @@ function BookingFormView(props: BookingFormViewProps) {
   }, [])
   // Memoize images array to prevent unnecessary re-renders
   const images = useMemo(() => {
-    return item.images || []
+    return getOptimizedImageUrls(item.images || [])
   }, [item.images]) // Reset current image when item changes and load stored image for new item
   useEffect(() => {
     const storedImage = getStoredImageIndex(item.id)

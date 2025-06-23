@@ -16,6 +16,7 @@
     "clean-old-bookings": "tsx src/server/jobs/cleanOldBookings.ts",
     "cancel-expired-bookings": "tsx src/server/jobs/cancelExpiredBookings.ts",
     "delete-inactive-users": "tsx src/server/jobs/deleteInactiveUsers.ts",
+    "warm-cache": "tsx src/lib/cacheWarmer.ts",
     "postinstall": "prisma generate",
     "lhci:run": "lhci autorun",
     "format": "prettier --ignore-path .prettierignore --write ."

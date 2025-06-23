@@ -7,6 +7,7 @@ import Image from "next/image"
 import { ItemType } from "@prisma/client"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
+import { getOptimizedImageUrl } from "@/lib/imageUtils"
 
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import type { AppRouter } from "@/server/routers/appRouter"
@@ -376,7 +377,7 @@ export default function ItemsTab() {
                               try {
                                 const images = item.imagesJson ? JSON.parse(item.imagesJson) : []
                                 const firstImage =
-                                  Array.isArray(images) && images.length > 0 ? images[0] : null
+                                  Array.isArray(images) && images.length > 0 ? getOptimizedImageUrl(images[0]) : null
                                 return firstImage ? (
                                   <Image
                                     src={firstImage}
@@ -405,7 +406,7 @@ export default function ItemsTab() {
                             try {
                               const images = item.imagesJson ? JSON.parse(item.imagesJson) : []
                               const firstImage =
-                                Array.isArray(images) && images.length > 0 ? images[0] : null
+                                Array.isArray(images) && images.length > 0 ? getOptimizedImageUrl(images[0]) : null
                               return firstImage ? (
                                 <TooltipContent>
                                   <Image

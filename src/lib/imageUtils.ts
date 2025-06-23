@@ -13,18 +13,20 @@ export function getOptimizedImageUrl(originalUrl: string): string {
     return originalUrl
   }
 
-  // If it's an external image from our IMAGE_DOMAIN, optimize it
-  if (
-    typeof process !== "undefined" &&
-    process.env.IMAGE_DOMAIN &&
-    originalUrl.includes(process.env.IMAGE_DOMAIN)
-  ) {
+  // Check for any Vercel blob storage URL (more comprehensive)
+  const isBlobStorage = originalUrl.includes(".blob.vercel-storage.com")
+
+  // If it's a blob storage image, optimize it through our cache
+  if (isBlobStorage) {
     return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
   }
 
-  // For client-side, we'll need to check if it looks like our image domain
-  if (typeof window !== "undefined" && originalUrl.includes("blob.core.windows.net")) {
-    return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
+  // If it's an external image from our configured domain, optimize it
+  if (typeof process !== "undefined" && process.env.IMAGE_DOMAIN) {
+    const imageDomain = process.env.IMAGE_DOMAIN
+    if (originalUrl.startsWith(`https://${imageDomain}/`) || originalUrl.startsWith(`http://${imageDomain}/`)) {
+      return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
+    }
   }
 
   // Return original URL if not optimizable

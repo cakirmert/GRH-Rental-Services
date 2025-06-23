@@ -19,10 +19,16 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      // Allow our custom image optimization endpoint  
       {
-        protocol: "https",
-        hostname: process.env.BLOB_URL_BASE!.replace(/^https?:\/\//, ""),
-        pathname: "/**",
+        protocol: "http",
+        hostname: "localhost",
+        pathname: "/api/edgeImage",
+      },
+      {
+        protocol: "https", 
+        hostname: "*.vercel.app",
+        pathname: "/api/edgeImage",
       },
     ],
     formats: ["image/avif", "image/webp"],
