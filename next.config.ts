@@ -30,6 +30,11 @@ const nextConfig: NextConfig = {
         hostname: "*.vercel.app",
         pathname: "/api/edgeImage",
       },
+      // Allow Vercel blob storage images
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,
