@@ -632,5 +632,17 @@
     "newUserPrompt": "Neu in diesem Dashboard? Probieren Sie die interaktive Tour!",
     "quickReference": "Schnellreferenz",
     "needMoreHelp": "Benötigen Sie weitere Hilfe? Wenden Sie sich an Ihren Administrator."
+  },
+  "notAuthorized": {
+    "adminTitle": "Admin-Zugriff erforderlich",
+    "adminMessage": "Sie benötigen Administrator-Berechtigungen, um auf diesen Bereich zuzugreifen.",
+    "rentalTitle": "Verleihteam-Zugriff erforderlich",
+    "rentalMessage": "Sie müssen Teil des Verleihteams sein, um auf diesen Bereich zuzugreifen.",
+    "contactAdmin": "Wenden Sie sich an einen Administrator, wenn Sie glauben, dass dies ein Fehler ist."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "rental": "Verleihteam",
+    "user": "Benutzer"
   }
 }

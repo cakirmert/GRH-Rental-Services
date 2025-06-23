@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Package, Users as UsersIcon, ListChecks, Loader2 } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
@@ -18,6 +19,7 @@ import CancelledByStaffTab from "./admin/CancelledByStaffTab"
 import { CalendarProvider } from "./calendar/calendar-provider"
 import { Calendar } from "./calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
+import NotAuthorized from "./NotAuthorized"
 
 /**
  * Available admin dashboard views/tabs
@@ -79,8 +81,18 @@ function ActionCard({
 
 export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void }) {
   const { t } = useI18n()
+  const { data: session } = useSession()
+  
   // Default to 'home' for the new homepage experience
   const [currentViewOrTab, setCurrentViewOrTab] = useState<AdminView>("home")
+  
+  // Check if user has admin role
+  const isAdmin = session?.user?.role === "ADMIN"
+  
+  // Show not authorized page if user is not an admin
+  if (!isAdmin) {
+    return <NotAuthorized onGoBack={onGoBack} requiredRole="ADMIN" />
+  }
 
   const handleNavigateToSection = (section: AdminView) => {
     setCurrentViewOrTab(section)

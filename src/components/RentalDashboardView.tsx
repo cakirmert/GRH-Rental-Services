@@ -54,10 +54,12 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { useDebounce } from "@/hooks/useDebounce"
+import { useSession } from "next-auth/react"
 
 import { CalendarProvider } from "@/components/calendar/calendar-provider"
 import { Calendar } from "@/components/calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
+import NotAuthorized from "./NotAuthorized"
 
 interface RentalDashboardViewProps {
   onGoBack: () => void
@@ -95,6 +97,7 @@ const statusUiStyles: Record<BookingStatus, { colors: string; icon: React.Elemen
 
 export default function RentalDashboardView({ onGoBack }: RentalDashboardViewProps) {
   const { t, locale: i18nLocale } = useI18n()
+  const { data: session } = useSession()
 
   const localeMap = { en: enUSLocaleFn, de: deLocaleFn }
   const dateFnsLocale = localeMap[i18nLocale as keyof typeof localeMap] || enUSLocaleFn
@@ -133,6 +136,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     // placeholderData: keepPreviousData, // For TanStack Query v5+
   })
+
   // Flatten bookings and ensure item.totalQuantity is present (if not, fallback to 1)
   const bookings: BookingForRentalTeam[] =
     paginatedBookings?.pages.flatMap((page) =>
@@ -178,6 +182,14 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
       setShowActionModal(false)
     },
   })
+
+  // Check if user has rental team access (RENTAL or ADMIN role)
+  const isRentalTeamMember = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
+  
+  // Show not authorized page if user is not part of rental team
+  if (!isRentalTeamMember) {
+    return <NotAuthorized onGoBack={onGoBack} requiredRole="RENTAL" />
+  }
 
   const ensureDateRental = (dateInput: Date | string): Date => {
     // Renamed to avoid conflict

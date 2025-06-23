@@ -634,5 +634,17 @@
     "newUserPrompt": "New to this dashboard? Try the interactive tour!",
     "quickReference": "Quick Reference",
     "needMoreHelp": "Need more help? Contact your administrator."
+  },
+  "notAuthorized": {
+    "adminTitle": "Admin Access Required",
+    "adminMessage": "You need administrator privileges to access this section.",
+    "rentalTitle": "Rental Team Access Required", 
+    "rentalMessage": "You need to be part of the rental team to access this section.",
+    "contactAdmin": "Contact an administrator if you believe this is an error."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "rental": "Rental Team",
+    "user": "User"
   }
 }
