@@ -18,11 +18,14 @@ export async function getRegistrationOptions(
   userId: string,
   username: string,
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
+  // Convert userId string to Uint8Array
+  const userIdBuffer = new TextEncoder().encode(userId)
+  
   return generateRegistrationOptions({
     rpName: "GRH Booking",
     rpID,
     timeout: 60_000,
-    userID: userId,
+    userID: userIdBuffer,
     userName: username,
     attestationType: "none",
     authenticatorSelection: {
@@ -63,13 +66,13 @@ export async function getAuthenticationOptions(
       console.log(`🔄 Normalized credential ID: "${id}" -> "${normalizedId}"`)
 
       try {
-        const buffer = Buffer.from(normalizedId, "base64url")
+        // In the new API, we use the string directly, not a Buffer
         console.log(
-          `✅ Successfully parsed normalized ID: ${buffer.toString("hex").substring(0, 20)}...`,
+          `✅ Using credential ID directly: ${normalizedId.substring(0, 20)}...`,
         )
-        return { id: buffer, type: "public-key" as const }
+        return { id: normalizedId, type: "public-key" as const }
       } catch (e) {
-        console.error("❌ Failed to parse normalized credential ID:", normalizedId, e)
+        console.error("❌ Failed to process credential ID:", normalizedId, e)
         return null
       }
     })
@@ -188,9 +191,9 @@ export async function verifyAuthentication(
       expectedOrigin: origin,
       expectedRPID: rpID,
       requireUserVerification: true,
-      authenticator: {
-        credentialID: new Uint8Array(Buffer.from(normalizedCredentialID, "base64url")),
-        credentialPublicKey: new Uint8Array(publicKeyBuffer),
+      credential: {
+        id: normalizedCredentialID,
+        publicKey: new Uint8Array(publicKeyBuffer),
         counter: authenticator.counter,
       },
     })

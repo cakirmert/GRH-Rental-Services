@@ -57,7 +57,10 @@ export const webauthnRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST" })
       }
 
-      const { credentialPublicKey, credentialID, counter } = verification.registrationInfo
+      const { credential } = verification.registrationInfo
+      const { id: credentialID, publicKey: credentialPublicKey } = credential
+      const counter = 0 // New credentials start with counter 0
+      
       await ctx.prisma.user.update({
         where: { id: ctx.session.user.id },
         data: {

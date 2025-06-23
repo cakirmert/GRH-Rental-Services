@@ -195,7 +195,7 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
       const options = await passkeyLoginOptions.mutateAsync({}) // Start authentication with the browser
       let authenticationResponse: AuthenticationResponseJSON
       try {
-        const credential = await startAuthentication(options)
+        const credential = await startAuthentication({ optionsJSON: options })
 
         console.log("🔍 Raw credential from SimpleWebAuthn browser:", {
           id: credential.id,

@@ -165,7 +165,7 @@ export default function NamePrompt({
       const options = await registerOptions.mutateAsync({ userId: session.user.id })
 
       // Start registration with the browser
-      const credential = await startRegistration(options)
+      const credential = await startRegistration({ optionsJSON: options })
 
       // Send the response to server for verification
       await registerFinish.mutateAsync({ credential })
