@@ -329,42 +329,28 @@ function BookingFormView(props: BookingFormViewProps) {
     }
   }, [])
   // Memoize images array to prevent unnecessary re-renders
+  // Create a stable reference by stringifying the array content
+  const imageUrlsJson = JSON.stringify(item.images || [])
   const images = useMemo(() => {
     return getOptimizedImageUrls(item.images || [])
-  }, [item.images]) // Reset current image when item changes and load stored image for new item
+  }, [imageUrlsJson]) // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Reset current image when item changes and load stored image for new item
   useEffect(() => {
     const storedImage = getStoredImageIndex(item.id)
     setCurrentImage(storedImage)
   }, [item.id])
+  
   // Handle image loading state when current image source changes
+  // Simplified approach: let Next.js Image component handle loading states
   useEffect(() => {
     if (images.length > 0 && images[currentImage]) {
       const newImageSrc = images[currentImage]
       if (newImageSrc !== loadingImageSrc) {
-        // Check if image is likely cached by creating a new Image object
-        const img = document.createElement("img")
-
-        // If image doesn't load within 50ms, show loading state
-        const loadingTimeout = setTimeout(() => {
-          setImageLoading(true)
-          setImageError(false)
-        }, 50)
-
-        img.onload = () => {
-          clearTimeout(loadingTimeout)
-          setImageLoading(false)
-          setImageError(false)
-          setLoadingImageSrc(newImageSrc)
-        }
-
-        img.onerror = () => {
-          clearTimeout(loadingTimeout)
-          setImageLoading(false)
-          setImageError(true)
-          setLoadingImageSrc(newImageSrc)
-        }
-
-        img.src = newImageSrc
+        setLoadingImageSrc(newImageSrc)
+        // Set initial loading state, but let the Image component's onLoad/onError handle the rest
+        setImageLoading(true)
+        setImageError(false)
       }
     }
   }, [currentImage, images, loadingImageSrc])
@@ -390,47 +376,24 @@ function BookingFormView(props: BookingFormViewProps) {
       }
     },
     [images.length],
-  ) // Handle thumbnail loading state - similar to main image logic
-  const handleThumbnailLoadCheck = useCallback((index: number, src: string) => {
-    const img = document.createElement("img")
-
-    // Only show loading if image doesn't load within 50ms (indicating it's not cached)
-    const loadingTimeout = setTimeout(() => {
-      setThumbnailLoadingStates((prev) => new Set([...prev, index]))
-    }, 50)
-
-    img.onload = () => {
-      clearTimeout(loadingTimeout)
-      setThumbnailLoadingStates((prev) => {
-        const newSet = new Set([...prev])
-        newSet.delete(index)
-        return newSet
-      })
-    }
-
-    img.onerror = () => {
-      clearTimeout(loadingTimeout)
-      setThumbnailLoadingStates((prev) => {
-        const newSet = new Set([...prev])
-        newSet.delete(index)
-        return newSet
-      })
-    }
-
-    img.src = src
+  )  // Handle thumbnail loading state - simplified approach
+  const handleThumbnailLoadStart = useCallback((index: number) => {
+    setThumbnailLoadingStates((prev) => new Set([...prev, index]))
   }, [])
-  // Check thumbnail loading when images change (but not when current image changes)
-  useEffect(() => {
-    if (images.length > 1) {
-      // Clear all loading states first
-      setThumbnailLoadingStates(new Set())
 
-      // Check all images for caching status
-      images.forEach((src, index) => {
-        handleThumbnailLoadCheck(index, src)
-      })
-    }
-  }, [images, handleThumbnailLoadCheck])
+  const handleThumbnailLoadEnd = useCallback((index: number) => {
+    setThumbnailLoadingStates((prev) => {
+      const newSet = new Set([...prev])
+      newSet.delete(index)
+      return newSet
+    })
+  }, [])
+
+  // Initialize thumbnail loading states when images change
+  useEffect(() => {
+    // Clear all loading states when images array changes
+    setThumbnailLoadingStates(new Set())
+  }, [imageUrlsJson]) // Use the stable reference
 
   const dateRange = watch("dateRange") // RHF source of truth
   const startTime = watch("startTime")
@@ -868,6 +831,9 @@ function BookingFormView(props: BookingFormViewProps) {
                             className="object-cover rounded-md select-none pointer-events-none"
                             sizes="64px"
                             draggable={false}
+                            onLoadingComplete={() => handleThumbnailLoadEnd(idx)}
+                            onError={() => handleThumbnailLoadEnd(idx)}
+                            onLoadStart={() => handleThumbnailLoadStart(idx)}
                             style={{
                               opacity:
                                 thumbnailLoadingStates.has(idx) && idx !== currentImage ? 0 : 1,
