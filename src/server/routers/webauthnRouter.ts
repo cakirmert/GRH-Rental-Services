@@ -60,7 +60,7 @@ export const webauthnRouter = router({
       const { credential } = verification.registrationInfo
       const { id: credentialID, publicKey: credentialPublicKey } = credential
       const counter = 0 // New credentials start with counter 0
-      
+
       await ctx.prisma.user.update({
         where: { id: ctx.session.user.id },
         data: {
@@ -127,16 +127,14 @@ export const webauthnRouter = router({
             if (process.env.NODE_ENV === "development") {
               console.log(
                 `🔑 User ${user.email} has ${userPasskeys.length} passkeys:`,
-                userPasskeys.map(
-                  (p: UserPasskey) => ({
-                    id: p.credentialID,
-                    length: p.credentialID?.length,
-                    hasInvalidChars:
-                      p.credentialID?.includes("+") ||
-                      p.credentialID?.includes("/") ||
-                      p.credentialID?.includes("="),
-                  }),
-                ),
+                userPasskeys.map((p: UserPasskey) => ({
+                  id: p.credentialID,
+                  length: p.credentialID?.length,
+                  hasInvalidChars:
+                    p.credentialID?.includes("+") ||
+                    p.credentialID?.includes("/") ||
+                    p.credentialID?.includes("="),
+                })),
               )
             }
             allowCredentials.push(...userPasskeys.map((p: UserPasskey): string => p.credentialID))

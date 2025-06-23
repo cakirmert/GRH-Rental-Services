@@ -16,7 +16,7 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const [isManuallyOpened, setIsManuallyOpened] = useState(false)
-  
+
   useEffect(() => {
     if (status !== "authenticated") {
       setOpen(false)

@@ -38,7 +38,7 @@ export function WeekView() {
 
   const dayStart = (day: Date) => addHours(startOfDay(day), START_HOUR)
   const dayEnd = (day: Date) => addHours(startOfDay(day), END_HOUR)
-  
+
   /**
    * Get all bookings for a specific day within the week view time range
    * @param day - The date to get bookings for
