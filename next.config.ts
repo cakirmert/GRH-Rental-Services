@@ -10,8 +10,6 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {},
-    optimizeCss: true,
-    inlineCss: true,
     scrollRestoration: true,
   },
   turbopack: {
