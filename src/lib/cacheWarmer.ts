@@ -52,12 +52,15 @@ export async function warmImageCache() {
       console.error(`❌ Server not accessible at ${baseUrl}. Make sure Next.js is running.`)
       console.error(`   Run 'npm run dev' first, then 'npm run warm-cache'`)
       return
-    }    // Check which images are already cached using edge cache detection
+    }
+
+    // Fast cache status check using unified cache system
     console.log(`🔍 Checking cache status...`)
     const uncachedImages: string[] = []
     const cachedImages: string[] = []
-      try {
-      // Build URL with all images as query parameters for cache status check
+    
+    try {
+      // Use the new cache status API which is much faster
       const checkUrl = new URL('/api/cache-status', baseUrl)
       allImageUrls.forEach(url => checkUrl.searchParams.append('url', url))
       
@@ -68,15 +71,19 @@ export async function warmImageCache() {
         cacheData.results.forEach((result: { url: string; cached: boolean; responseTime?: number; cacheStatus?: string }) => {
           if (result.cached) {
             cachedImages.push(result.url)
-            const time = result.responseTime ? `${result.responseTime}ms` : 'fast'
-            const status = result.cacheStatus === 'HIT' ? 'HIT' : 'fast'
-            console.log(`💨 Already cached: ${result.url.split('/').pop()} (${time}, ${status})`)
+            console.log(`💨 Already cached: ${result.url.split('/').pop()} (instant, ${result.cacheStatus})`)
           } else {
             uncachedImages.push(result.url)
           }
         })
         
         console.log(`💾 Cache check complete: ${cacheData.summary.cached} cached, ${cacheData.summary.uncached} need warming (${cacheData.summary.cacheRate}% cache rate)`)
+        
+        // Show overall cache stats
+        if (cacheData.cacheStats) {
+          const stats = cacheData.cacheStats
+          console.log(`📊 Cache stats: ${stats.size} items, ${Math.round(stats.totalSize / 1024 / 1024)}MB, ${stats.hitRate}% hit rate`)
+        }
       } else {
         console.warn('❌ Could not check cache status, warming all images')
         uncachedImages.push(...Array.from(allImageUrls))
@@ -94,8 +101,9 @@ export async function warmImageCache() {
       return
     }
 
-    // Warm only uncached images in batches
-    const warmBatchSize = 5
+    // Warm only uncached images in optimized batches
+    const warmBatchSize = 8 // Increased batch size for better performance
+    let warmedCount = 0
     
     for (let i = 0; i < uncachedImages.length; i += warmBatchSize) {
       const batch = uncachedImages.slice(i, i + warmBatchSize)
@@ -106,7 +114,8 @@ export async function warmImageCache() {
           
           const response = await fetch(cacheUrl)
           if (response.ok) {
-            console.log(`✅ Warmed: ${imageUrl.split('/').pop()}`)
+            warmedCount++
+            console.log(`✅ Warmed: ${imageUrl.split('/').pop()} (${warmedCount}/${uncachedImages.length})`)
           } else {
             console.warn(`❌ Failed to warm: ${imageUrl.split('/').pop()}`)
           }
@@ -117,13 +126,27 @@ export async function warmImageCache() {
       
       await Promise.all(promises)
       
-      // Small delay between batches to avoid overwhelming
+      // Shorter delay between batches for faster warming
       if (i + warmBatchSize < uncachedImages.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
     
-    console.log("🎉 Image cache warming complete!")
+    console.log(`🎉 Image cache warming complete! Warmed ${warmedCount}/${uncachedImages.length} images.`)
+    
+    // Final cache stats
+    try {
+      const finalStatsResponse = await fetch(`${baseUrl}/api/cache-status`)
+      if (finalStatsResponse.ok) {
+        const statsData = await finalStatsResponse.json()
+        if (statsData.stats) {
+          const stats = statsData.stats
+          console.log(`📊 Final cache stats: ${stats.size} items, ${Math.round(stats.totalSize / 1024 / 1024)}MB, ${stats.hitRate}% hit rate`)
+        }
+      }
+    } catch {
+      // Ignore stats errors
+    }
     
   } catch (error) {
     console.error("❌ Cache warming failed:", error)

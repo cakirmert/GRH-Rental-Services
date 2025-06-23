@@ -1,36 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
-
-// Note: Edge runtime cannot import our shared cache module due to restrictions
-// We'll need to keep a local cache here and provide a different solution
-
-// In-memory cache for optimized images (edge runtime compatible)
-const imageCache = new Map<string, { buffer: Buffer; contentType: string; timestamp: number }>()
-const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours for images
-let lastCleanup = Date.now() // Track when we last cleaned up
-
-function getCacheKey(imageUrl: string, format?: string): string {
-  return `${imageUrl}:${format || "original"}`
-}
-
-function cleanupExpiredEntries(): void {
-  const now = Date.now()
-  // Only cleanup every 10 minutes, not randomly
-  if (now - lastCleanup < 10 * 60 * 1000) return
-  
-  let cleaned = 0
-  for (const [key, value] of imageCache.entries()) {
-    if (now - value.timestamp > CACHE_TTL) {
-      imageCache.delete(key)
-      cleaned++
-    }
-  }
-  
-  lastCleanup = now
-  if (cleaned > 0) {
-    console.log(`🧹 Cleaned up ${cleaned} expired cache entries`)
-  }
-}
+import { imageCache } from "@/lib/imageCache"
 
 export const config = { runtime: "edge" }
 
@@ -59,26 +29,17 @@ export async function GET(request: NextRequest) {
     }
 
     const accept = request.headers.get("accept") || ""
-    let format: "webp" | "avif" | null = null
+    let format: "webp" | "avif" | undefined = undefined
     if (accept.includes("image/avif")) {
       format = "avif"
     } else if (accept.includes("image/webp")) {
       format = "webp"
     }
 
-    // Create cache key including format preference
-    const cacheKey = getCacheKey(imageUrl, format || "original")
-
-    // Check cache first
-    const cached = imageCache.get(cacheKey)
-    console.log(`🔍 Cache lookup for ${imageUrl.split('/').pop()}:`)
-    console.log(`  - Cache key: ${cacheKey}`)
-    console.log(`  - Cache has entry: ${imageCache.has(cacheKey)}`)
-    console.log(`  - Total cache size: ${imageCache.size}`)
-    console.log(`  - Cache entry valid: ${cached ? (Date.now() - cached.timestamp < CACHE_TTL) : false}`)
+    // Check cache first using unified cache system
+    const cached = imageCache.get(imageUrl, format)
     
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`✅ Cache HIT for ${imageUrl.split('/').pop()}`)
+    if (cached) {
       return new NextResponse(cached.buffer, {
         status: 200,
         headers: {
@@ -90,6 +51,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Fetch and process image
     const originalResponse = await fetch(imageUrl)
     if (!originalResponse.ok) {
       throw new Error(`Failed to fetch source image: ${originalResponse.status}`)
@@ -106,18 +68,13 @@ export async function GET(request: NextRequest) {
       contentType = originalResponse.headers.get("Content-Type") || "image/jpeg"
     }
 
-    // Cache the optimized image
-    imageCache.set(cacheKey, {
-      buffer: optimizedBuffer,
-      contentType,
-      timestamp: Date.now(),
-    })
-    
-    console.log(`💾 Cached image ${imageUrl.split('/').pop()} with key: ${cacheKey}`)
-    console.log(`📊 Cache now has ${imageCache.size} entries`)
+    // Cache the optimized image using unified cache system
+    imageCache.set(imageUrl, optimizedBuffer, contentType, format)
 
-    // Clean up expired entries periodically (every 10 minutes, not randomly!)
-    cleanupExpiredEntries()
+    // Periodic cleanup for memory management
+    if (Math.random() < 0.01) { // 1% chance to trigger cleanup
+      imageCache.cleanup()
+    }
 
     const response = new NextResponse(optimizedBuffer, {
       status: 200,
@@ -149,17 +106,16 @@ export async function HEAD(request: NextRequest) {
   try {
     // Check if image is in cache with format detection (same as GET)
     const accept = request.headers.get("Accept") || ""
-    let format = undefined
+    let format: "webp" | "avif" | undefined = undefined
     if (accept.includes("image/avif")) {
       format = "avif"
     } else if (accept.includes("image/webp")) {
       format = "webp"
     }
 
-    const cacheKey = getCacheKey(imageUrl, format || "original")
-    const cached = imageCache.get(cacheKey)
+    const cached = imageCache.get(imageUrl, format)
     
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    if (cached) {
       // Image is cached, return cache hit headers
       return new NextResponse(null, {
         status: 200,
