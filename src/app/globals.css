@@ -40,11 +40,6 @@ textarea:-webkit-autofill {
   --border: oklch(0.922 0 0); /* Lighter Gray */
   --input: oklch(0.922 0 0); /* Lighter Gray */
   --ring: oklch(0.708 0 0); /* Near Black */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
   /* Status colors - Modern vibrant palette with better semantics */
   --status-requested: hsl(38 95% 95%);
@@ -99,11 +94,6 @@ textarea:-webkit-autofill {
   --border: oklch(1 0 0 / 10%); /* Darker Gray */
   --input: oklch(1 0 0 / 15%); /* Darker Gray */
   --ring: oklch(0.556 0 0); /* Near White */
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
   /* Sidebar Dark */
   --sidebar-background: hsl(240 10% 3.9%); /* Dark Gray */
   --sidebar-foreground: oklch(0.985 0 0); /* Near White */
@@ -155,11 +145,6 @@ textarea:-webkit-autofill {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --color-status-requested: var(--status-requested);
   --color-status-requested-foreground: var(--status-requested-foreground);
   --color-status-accepted: var(--status-accepted);
