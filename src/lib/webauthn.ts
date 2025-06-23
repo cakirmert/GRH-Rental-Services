@@ -20,7 +20,7 @@ export async function getRegistrationOptions(
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   // Convert userId string to Uint8Array
   const userIdBuffer = new TextEncoder().encode(userId)
-  
+
   return generateRegistrationOptions({
     rpName: "GRH Booking",
     rpID,
@@ -67,9 +67,7 @@ export async function getAuthenticationOptions(
 
       try {
         // In the new API, we use the string directly, not a Buffer
-        console.log(
-          `✅ Using credential ID directly: ${normalizedId.substring(0, 20)}...`,
-        )
+        console.log(`✅ Using credential ID directly: ${normalizedId.substring(0, 20)}...`)
         return { id: normalizedId, type: "public-key" as const }
       } catch (e) {
         console.error("❌ Failed to process credential ID:", normalizedId, e)

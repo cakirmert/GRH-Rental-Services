@@ -14,6 +14,7 @@ import {
 import { Users, ChevronLeft, ChevronRight } from "lucide-react"
 import { useI18n } from "@/locales/i18n"
 import { useState } from "react"
+import { getOptimizedImageUrls } from "@/lib/imageUtils"
 
 export interface Item {
   id: string
@@ -45,7 +46,8 @@ export function ItemCard({ item, onSelectItem }: ItemCardProps) {
   const [isSliding, setIsSliding] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
-  const images = item.images && item.images.length > 0 ? item.images : ["/placeholder.svg"]
+  const rawImages = item.images && item.images.length > 0 ? item.images : ["/placeholder.svg"]
+  const images = getOptimizedImageUrls(rawImages)
 
   const fitMode = getObjectFitMode(images[current])
 

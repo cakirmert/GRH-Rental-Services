@@ -9,13 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import {
-  ArrowLeft,
-  Package,
-  Users as UsersIcon,
-  ListChecks,
-  Loader2,
-} from "lucide-react"
+import { ArrowLeft, Package, Users as UsersIcon, ListChecks, Loader2 } from "lucide-react"
 
 import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"

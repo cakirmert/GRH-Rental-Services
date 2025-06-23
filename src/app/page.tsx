@@ -88,7 +88,6 @@ function mapDbItemToClient(it: DbItem, locale: string): Item {
   }
 }
 
-type ItemsQueryOutput = inferRouterOutputs<AppRouter>["items"]["all"]
 import AdminDashboardView from "@/components/AdminDashboardView"
 
 function BookingViewSkeleton() {
@@ -165,15 +164,38 @@ export default function HomePage() {
   const { t, locale: i18nLocale } = useI18n()
   const { data: session, status: authStatus } = useSession()
   const dateFnsLocales: Record<string, Locale> = { en: enGB, de }
-  const currentLocale = dateFnsLocales[i18nLocale] || enGB
+  const currentLocale = dateFnsLocales[i18nLocale] || enGB // Progressive loading: load rooms first (default tab), then others in background
+  const { data: roomItems, isLoading: isLoadingRooms } = trpc.items.byType.useQuery(
+    { types: ["ROOM"] },
+    {
+      refetchOnWindowFocus: false,
+    },
+  )
 
-  const { data: rawItems, isLoading } = trpc.items.all.useQuery(undefined, {
-    // Add a query key if your backend procedure for items.all expects/uses one,
-    // or if you want to manually refetch. For a simple "all", undefined is often fine.
-  })
+  const { data: otherItems, isLoading: isLoadingOthers } = trpc.items.byType.useQuery(
+    { types: ["SPORTS", "GAME", "OTHER"] },
+    {
+      refetchOnWindowFocus: false,
+      // Start loading other items after rooms are loaded
+      enabled: !isLoadingRooms,
+    },
+  )
 
-  const rawItemsArray: ItemsQueryOutput = Array.isArray(rawItems) ? rawItems : []
-  const items: Item[] = rawItemsArray.map((it) => mapDbItemToClient(it, i18nLocale))
+  const items: Item[] = useMemo(() => {
+    const roomItemsArray = Array.isArray(roomItems) ? roomItems : []
+    const otherItemsArray = Array.isArray(otherItems) ? otherItems : []
+    const combined = [...roomItemsArray, ...otherItemsArray]
+    return combined.map((it) => mapDbItemToClient(it, i18nLocale))
+  }, [roomItems, otherItems, i18nLocale])
+
+  // Smart loading: only show loading when current tab's items are loading
+  const isLoading = useMemo(() => {
+    if (activeTab === "room") {
+      return isLoadingRooms
+    }
+    // For other tabs, we need both room items (for search) and the specific items
+    return isLoadingRooms || isLoadingOthers
+  }, [activeTab, isLoadingRooms, isLoadingOthers])
 
   // Initialize from current route when component mounts (handle page refresh)
   useEffect(() => {

@@ -6,11 +6,7 @@
  */
 
 // Authentication types
-export type {
-  AuthModalView,
-  AuthModalContextType,
-  UserPasskey,
-} from "./auth"
+export type { AuthModalView, AuthModalContextType, UserPasskey } from "./auth"
 
 // Booking types
 export type {
@@ -25,11 +21,7 @@ export type {
 export type { Locale, Translations, I18nContextProps } from "./i18n"
 
 // Notification types
-export type {
-  NotificationData,
-  SSEMessage,
-  NotificationContextType,
-} from "./notification"
+export type { NotificationData, SSEMessage, NotificationContextType } from "./notification"
 
 // Routing types
 export type { AppRoute } from "./routing"
