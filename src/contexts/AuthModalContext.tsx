@@ -386,6 +386,9 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                         </>
                       )}
                     </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {t("auth.passkeyLoginInfo")}
+                    </p>
 
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
