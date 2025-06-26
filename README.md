@@ -8,6 +8,7 @@ Welcome to the codebase for the GRH Rental Services, a Next.js application used 
 - Multiple views for booking, dashboards, help pages and more
 - Realtime chat and push notifications
 - Passwordless email authentication
+- Optional passkey sign-in after verifying your email and registering a passkey
 - Admin and rental dashboards
 - Multi-language support (English & German)
 - Responsive UI built with Tailwind and shadcn/ui
@@ -96,6 +97,7 @@ npm run start
 ## 6. Important Concepts
 
 - **Authentication** – Passwordless email sign-in using one-time codes. The configuration lives in `auth.ts` and uses NextAuth with Prisma as an adapter.
+- You can also sign in with a passkey once your email is verified and a passkey is registered to your account.
 - **TRPC API** – Typed API routes defined under `src/server/routers`. The client uses hooks in `src/utils/trpc.ts` to call them.
 - **Views & Components** – The main page switches between list view, booking forms and dashboards using a view context (`src/contexts/ViewContext.tsx`). UI pieces live in `src/components`.
 - **Localization** – JSON translation files in `src/locales` with language preference stored in `localStorage`.

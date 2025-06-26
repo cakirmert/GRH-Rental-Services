@@ -233,7 +233,8 @@
     "signInSuccessDescription": "You are now signed in.",
     "orContinueWith": "or continue with",
     "signInWithPasskey": "Sign in with Passkey",
-    "authenticating": "Authenticating..."
+    "authenticating": "Authenticating...",
+    "passkeyLoginInfo": "Passkey sign-in is available after verifying your email and adding a passkey"
   },
   "profile": {
     "setNameTitle": "Welcome! What's your name?",

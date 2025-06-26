@@ -233,7 +233,8 @@
     "signInSuccessDescription": "Du bist jetzt angemeldet.",
     "orContinueWith": "oder fortfahren mit",
     "signInWithPasskey": "Mit Passkey anmelden",
-    "authenticating": "Authentifiziere..."
+    "authenticating": "Authentifiziere...",
+    "passkeyLoginInfo": "Passkey-Anmeldung ist erst nach Bestätigung deiner E-Mail und Hinzufügen eines Passkeys möglich"
   },
   "profile": {
     "setNameTitle": "Willkommen! Wie hei\u00dft du?",
