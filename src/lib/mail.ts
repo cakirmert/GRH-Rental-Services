@@ -12,11 +12,10 @@ export const transporter = !isDev
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST!,
       port: Number(process.env.SMTP_PORT!),
-      secure: false,
+      secure: true,
       auth: {
         user: CONTACT_EMAIL,
         pass: process.env.EMAIL_PASSWORD!,
       },
-      requireTLS: true,
     })
   : null
