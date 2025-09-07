@@ -151,7 +151,7 @@ export default function Header() {
 
   return (
     <header
-      className={`bg-background text-foreground border-b shadow-sm sticky top-0 z-50 transition-transform duration-300 ${
+      className={`bg-background bg-opacity-50 opacity-90 text-foreground border-b shadow-sm sticky top-0 z-50 transition-transform duration-300 ${
         hidden ? "-translate-y-full" : "translate-y-0"
       }`}
     >

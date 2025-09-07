@@ -126,12 +126,10 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
       <Dialog.Portal>
         {/* Overlay scrolls and centers */}
         <Dialog.Overlay
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm
-                     grid place-items-center overflow-auto p-4"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4"
         >
           <Dialog.Content
-            className="w-full max-w-2xl max-h-[90vh] bg-background
-                       rounded-xl shadow-lg flex flex-col overflow-hidden"
+            className="w-full z-50 max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden"
           >
             {/* Hidden title for a11y */}
             <Dialog.Title asChild>
@@ -155,13 +153,20 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
             <div
               ref={messagesRef}
               onScroll={onListScroll}
-              className="flex-1 min-h-0 overflow-y-auto space-y-4 px-4 py-4"
+              className="flex-1 min-h-[220px] overflow-y-auto space-y-4 px-4 py-4 bg-background/80 rounded-b-xl"
             >
               {msgsQry.isInitialLoading && (
                 <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin" />
               )}
 
               <div ref={topSentinelRef} />
+
+              {messages.length === 0 && !msgsQry.isInitialLoading && (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+                  <span className="text-3xl mb-2">💬</span>
+                  <span className="text-sm">No messages yet. Start the conversation!</span>
+                </div>
+              )}
 
               {messages.map((m) => {
                 const isMe = m.sender.id === meId
@@ -187,10 +192,12 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
 
                     <div className="mt-2 flex justify-between text-[10px] opacity-70">
                       <span>
-                        {new Date(m.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {typeof window !== "undefined"
+                          ? new Date(m.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "--:--"}
                       </span>
                       {isMe &&
                         (m.reads.length ? (

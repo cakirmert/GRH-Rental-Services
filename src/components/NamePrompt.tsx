@@ -224,12 +224,10 @@ export default function NamePrompt({
       <Dialog.Portal>
         {/* Overlay scrolls and centers */}{" "}
         <Dialog.Overlay
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm
-                     grid place-items-center overflow-auto p-2 sm:p-4"
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4"
         >
           <Dialog.Content
-            className="w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] bg-background
-                       rounded-xl shadow-lg flex flex-col overflow-hidden"
+            className="w-full z-[100] max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden"
           >
             {/* Hidden title for a11y */}
             <Dialog.Title asChild>
