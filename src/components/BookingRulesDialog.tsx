@@ -80,7 +80,7 @@ export function BookingRulesDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             {t("bookingRulesDialog.cancel")}
           </Button>
-          <Button onClick={onConfirm} disabled={!agreeToRules || isSubmitting}>
+          <Button variant="beam" onClick={onConfirm} disabled={!agreeToRules || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

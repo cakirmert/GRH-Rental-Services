@@ -7,10 +7,14 @@ What’s done
 - Header: Glass surface (backdrop blur) for premium feel.
 - Hero: Gradient text + entrance animation.
 - Cards: Staggered fade/slide-in and hover lift.
+- Spotlight cursor overlay with low intensity.
+- Beam CTAs: item cards, booking continue, chat send, rules confirm, auth submit/verify.
+- Rental dashboard: accept CTA marked with beam glow; chat buttons use beam.
+- Footer: subtle grid + compact subscribe row, address text fixed.
 
 Planned next
 - Spotlight cursor effect with low-intensity radial highlight.
-- Gradient border “beam” for key CTAs.
+- Extend gradient border “beam” to remaining primary actions (admin/rental).
 - Footer visual refresh: subtle grid/dots and spacing/typography pass.
 - Optional hero parallax if imagery exists.
 - Consistency sweep: radii, shadows, spacing tokens.
@@ -22,4 +26,3 @@ Non-goals (for now)
 Notes
 - Respect prefers-reduced-motion.
 - Keep effects behind pointer-events: none and low opacity.
-

@@ -348,6 +348,7 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                       type="submit"
                       disabled={isSubmittingAuth || otp.length !== 6}
                       className="w-full sm:w-auto h-11"
+                      variant="beam"
                     >
                       {isSubmittingAuth ? (
                         <>
@@ -435,6 +436,7 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                       type="submit"
                       disabled={isSubmittingAuth || !email}
                       className="w-full sm:w-auto h-11"
+                      variant="beam"
                     >
                       {isSubmittingAuth ? (
                         <>

@@ -266,7 +266,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             <Button
               size="sm"
               variant="constructive"
-              className={`${buttonClass} accept-btn `}
+              className={`${buttonClass} accept-btn btn-beam`}
               onClick={() => handleActionClick(booking, BookingStatus.ACCEPTED)}
             >
               <CheckCircle className="mr-1.5 h-4 w-4" />
@@ -301,7 +301,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             <Button
               size="sm"
               variant="outline"
-              className={buttonClass}
+              className={`${buttonClass} btn-beam`}
               onClick={() => handleActionClick(booking, BookingStatus.COMPLETED)}
             >
               <CheckCircle className="mr-1.5 h-4 w-4" />
@@ -542,7 +542,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                         {/* Chat Button - Takes available space */}
                         <Button
                           size="default"
-                          variant="default"
+                          variant="beam"
                           className="w-full booking-chat-btn"
                           onClick={() => {
                             localStorage.setItem("grh-open-chat-booking-id", booking.id)
@@ -637,7 +637,11 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                   selectedBookingForAction?.status === BookingStatus.BORROWED &&
                   !rentalNotes.trim())
               }
-              variant={actionToConfirm === BookingStatus.DECLINED ? "destructive" : "default"}
+              variant={
+                actionToConfirm === BookingStatus.DECLINED || actionToConfirm === BookingStatus.CANCELLED
+                  ? "destructive"
+                  : "beam"
+              }
             >
               {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 

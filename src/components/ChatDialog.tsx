@@ -223,10 +223,11 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
                   }}
                 />
                 <Button
+                  variant="beam"
                   onClick={handleSend}
                   disabled={sendMut.isPending || !body.trim()}
                   size="lg"
-                  className="flex-1 min-h-[80px] rounded-xl px-4 py-2"
+                  className="flex-1 min-h-[56px] rounded-xl px-4 py-2"
                 >
                   {sendMut.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

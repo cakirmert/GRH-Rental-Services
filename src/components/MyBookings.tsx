@@ -843,7 +843,7 @@ export default function MyBookingsComponent({
                 {t("common.cancel")}
               </Button>
             </DialogClose>
-            <Button onClick={handleUpdateBooking} disabled={isSubmitting}>
+            <Button variant="beam" onClick={handleUpdateBooking} disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("common.saveChanges")}
             </Button>

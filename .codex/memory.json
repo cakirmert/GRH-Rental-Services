@@ -79,8 +79,8 @@
     }
   ],
   "next_steps": [
-    "Extend beam CTA to other primary actions (submit, contact).",
-    "Refine Footer typography/spacing; optional link icon alignment.",
+    "Audit admin/rental lists for remaining key actions to beam/btn-beam.",
+    "Fine-tune Footer spacing and Input/Button sizes for mobile.",
     "Add shimmer/magnetic hover for prominent buttons.",
     "Optional: Add subtle parallax for hero media if available.",
     "Audit components for consistent radius/spacing and apply tokens."
