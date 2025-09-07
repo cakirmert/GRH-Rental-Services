@@ -45,6 +45,7 @@ import { trpc } from "@/utils/trpc"
 import InteractiveTimeRangePicker from "@/components/InteractiveTimeRangePicker"
 import { useAuthModal } from "@/contexts/AuthModalContext"
 
+import { useView, View } from "@/contexts/ViewContext" // Import View type
 // ... (interfaces and schema remain the same) ...
 /* ---------- types ---------- */
 interface Item {
@@ -661,12 +662,18 @@ function BookingFormView(props: BookingFormViewProps) {
     formHookErrors.dateRange?.to?.message,
     combineDateTime,
   ])
+  const SELECTED_ITEM_KEY = "grh-selected-item-id"
 
+  const { setView } = useView()
   const { openAuthModal } = useAuthModal()
+  const goBack = useCallback(() => {
+    localStorage.removeItem(SELECTED_ITEM_KEY)
+    setView(View.LIST)
+  }, [setView])
 
   return (
     <div className="space-y-8 mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
         {/* Item Details Column */}
         <div className="space-y-6 md:sticky md:top-24 md:self-start">
           {!mounted ? (
@@ -699,8 +706,12 @@ function BookingFormView(props: BookingFormViewProps) {
             </>
           ) : (
             <>
-              <h1 className="text-3xl lg:text-4xl font-bold">{item.name}</h1>
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+              <Button variant="outline" size="sm" onClick={goBack} className="flex ml-auto gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                {t("common.back")}
+              </Button>
+              <h1 className="text-3xl lg:text-5xl font-bold mb-1">{item.name}</h1>
+              <p className="text-base lg:text-lg leading-relaxed whitespace-pre-line text-foreground/80 dark:text-muted-foreground mb-4">
                 {translatedDescription}
               </p>
               {images.length > 0 && (
@@ -846,7 +857,7 @@ function BookingFormView(props: BookingFormViewProps) {
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-3 text-base mt-2">
                 {item.capacity && (
                   <Badge variant="secondary" className="py-1 px-2">
                     <Users className="h-4 w-4 mr-1" />
@@ -878,8 +889,7 @@ function BookingFormView(props: BookingFormViewProps) {
           )}
         </div>
         {/* Booking Form Column */}
-        <div className="space-y-6 w-full max-w-md mx-auto min-h-[600px]">
-          {" "}
+        <div className="space-y-6 w-full max-w-md ml-auto min-h-[600px]">
           {/* Added min-h-[600px] for layout stability */}
           {!mounted || authStatus === "loading" ? (
             // Skeleton loading state to prevent layout shifts and hydration mismatches

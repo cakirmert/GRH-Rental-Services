@@ -18,7 +18,7 @@ export default function Footer() {
   const { t } = useI18n()
   const { setView } = useView()
   return (
-    <footer className="bg-background border-t">
+    <footer className="backdrop-blur-md bg-background/20 border-t">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid gap-8 md:grid-cols-3">
           {/* Help & Support */}

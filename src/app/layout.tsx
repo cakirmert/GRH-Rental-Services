@@ -6,6 +6,7 @@ import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import PushNotificationManager from "@/components/PushNotificationManager"
 import InstallPrompt from "@/components/InstallPrompt"
+import SiteBackground from "@/components/SiteBackground"
 import { auth } from "../../auth"
 import type { Session } from "next-auth"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -37,7 +38,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <Providers session={session}>
-          <div className="flex flex-col min-h-screen tabindex--1">
+          <div className="relative flex flex-col min-h-screen tabindex--1">
+            <SiteBackground />
+            <div className="relative z-10 flex flex-col min-h-screen">
             <Header />
             <main role="main" className="flex-grow">
               {children}
@@ -45,6 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Footer />
             <PushNotificationManager />
             <InstallPrompt />
+            </div>
           </div>
         </Providers>
         <SpeedInsights />

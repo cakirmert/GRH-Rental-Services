@@ -5,13 +5,13 @@ import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { trpc } from "@/utils/trpc"
 import { SearchBar } from "@/components/SearchBar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button" // unused here; back button handled in BookingFormView
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { useI18n } from "@/locales/i18n"
 import { Container } from "@/components/ui/container"
 import { useSession, signIn } from "next-auth/react"
 // import { toast } from "@/components/ui/use-toast"; // Not used directly here
-import { ChevronLeft } from "lucide-react"
+// removed misaligned back icon import; using internal back in BookingFormView
 import { enGB, de } from "date-fns/locale"
 import type { Locale } from "date-fns"
 import { ItemCard } from "@/components/ItemCard"
@@ -401,7 +401,7 @@ export default function HomePage() {
       <>
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold mb-3">{t("homePage.title")}</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg max-w-2xl mx-auto text-foreground/80 dark:text-muted-foreground">
             {t("homePage.description")}
           </p>
         </div>
@@ -452,14 +452,8 @@ export default function HomePage() {
   )
 
   const BookingViewComponent = () => (
-    // Renamed for clarity
+    // Back button is handled inside BookingFormView for better alignment
     <>
-      <div className="flex justify-end mb-6">
-        <Button variant="outline" size="sm" onClick={goBack} className="flex items-center gap-2">
-          <ChevronLeft className="h-4 w-4" />
-          {t("common.back")}
-        </Button>
-      </div>
       {selectedItem ? (
         <BookingFormView
           item={selectedItem}
