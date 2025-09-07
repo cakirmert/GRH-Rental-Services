@@ -2,6 +2,7 @@
 "use client"
 
 import { useCallback, useEffect, useState, useRef, useMemo } from "react"
+import { motion } from "framer-motion"
 import { trpc } from "@/utils/trpc"
 import { SearchBar } from "@/components/SearchBar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -399,12 +400,19 @@ export default function HomePage() {
   const ListView = useMemo(
     () => (
       <>
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold mb-3">{t("homePage.title")}</h1>
+        <motion.div
+          className="relative text-center mb-10"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <h1 className="text-4xl font-bold mb-3 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
+            {t("homePage.title")}
+          </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             {t("homePage.description")}
           </p>
-        </div>
+        </motion.div>
         <SearchBar
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -427,8 +435,16 @@ export default function HomePage() {
           </div>
         ) : filtered.length > 0 ? (
           <div className={`grid ${getGridClasses(filtered.length)} gap-4 md:gap-6`}>
-            {filtered.map((item) => (
-              <ItemCard key={item.id} item={item} onSelectItem={handleSelect} />
+            {filtered.map((item, idx) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(idx * 0.03, 0.25) }}
+                whileHover={{ y: -2 }}
+              >
+                <ItemCard item={item} onSelectItem={handleSelect} />
+              </motion.div>
             ))}
           </div>
         ) : (

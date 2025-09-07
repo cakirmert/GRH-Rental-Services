@@ -1,0 +1,88 @@
+{
+  "project": "GRH Rental Services",
+  "task_description": "Adopt UI/UX patterns from reactbits.dev to refresh components, layout, and visuals; add tasteful effects/backgrounds; modernize interactions while keeping business logic intact.",
+  "stack": {
+    "framework": "Next.js 15 App Router",
+    "ui": "Tailwind CSS v4, Radix UI primitives, custom shadcn-like components",
+    "state": "next-auth, tRPC, next-themes, react-query",
+    "lang": "TypeScript, React 19"
+  },
+  "decisions": [
+    "Prefer decorative overlays (aurora/grid/spotlight) that do not alter layout or data flow.",
+    "Enhance perceived quality with glass surfaces and subtle motion; respect prefers-reduced-motion.",
+    "Avoid invasive refactors of business components initially; layer styles and wrappers first."
+  ],
+  "actions_taken": [
+    {
+      "date": "2025-06-23",
+      "summary": "Initial visual pass",
+      "details": [
+        "Added AuroraBackground and GridBackground effects components.",
+        "Wired both effects globally in app layout as non-interactive overlays.",
+        "Applied glass-surface styling to sticky Header for subtle blur.",
+        "Enhanced homepage hero with gradient text and entrance animation.",
+        "Animated item cards with subtle fade/slide and hover lift.",
+        "Added aurora keyframes and glass helper in globals.css."
+      ],
+      "files": [
+        "src/components/ui/effects/AuroraBackground.tsx",
+        "src/components/ui/effects/GridBackground.tsx",
+        "src/app/layout.tsx",
+        "src/components/Header.tsx",
+        "src/app/page.tsx",
+        "src/app/globals.css"
+      ]
+    },
+    {
+      "date": "2025-06-23",
+      "summary": "Spotlight cursor overlay",
+      "details": [
+        "Added Spotlight effect that gently highlights cursor area.",
+        "Wired spotlight into layout with low intensity.",
+        "Respects reduced motion by keeping it event-driven only."
+      ],
+      "files": [
+        "src/components/ui/effects/Spotlight.tsx",
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "date": "2025-06-23",
+      "summary": "CTA beam + magnetic + footer grid",
+      "details": [
+        "Added Button variant 'beam' with gradient border and shimmer.",
+        "Introduced Magnetic wrapper for subtle pointer-follow hover.",
+        "Applied 'beam' + Magnetic to sign-in CTA in Header.",
+        "Refreshed Footer background with subtle grid overlay."
+      ],
+      "files": [
+        "src/app/globals.css",
+        "src/components/ui/button.tsx",
+        "src/components/ui/effects/Magnetic.tsx",
+        "src/components/Header.tsx",
+        "src/components/Footer.tsx"
+      ]
+    },
+    {
+      "date": "2025-06-23",
+      "summary": "Rolled beam CTA to booking flows",
+      "details": [
+        "Applied Magnetic + beam variant to ItemCard primary CTA.",
+        "Applied beam variant to BookingFormView continue button.",
+        "Rebuilt Footer component to correct address text and keep overlay."
+      ],
+      "files": [
+        "src/components/ItemCard.tsx",
+        "src/components/BookingFormView.tsx",
+        "src/components/Footer.tsx"
+      ]
+    }
+  ],
+  "next_steps": [
+    "Extend beam CTA to other primary actions (submit, contact).",
+    "Refine Footer typography/spacing; optional link icon alignment.",
+    "Add shimmer/magnetic hover for prominent buttons.",
+    "Optional: Add subtle parallax for hero media if available.",
+    "Audit components for consistent radius/spacing and apply tokens."
+  ]
+}

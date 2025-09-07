@@ -11,6 +11,9 @@ import type { Session } from "next-auth"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import type { ReactNode } from "react"
+import AuroraBackground from "@/components/ui/effects/AuroraBackground"
+import GridBackground from "@/components/ui/effects/GridBackground"
+import Spotlight from "@/components/ui/effects/Spotlight"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,11 +40,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <Providers session={session}>
-          <div className="flex flex-col min-h-screen tabindex--1">
+          <div className="relative flex flex-col min-h-screen tabindex--1">
+            {/* Global decorative backgrounds */}
+            <div className="pointer-events-none fixed inset-0 -z-10">
+              <AuroraBackground />
+              <GridBackground className="opacity-50 dark:opacity-20" />
+            </div>
             <Header />
             <main role="main" className="flex-grow">
               {children}
             </main>
+            {/* Cursor-driven spotlight overlay */}
+            <Spotlight size={520} strength={0.18} />
             <Footer />
             <PushNotificationManager />
             <InstallPrompt />

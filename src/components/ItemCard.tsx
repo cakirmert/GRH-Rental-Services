@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import Magnetic from "@/components/ui/effects/Magnetic"
 import {
   Card,
   CardContent,
@@ -187,14 +188,16 @@ export function ItemCard({ item, onSelectItem }: ItemCardProps) {
         </div>
       </CardContent>{" "}
       <CardFooter className="p-6 pt-0">
-        <Button
-          variant="default"
-          size="lg"
-          className="w-full font-semibold transition-all duration-200 hover:shadow-md"
-          onClick={() => onSelectItem(item)}
-        >
-          {t("itemCard.viewAndBookButton")}
-        </Button>
+        <Magnetic>
+          <Button
+            variant="beam"
+            size="lg"
+            className="w-full font-semibold"
+            onClick={() => onSelectItem(item)}
+          >
+            {t("itemCard.viewAndBookButton")}
+          </Button>
+        </Magnetic>
       </CardFooter>
     </Card>
   )

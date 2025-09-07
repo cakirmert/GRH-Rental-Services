@@ -11,6 +11,7 @@ import { useView, View } from "@/contexts/ViewContext"
 import { useNamePrompt } from "@/contexts/NamePromptContext"
 import { useAuthModal } from "@/contexts/AuthModalContext"
 import { Button } from "@/components/ui/button"
+import Magnetic from "@/components/ui/effects/Magnetic"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Menu,
@@ -120,7 +121,7 @@ export default function Header() {
   // Prevent hydration mismatches by using skeleton placeholders until mounted
   if (!mounted) {
     return (
-      <header className="bg-background text-foreground border-b shadow-sm sticky top-0 z-50">
+      <header className="glass-surface bg-background/80 text-foreground border-b shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-2">
@@ -151,7 +152,7 @@ export default function Header() {
 
   return (
     <header
-      className={`bg-background text-foreground border-b shadow-sm sticky top-0 z-50 transition-transform duration-300 ${
+      className={`glass-surface supports-[backdrop-filter]:bg-background/70 text-foreground border-b shadow-sm sticky top-0 z-50 transition-transform duration-300 ${
         hidden ? "-translate-y-full" : "translate-y-0"
       }`}
     >
@@ -292,13 +293,15 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openAuthModal("email", "", () => setIsMenuOpen(false))}
-              >
-                {t("header.signInButton")}
-              </Button>
+              <Magnetic>
+                <Button
+                  variant="beam"
+                  size="sm"
+                  onClick={() => openAuthModal("email", "", () => setIsMenuOpen(false))}
+                >
+                  {t("header.signInButton")}
+                </Button>
+              </Magnetic>
             )}
           </div>
 
@@ -397,13 +400,15 @@ export default function Header() {
                 {t("header.signOutButton")}
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                className="justify-start"
-                onClick={() => openAuthModal("email", "", () => setIsMenuOpen(false))}
-              >
-                {t("header.signInButton")}
-              </Button>
+              <Magnetic>
+                <Button
+                  variant="beam"
+                  className="justify-start"
+                  onClick={() => openAuthModal("email", "", () => setIsMenuOpen(false))}
+                >
+                  {t("header.signInButton")}
+                </Button>
+              </Magnetic>
             )}
           </div>
         </nav>

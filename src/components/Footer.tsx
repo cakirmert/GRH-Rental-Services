@@ -13,20 +13,25 @@ import {
 import { useI18n } from "@/locales/i18n"
 import { useView, View } from "@/contexts/ViewContext"
 import { Button } from "@/components/ui/button"
+import GridBackground from "@/components/ui/effects/GridBackground"
 
 export default function Footer() {
   const { t } = useI18n()
   const { setView } = useView()
   return (
-    <footer className="bg-background border-t">
+    <footer className="relative bg-background border-t overflow-hidden">
+      {/* subtle grid backdrop */}
+      <div className="absolute inset-0 -z-10">
+        <GridBackground className="opacity-40 dark:opacity-20" gap={28} />
+      </div>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid gap-8 md:grid-cols-3">
           {/* Help & Support */}
           <div className="space-y-4 w-full max-w-xs">
-            <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <h3 className="font-semibold text-foreground flex items-center gap-2 tracking-tight">
               <LifeBuoy className="h-5 w-5 text-primary" />
               {t("footer.needHelpTitle")}
-            </h3>{" "}
+            </h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Button
@@ -126,11 +131,11 @@ export default function Footer() {
         {/* Bottom section */}
         <div className="mt-8 pt-8 border-t border-border">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>{t("footer.broughtToYou")}</p>
+            <p className="tracking-tight">{t("footer.broughtToYou")}</p>
 
             <div className="flex items-center gap-4">
               <address className="not-italic">
-                Gustav‑Radbruch Haus, Borgfelder Straße 16, 20537 Hamburg
+                Gustav-Radbruch-Haus, Borgfelder Straße 16, 20537 Hamburg
               </address>
             </div>
           </div>
@@ -139,3 +144,4 @@ export default function Footer() {
     </footer>
   )
 }
+

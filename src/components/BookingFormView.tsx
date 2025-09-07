@@ -20,6 +20,7 @@ import {
   FormDescription,
 } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
+import Magnetic from "@/components/ui/effects/Magnetic"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -1135,26 +1136,29 @@ function BookingFormView(props: BookingFormViewProps) {
                     </div>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleContinueToBooking}
-                  disabled={submittingBooking || authStatus !== "authenticated"}
-                  className="w-full"
-                  size="lg"
-                >
-                  {authStatus === "authenticated" ? (
-                    submittingBooking ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t("common.submitting")}
-                      </>
+                <Magnetic>
+                  <Button
+                    variant="beam"
+                    type="button"
+                    onClick={handleContinueToBooking}
+                    disabled={submittingBooking || authStatus !== "authenticated"}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {authStatus === "authenticated" ? (
+                      submittingBooking ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("common.submitting")}
+                        </>
+                      ) : (
+                        t("bookingForm.continueToBookingButton")
+                      )
                     ) : (
-                      t("bookingForm.continueToBookingButton")
-                    )
-                  ) : (
-                    t("auth.loginToBook")
-                  )}
-                </Button>{" "}
+                      t("auth.loginToBook")
+                    )}
+                  </Button>
+                </Magnetic>{" "}
               </form>
             </Form>
           ) : null}
