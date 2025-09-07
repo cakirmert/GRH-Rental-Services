@@ -81,7 +81,7 @@ export default function SiteBackground({ children }: Props) {
     if (isDark) {
       // Tuned for dark mode: a bit stronger & moodier
     return {
-      hueShift: 25,                // no hue shift - keep natural colors
+      hueShift: 15,                // no hue shift - keep natural colors
       noiseIntensity: 0.005,      // ↓ minimal grain
       scanlineIntensity: 0.0,     // off — scanlines look dirty on light
       scanlineFrequency: 0.0,
