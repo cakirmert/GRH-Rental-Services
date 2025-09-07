@@ -36,6 +36,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const session: Session | null = await auth()
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Pre-hydration fallback: ensure body background matches system theme before next-themes applies */}
+        <style id="grh-prefers-fallback">{`
+          html:not(.light):not(.dark),
+          html:not(.light):not(.dark) body { background-color: oklch(1 0 0); }
+          @media (prefers-color-scheme: dark) {
+            html:not(.light):not(.dark),
+            html:not(.light):not(.dark) body { background-color: oklch(0.145 0 0); color-scheme: dark; }
+          }
+        `}</style>
+      </head>
       <body className={`${inter.className} antialiased`}>
         <Providers session={session}>
           <div className="relative flex flex-col min-h-screen tabindex--1">

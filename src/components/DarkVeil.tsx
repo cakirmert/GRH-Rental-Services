@@ -88,6 +88,9 @@ type Props = {
   resolutionScale?: number;
   patternScale?: number; // <1 makes blobs bigger, >1 increases detail
   brightness?: number; // 0 = normal, 1 = inverted/bright for light themes
+  opaque?: boolean; // if true, use an opaque canvas to avoid white flashes
+  baseBgDark?: string; // CSS color for dark background under the shader
+  baseBgLight?: string; // CSS color for light background under the shader
 };
 
 export default function DarkVeil({
@@ -99,19 +102,57 @@ export default function DarkVeil({
   warpAmount = 0.01,
   resolutionScale = 1,
   patternScale = 0.8,
-  brightness = 0
+  brightness = 0,
+  opaque = true,
+  baseBgDark = '#18181b', // near oklch(0.145 0 0)
+  baseBgLight = '#ffffff'
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const isLight = brightness >= 0.5;
+  const signalledRef = useRef(false);
+
+  const parseHexToRGB = (hex: string): [number, number, number] => {
+    let h = hex.trim();
+    if (h.startsWith('#')) h = h.slice(1);
+    if (h.length === 3) {
+      const r = parseInt(h[0] + h[0], 16);
+      const g = parseInt(h[1] + h[1], 16);
+      const b = parseInt(h[2] + h[2], 16);
+      return [r / 255, g / 255, b / 255];
+    }
+    if (h.length === 6) {
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      return [r / 255, g / 255, b / 255];
+    }
+    // fallback to black
+    return [0, 0, 0];
+  };
   useEffect(() => {
     const canvas = ref.current as HTMLCanvasElement;
   // Using viewport dimensions for full-page coverage
 
+    // Ensure the canvas has an immediate theme-appropriate background color
+    const cssBg = isLight ? baseBgLight : baseBgDark;
+    canvas.style.backgroundColor = cssBg;
+
     const renderer = new Renderer({
       dpr: Math.min(window.devicePixelRatio, 2),
-      canvas
+      canvas,
+      alpha: !opaque ? true : false, // make canvas opaque by default
+      premultipliedAlpha: false,
+      antialias: true,
+      depth: false,
+      stencil: false,
+      powerPreference: 'high-performance'
     });
 
     const gl = renderer.gl;
+    // Opaque clear to the theme-appropriate color before shader draws
+    const [cr, cg, cb] = parseHexToRGB(cssBg);
+    gl.clearColor(cr, cg, cb, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     const geometry = new Triangle(gl);
 
     const program = new Program(gl, {
@@ -157,7 +198,15 @@ export default function DarkVeil({
       program.uniforms.uWarp.value = warpAmount;
       program.uniforms.uScale.value = patternScale;
       program.uniforms.uBrightness.value = brightness;
+      // Clear each frame to avoid blending with any default BG
+      gl.clear(gl.COLOR_BUFFER_BIT);
       renderer.render({ scene: mesh });
+      if (!signalledRef.current) {
+        signalledRef.current = true;
+        try {
+          window.dispatchEvent(new Event('grh-veil-ready'));
+        } catch {}
+      }
     };
 
     const loop = () => {
@@ -183,6 +232,8 @@ export default function DarkVeil({
       if (frame !== null) cancelAnimationFrame(frame);
       window.removeEventListener('resize', resizeHandler);
     };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, patternScale, brightness]);
-  return <canvas ref={ref} className="w-full h-full block" />;
+  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, patternScale, brightness, baseBgDark, baseBgLight, isLight, opaque]);
+  // Provide an initial CSS background based on theme for the very first paint
+  const initialBg = isLight ? baseBgLight : baseBgDark;
+  return <canvas ref={ref} className="w-full h-full block" style={{ backgroundColor: initialBg }} />;
 }

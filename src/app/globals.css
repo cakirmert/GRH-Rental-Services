@@ -192,3 +192,13 @@ textarea:-webkit-autofill {
     @apply bg-background text-foreground;
   }
 }
+
+/* Pre-hydration dark-mode fallback: if no theme class yet, honor system setting */
+@layer base {
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) body {
+      background-color: oklch(0.145 0 0); /* match --background in .dark */
+      color: oklch(0.985 0 0); /* match --foreground in .dark */
+    }
+  }
+}

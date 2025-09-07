@@ -37,11 +37,45 @@ type Props = { children?: React.ReactNode }
 
 export default function SiteBackground({ children }: Props) {
   const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
+  // Snapshot system preference synchronously for first paint
+  const [prefersDark] = useState(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      try {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+      } catch {
+        return false
+      }
+    }
+    return false
+  })
+  // Use resolvedTheme when available, otherwise fall back to system preference
+  const isDark = resolvedTheme ? resolvedTheme === "dark" : prefersDark
   const reduced = useReducedMotion()
   const isMobile = useIsMobile()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+  // Keep a system-aware fallback only until the veil has had a chance to paint
+  const [showFallback, setShowFallback] = useState(true)
+  const [mountVeil, setMountVeil] = useState(false)
+  useEffect(() => {
+    // Mount veil after main content had a chance to paint
+    let r: number | null = null
+    r = requestAnimationFrame(() => setMountVeil(true))
+    return () => {
+      if (r) cancelAnimationFrame(r)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onReady = () => setShowFallback(false)
+    window.addEventListener('grh-veil-ready', onReady)
+    // Safety: hide fallback after a second even if event didn't fire
+    const t = setTimeout(onReady, 1000)
+    return () => {
+      window.removeEventListener('grh-veil-ready', onReady)
+      clearTimeout(t)
+    }
+  }, [])
 
   const veilProps = useMemo(() => {
     if (isDark) {
@@ -76,7 +110,23 @@ export default function SiteBackground({ children }: Props) {
     <>
       {children}
 
-      {mounted &&
+      {/* Pre-hydration fallback: system-aware background to avoid white flash */}
+      {showFallback && (
+        <>
+          <style
+            // Applies before hydration to set a dark-safe background if the system prefers dark
+            dangerouslySetInnerHTML={{
+              __html: `
+                #grh-bg-fallback{position:fixed;inset:0;pointer-events:none;z-index:-20;background-color:oklch(1 0 0);} 
+                @media (prefers-color-scheme: dark){#grh-bg-fallback{background-color:oklch(0.145 0 0);}}
+              `,
+            }}
+          />
+          <div id="grh-bg-fallback" aria-hidden />
+        </>
+      )}
+
+      {mounted && mountVeil &&
         createPortal(
           <>
             {/* VEIL */}
