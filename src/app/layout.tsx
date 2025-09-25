@@ -6,7 +6,7 @@ import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import PushNotificationManager from "@/components/PushNotificationManager"
 import InstallPrompt from "@/components/InstallPrompt"
-import SiteBackground from "@/components/SiteBackground"
+import { FlickeringGrid } from "@/components/ui/shadcn-io/flickering-grid"
 import { auth } from "../../auth"
 import type { Session } from "next-auth"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -50,7 +50,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body className={`${inter.className} antialiased`}>
         <Providers session={session}>
           <div className="relative flex flex-col min-h-screen tabindex--1">
-            <SiteBackground />
+            <FlickeringGrid
+              className="absolute inset-0 -z-10 h-full w-full pointer-events-none"
+              color="rgb(148, 163, 184)"
+              squareSize={4}
+              gridGap={10}
+              maxOpacity={0.25}
+            />
             <div className="relative z-10 flex flex-col min-h-screen">
             <Header />
             <main role="main" className="flex-grow">
