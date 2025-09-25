@@ -2,11 +2,11 @@
 import { router, protectedProcedure, publicProcedure } from "@/lib/trpcServer"
 import type { Context } from "@/server/context"
 import { z } from "zod"
-import { BookingStatus, Prisma, ItemType, NotificationType, LogType } from "@prisma/client"
+import { BookingStatus, Prisma, ItemType, LogType } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
-import { format, parseISO } from "date-fns" // format for notes
+import { format, parseISO, differenceInCalendarDays } from "date-fns" // format for notes
 import { logAction } from "@/lib/logger"
-import { notificationEmitter } from "@/lib/notifications"
+import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusNotifier"
 
 // Helper (already defined)
 const isRentalTeamMember = (ctx: Context) => {
@@ -14,38 +14,22 @@ const isRentalTeamMember = (ctx: Context) => {
   return role === "RENTAL" || role === "ADMIN"
 }
 
-async function notifyStatusChange(
-  ctx: Context,
-  booking: { id: string; userId: string; assignedToId: string | null; itemTitle: string },
-  status: BookingStatus,
-) {
-  const recipients = Array.from(
-    new Set([booking.userId, booking.assignedToId].filter((id): id is string => Boolean(id))),
-  )
-  if (!recipients.length) return
-  const messageMap: Record<BookingStatus, string> = {
-    REQUESTED: "notifications.status.requested",
-    ACCEPTED: "notifications.status.accepted",
-    DECLINED: "notifications.status.declined",
-    BORROWED: "notifications.status.borrowed",
-    COMPLETED: "notifications.status.completed",
-    CANCELLED: "notifications.status.cancelled",
-  }
-  for (const id of recipients) {
-    const n = await ctx.prisma.notification.create({
-      data: {
-        userId: id,
-        bookingId: booking.id,
-        type: NotificationType.BOOKING_RESPONSE,
-        message: JSON.stringify({
-          key: messageMap[status],
-          vars: { item: booking.itemTitle },
-        }),
-      },
-    })
-    notificationEmitter.emit("new", n)
-  }
+
+type NotificationRecipient = {
+  id: string
+  email?: string | null
+  name?: string | null
 }
+
+const filterRecipients = (
+  recipients: Array<NotificationRecipient | null | undefined>,
+): NotificationRecipient[] =>
+  recipients.filter((recipient): recipient is NotificationRecipient =>
+    Boolean(recipient && recipient.id),
+  )
+
+const DEFAULT_MAX_RANGE_DAYS = 1
+const RENTAL_MAX_RANGE_DAYS = 13
 
 export const bookingsRouter = router({
   list: protectedProcedure
@@ -97,6 +81,18 @@ export const bookingsRouter = router({
       if (startDate < new Date()) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot book a time in the past." })
       }
+
+      const maxRangeDays = isRentalTeamMember(ctx) ? RENTAL_MAX_RANGE_DAYS : DEFAULT_MAX_RANGE_DAYS
+      if (
+        Number.isFinite(maxRangeDays) &&
+        differenceInCalendarDays(endDate, startDate) > maxRangeDays
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Booking range cannot exceed ${maxRangeDays + 1} days.`,
+        })
+      }
+
       const item = await ctx.prisma.item.findUnique({
         where: { id: input.itemId },
         select: { totalQuantity: true },
@@ -158,6 +154,17 @@ export const bookingsRouter = router({
         })
       }
 
+      const maxRangeDays = isRentalTeamMember(ctx) ? RENTAL_MAX_RANGE_DAYS : DEFAULT_MAX_RANGE_DAYS
+      if (
+        Number.isFinite(maxRangeDays) &&
+        differenceInCalendarDays(endDate, startDate) > maxRangeDays
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Booking range cannot exceed ${maxRangeDays + 1} days.`,
+        })
+      }
+
       const booking = await ctx.prisma.booking.findUnique({
         where: { id: input.id },
         select: { userId: true, status: true }, // Select only needed fields
@@ -200,23 +207,49 @@ export const bookingsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const booking = await ctx.prisma.booking.findUnique({
         where: { id: input.id },
-        select: { userId: true, status: true, startDate: true },
+        include: {
+          item: { select: { titleEn: true } },
+          user: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true } },
+        },
       })
       if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
       if (booking.userId !== ctx.session.user.id && !isRentalTeamMember(ctx)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Action not allowed." })
       }
-      // Allow cancellation for requested and accepted bookings
       if (booking.status !== BookingStatus.REQUESTED && booking.status !== BookingStatus.ACCEPTED) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Bookings with status "${booking.status}" cannot be cancelled.`,
         })
       }
+
       const updated = await ctx.prisma.booking.update({
         where: { id: input.id },
         data: { status: BookingStatus.CANCELLED },
+        include: {
+          item: { select: { titleEn: true } },
+          user: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true } },
+        },
       })
+
+      await notifyBookingStatusChange({
+        prisma: ctx.prisma,
+        bookingId: updated.id,
+        status: BookingStatus.CANCELLED,
+        itemTitle: updated.item.titleEn,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        notes: updated.notes,
+        recipients: filterRecipients([
+          { id: updated.userId, email: updated.user.email, name: updated.user.name },
+          updated.assignedTo
+            ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
+            : null,
+        ]),
+      })
+
       await logAction({
         type: LogType.BOOKING,
         userId: ctx.session.user.id,
@@ -392,20 +425,30 @@ export const bookingsRouter = router({
           notes: input.rentalNotes
             ? `${booking.notes ? booking.notes + "\n\n" : ""}Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):\n${input.rentalNotes}`
             : booking.notes,
-          assignedTo: assignedToUpdate, // Update assignedTo if applicable
+          assignedTo: assignedToUpdate,
         },
-        include: { item: { select: { titleEn: true } } },
+        include: {
+          item: { select: { titleEn: true } },
+          user: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true } },
+        },
       })
-      await notifyStatusChange(
-        ctx,
-        {
-          id: updated.id,
-          userId: updated.userId,
-          assignedToId: updated.assignedToId,
-          itemTitle: updated.item.titleEn,
-        },
-        input.newStatus,
-      )
+
+      await notifyBookingStatusChange({
+        prisma: ctx.prisma,
+        bookingId: updated.id,
+        status: input.newStatus,
+        itemTitle: updated.item.titleEn,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        notes: updated.notes,
+        recipients: filterRecipients([
+          { id: updated.userId, email: updated.user.email, name: updated.user.name },
+          updated.assignedTo
+            ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
+            : null,
+        ]),
+      })
       await logAction({
         type: LogType.BOOKING,
         userId: ctx.session.user.id,

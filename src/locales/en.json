@@ -321,7 +321,8 @@
     "itemHandoff": "{itemName} Pickup",
     "return": "Return",
     "purpose": "Purpose",
-    "at": "at"
+    "at": "at",
+    "multiDayAvailabilityNotice": "Detailed availability is not shown for multi-day bookings."
   },
   "timeSelect": {
     "placeholder": "Select Time",
@@ -343,7 +344,8 @@
     "agreeToRules": "I agree to the booking rules",
     "cancel": "Cancel",
     "confirmBooking": "Confirm Booking",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "ruleNoGuarantee": "Bookings are provided on a best-effort basis; schedules may change and we may cancel or adjust a booking without legal liability."
   },
   "bookingSuccess": {
     "title": "Booking Submitted",
@@ -382,7 +384,8 @@
     "maxBookingDuration": "Booking duration cannot exceed {hours} hours. (Max 2 days overall)",
     "chatClosed": "Chat is closed.",
     "chatRateLimit": "Too many messages. Please slow down.",
-    "chatWait": "Please wait for a response."
+    "chatWait": "Please wait for a response.",
+    "rangeTooLong": "Booking range cannot exceed {days} days."
   },
   "contact": {
     "formTitle": "Contact Form",
@@ -519,7 +522,9 @@
     "storageTitle": "How long is data kept?",
     "storageDesc": "All bookings are deleted six months after they end. If you don't sign in for a year, your account and email are removed automatically.",
     "contactTitle": "Who is responsible?",
-    "contactDesc": "Student Self Administration (SV), Gustav‑Radbruch Haus, Borgfelderstr. 16, 20537 Hamburg. Email: sv@grh-hamburg.de"
+    "contactDesc": "Student Self Administration (SV), Gustav‑Radbruch Haus, Borgfelderstr. 16, 20537 Hamburg. Email: sv@grh-hamburg.de",
+    "disclaimerTitle": "Disclaimer",
+    "disclaimerDesc": "We coordinate bookings as a student service. Unexpected conflicts or technical issues may require us to reschedule or cancel a reservation. There is no legal entitlement to a confirmed booking."
   },
   "imprint": {
     "title": "Imprint",
@@ -651,7 +656,7 @@
   "notAuthorized": {
     "adminTitle": "Admin Access Required",
     "adminMessage": "You need administrator privileges to access this section.",
-    "rentalTitle": "Rental Team Access Required", 
+    "rentalTitle": "Rental Team Access Required",
     "rentalMessage": "You need to be part of the rental team to access this section.",
     "contactAdmin": "Contact an administrator if you believe this is an error."
   },

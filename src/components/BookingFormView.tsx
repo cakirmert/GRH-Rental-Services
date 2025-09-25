@@ -72,32 +72,38 @@ interface BookingFormViewProps {
 }
 
 /* ---------- zod schema ---------- */
-const bookingFormSchema = z.object({
+const baseBookingFormSchema = z.object({
   dateRange: z
     .object({
       from: z.date(),
       to: z.date().optional(),
     })
-    .refine(
-      (data) => {
-        // Custom validation for max 2-day range
-        if (data && data.from && data.to) {
-          return differenceInCalendarDays(data.to, data.from) <= 1
-        }
-        return true // Allow if 'to' is not set (single day) or if dateRange is undefined
-      },
-      {
-        message: "Booking range cannot exceed 2 days.", // This message can be localized
-        path: ["to"], // Associate error with the 'to' date if range is too long
-      },
-    )
     .optional(),
   startTime: z.string().min(1, { message: "Start time is required." }),
   endTime: z.string().min(1, { message: "End time is required." }),
   quantity: z.number().min(1),
   notes: z.string().optional(),
 })
-type BookingFormValues = z.infer<typeof bookingFormSchema>
+type BookingFormValues = z.infer<typeof baseBookingFormSchema>
+
+const createBookingFormSchema = (maxRangeDays: number, errorMessage: string) =>
+  baseBookingFormSchema.superRefine((data, ctx) => {
+    if (
+      Number.isFinite(maxRangeDays) &&
+      data.dateRange?.from &&
+      data.dateRange?.to &&
+      differenceInCalendarDays(data.dateRange.to, data.dateRange.from) > maxRangeDays
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: errorMessage,
+        path: ["to"],
+      })
+    }
+  })
+
+const DEFAULT_MAX_RANGE_DAYS = 1
+const RENTAL_MAX_RANGE_DAYS = 13
 
 // Global state for image positions to persist across component unmounts
 const globalImageState = new Map<string, number>()
@@ -242,7 +248,26 @@ function setStoredFormData(itemId: string, formData: Partial<BookingFormValues>)
 /* =================================================================== */
 function BookingFormView(props: BookingFormViewProps) {
   const { t } = useI18n()
-  const { item, authStatus, currentLocale, onBookingSuccess } = props
+  const { item, session, authStatus, currentLocale, onBookingSuccess } = props
+
+  const userRole = session?.user?.role
+  const isRentalMember = userRole === "RENTAL" || userRole === "ADMIN"
+  const maxSelectableRangeDays = isRentalMember ? RENTAL_MAX_RANGE_DAYS : DEFAULT_MAX_RANGE_DAYS
+
+  const rangeErrorMessage = useMemo(() => {
+    if (!Number.isFinite(maxSelectableRangeDays)) return ""
+    return t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 })
+  }, [maxSelectableRangeDays, t])
+
+  const bookingSchema = useMemo(() => {
+    if (!Number.isFinite(maxSelectableRangeDays)) {
+      return baseBookingFormSchema
+    }
+    const message = rangeErrorMessage || t("errors.checkForm")
+    return createBookingFormSchema(maxSelectableRangeDays, message)
+  }, [maxSelectableRangeDays, rangeErrorMessage, t])
+
+  const formResolver = useMemo(() => zodResolver(bookingSchema), [bookingSchema])
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
@@ -258,7 +283,7 @@ function BookingFormView(props: BookingFormViewProps) {
   }, [mounted, item.id, authStatus]) // Re-run if any of these change
 
   const form = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingFormSchema),
+    resolver: formResolver,
     defaultValues: getDefaultFormValues(item.id),
     // mode: "onChange", // Consider if you want validation on every change for dateRange
   })
@@ -439,8 +464,10 @@ function BookingFormView(props: BookingFormViewProps) {
     }
     if (selectedFromDate && !modifiers.selected) {
       // If a 'from' date is selected and we are evaluating other dates
-      // Disable days that are more than 1 day after the selected 'from' date
-      if (differenceInCalendarDays(day, selectedFromDate) > 1) {
+      if (
+        Number.isFinite(maxSelectableRangeDays) &&
+        differenceInCalendarDays(day, selectedFromDate) > maxSelectableRangeDays
+      ) {
         return true
       }
     }
@@ -515,6 +542,14 @@ function BookingFormView(props: BookingFormViewProps) {
       const startDT = combineDateTime(dateRange.from, startTime)
       const effEndDate = dateRange.to || dateRange.from
       const endDT = combineDateTime(effEndDate, endTime)
+      const rangeDifference = differenceInCalendarDays(effEndDate, dateRange.from)
+      if (
+        Number.isFinite(maxSelectableRangeDays) &&
+        rangeDifference > maxSelectableRangeDays
+      ) {
+        setFormError(rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }))
+        return false
+      }
       const now = new Date()
       if (isToday(dateRange.from)) {
         const limit = new Date()
@@ -610,6 +645,14 @@ function BookingFormView(props: BookingFormViewProps) {
       const startDT = combineDateTime(dateRange.from, startTime)
       const effEndDate = dateRange.to || dateRange.from
       const endDT = combineDateTime(effEndDate, endTime)
+      const rangeDifference = differenceInCalendarDays(effEndDate, dateRange.from)
+      if (
+        Number.isFinite(maxSelectableRangeDays) &&
+        rangeDifference > maxSelectableRangeDays
+      ) {
+        setFormError(rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }))
+        return null
+      }
 
       if (
         format(startDT, "yyyy-MM-dd") === format(endDT, "yyyy-MM-dd") &&
@@ -661,6 +704,8 @@ function BookingFormView(props: BookingFormViewProps) {
     t,
     formHookErrors.dateRange?.to?.message,
     combineDateTime,
+    maxSelectableRangeDays,
+    rangeErrorMessage,
   ])
   const SELECTED_ITEM_KEY = "grh-selected-item-id"
 
@@ -965,8 +1010,13 @@ function BookingFormView(props: BookingFormViewProps) {
                                 const from = currentSelectedRange.from
                                 let to = currentSelectedRange.to
 
-                                if (from && to && differenceInCalendarDays(to, from) > 1) {
-                                  to = addDays(from, 1) // Cap 'to' to be one day after 'from'
+                                if (
+                                  from &&
+                                  to &&
+                                  Number.isFinite(maxSelectableRangeDays) &&
+                                  differenceInCalendarDays(to, from) > maxSelectableRangeDays
+                                ) {
+                                  to = addDays(from, maxSelectableRangeDays) // Cap range to allowed window
                                 }
                                 newRHFValue = { from, to }
                               } else {
@@ -998,7 +1048,7 @@ function BookingFormView(props: BookingFormViewProps) {
                     label={t("bookingForm.startTimeLabel")}
                     placeholder={t("timeSelect.placeholder")}
                     disabled={!dateRange?.from}
-                    otherSelectedTime={endTime}
+                    otherSelectedTime={isSingleDayForTimeSelect ? endTime : null}
                     isEndTimeSelector={false}
                     shouldFilterTimes={isSingleDayForTimeSelect}
                   />
@@ -1008,18 +1058,24 @@ function BookingFormView(props: BookingFormViewProps) {
                     label={t("bookingForm.endTimeLabel")}
                     placeholder={t("timeSelect.placeholder")}
                     disabled={!dateRange?.from}
-                    otherSelectedTime={startTime}
+                    otherSelectedTime={isSingleDayForTimeSelect ? startTime : null}
                     isEndTimeSelector={true}
                     shouldFilterTimes={isSingleDayForTimeSelect}
                   />
                 </div>
                 {dateRange?.from && item?.id ? (
-                  <InteractiveTimeRangePicker
-                    control={control}
-                    itemId={item.id}
-                    dateRange={dateRange}
-                    totalQuantity={item.totalQuantity ?? 1}
-                  />
+                  isSingleDayForTimeSelect ? (
+                    <InteractiveTimeRangePicker
+                      control={control}
+                      itemId={item.id}
+                      dateRange={dateRange}
+                      totalQuantity={item.totalQuantity ?? 1}
+                    />
+                  ) : (
+                    <div className="h-12 flex items-center justify-center bg-muted rounded text-xs text-muted-foreground">
+                      {t("bookingForm.multiDayAvailabilityNotice")}
+                    </div>
+                  )
                 ) : (
                   <div className="h-12 flex items-center justify-center bg-muted rounded text-xs text-muted-foreground">
                     {t("bookingForm.selectDateToSeeAvailability")}

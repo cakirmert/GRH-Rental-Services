@@ -1,8 +1,14 @@
-import { describe, it, expect } from "vitest"
+﻿import { describe, it, expect, beforeEach } from "vitest"
 import { vi } from "vitest"
 import { BookingStatus } from "@prisma/client"
 import type { Context } from "@/server/context"
 import type { Request } from "express"
+
+const notifyMock = vi.fn()
+
+vi.mock("@/server/notifications/bookingStatusNotifier", () => ({
+  notifyBookingStatusChange: notifyMock,
+}))
 
 const prisma = {
   booking: {
@@ -15,14 +21,23 @@ const prisma = {
 
 vi.mock("@/lib/prismadb", () => ({ __esModule: true, default: prisma }))
 
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
 async function createCaller() {
   const { bookingsRouter } = await import("../bookings")
   const booking = {
     id: "b1",
     userId: "user1",
     assignedToId: null,
-    notes: null,
+    notes: "",
+    status: BookingStatus.REQUESTED,
+    startDate: new Date("2024-01-01T10:00:00Z"),
+    endDate: new Date("2024-01-01T12:00:00Z"),
     item: { titleEn: "Item" },
+    user: { id: "user1", email: "user@example.com", name: "User" },
+    assignedTo: null,
   }
   prisma.booking.findUnique.mockResolvedValue(booking)
   prisma.booking.update.mockResolvedValue(booking)
@@ -35,12 +50,13 @@ async function createCaller() {
     req: new Request("http://localhost:3000/test"),
   }
   const caller = bookingsRouter.createCaller(ctx)
-  return { caller, prisma }
+  return { caller }
 }
+
 describe("notifications on status update", () => {
-  it("creates notification when user updates own booking", async () => {
-    const { caller, prisma } = await createCaller()
+  it("triggers booking status notifier", async () => {
+    const { caller } = await createCaller()
     await caller.updateBookingStatusByTeam({ bookingId: "b1", newStatus: BookingStatus.ACCEPTED })
-    expect(prisma.notification.create).toHaveBeenCalled()
+    expect(notifyMock).toHaveBeenCalled()
   })
 })

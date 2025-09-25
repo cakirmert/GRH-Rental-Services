@@ -143,7 +143,34 @@ export default function HomePage() {
   const [chatBookingId, setChatBookingId] = useState<string | null>(null)
   const [chatItemTitle, setChatItemTitle] = useState<string | null>(null)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatSuppressed, setChatSuppressed] = useState(false)
   const mainContentRef = useRef<HTMLDivElement>(null)
+
+  const openChatWindow = useCallback(
+    (bookingId: string, itemTitle?: string | null, options?: { force?: boolean }) => {
+      const force = options?.force ?? false
+      if (chatSuppressed && !force) {
+        return
+      }
+      setChatSuppressed(false)
+      setChatBookingId(bookingId)
+      setChatItemTitle(itemTitle ?? null)
+      setIsChatOpen(true)
+    },
+    [chatSuppressed, setChatBookingId, setChatItemTitle, setIsChatOpen, setChatSuppressed],
+  )
+
+  const handleChatOpenChange = useCallback(
+    (open: boolean) => {
+      setIsChatOpen(open)
+      if (!open) {
+        setChatSuppressed(true)
+      } else {
+        setChatSuppressed(false)
+      }
+    },
+    [setIsChatOpen, setChatSuppressed],
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -329,12 +356,10 @@ export default function HomePage() {
   useEffect(() => {
     const openChatBookingId = localStorage.getItem("grh-open-chat-booking-id")
     if (openChatBookingId && session?.user) {
-      setChatBookingId(openChatBookingId)
-      setChatItemTitle(null) // We'll update this when we have booking data
-      setIsChatOpen(true)
+      openChatWindow(openChatBookingId, null, { force: true })
       localStorage.removeItem("grh-open-chat-booking-id")
     }
-  }, [session])
+  }, [session, openChatWindow])
 
   // Listen for custom events to open the chat dialog
   useEffect(() => {
@@ -342,13 +367,11 @@ export default function HomePage() {
       const { bookingId, itemTitle } = (
         event as CustomEvent<{ bookingId: string; itemTitle?: string }>
       ).detail
-      setChatBookingId(bookingId)
-      setChatItemTitle(itemTitle ?? null)
-      setIsChatOpen(true)
+      openChatWindow(bookingId, itemTitle ?? null, { force: true })
     }
     window.addEventListener("grh-open-chat", handler)
     return () => window.removeEventListener("grh-open-chat", handler)
-  }, [])
+  }, [openChatWindow])
   // Handle navigation from service worker messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -357,9 +380,7 @@ export default function HomePage() {
         if (bookingId) {
           if (notificationType === "chat") {
             localStorage.setItem("grh-open-chat-booking-id", bookingId)
-            setChatBookingId(bookingId)
-            setChatItemTitle(null)
-            setIsChatOpen(true)
+            openChatWindow(bookingId, null, { force: true })
           } else {
             localStorage.setItem("grh-highlight-booking-id", bookingId)
             setView(View.MY_BOOKINGS)
@@ -372,7 +393,7 @@ export default function HomePage() {
     return () => {
       navigator.serviceWorker?.removeEventListener("message", handleMessage)
     }
-  }, [setView])
+  }, [setView, openChatWindow])
 
   // Handle URL parameters for navigation (when app is opened from native notifications)
   useEffect(() => {
@@ -383,9 +404,7 @@ export default function HomePage() {
     const highlightBookingId = urlParams.get("highlight")
 
     if (chatBookingId) {
-      setChatBookingId(chatBookingId)
-      setChatItemTitle(null)
-      setIsChatOpen(true)
+      openChatWindow(chatBookingId, null, { force: true })
       // Clean up URL without triggering a page reload
       window.history.replaceState({}, "", "/")
     } else if (highlightBookingId) {
@@ -394,7 +413,7 @@ export default function HomePage() {
       // Clean up URL without triggering a page reload
       window.history.replaceState({}, "", "/")
     }
-  }, [session, setView])
+  }, [session, setView, openChatWindow])
 
   const ListView = useMemo(
     () => (
@@ -545,7 +564,7 @@ export default function HomePage() {
       <div ref={mainContentRef}>{currentViewComponent}</div>
       <ChatDialog
         open={isChatOpen}
-        onOpenChange={setIsChatOpen}
+        onOpenChange={handleChatOpenChange}
         bookingId={chatBookingId}
         itemTitle={chatItemTitle}
       />

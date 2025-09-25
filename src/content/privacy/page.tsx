@@ -13,6 +13,8 @@ export default function PrivacyPage() {
       <p>{t("privacy.collectionDesc")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.storageTitle")}</h2>
       <p>{t("privacy.storageDesc")}</p>
+      <h2 className="text-2xl font-semibold">{t("privacy.disclaimerTitle")}</h2>
+      <p>{t("privacy.disclaimerDesc")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.contactTitle")}</h2>
       <p>{t("privacy.contactDesc")}</p>
     </Container>

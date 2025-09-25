@@ -54,6 +54,7 @@ export function BookingRulesDialog({
               <li>{t("bookingRulesDialog.ruleReport")}</li>
               <li>{t("bookingRulesDialog.ruleClean")}</li>
               <li>{t("bookingRulesDialog.ruleRespect")}</li>
+              <li>{t("bookingRulesDialog.ruleNoGuarantee")}</li>
             </ul>
           </div>
           <div className="space-y-2">

@@ -237,13 +237,13 @@
     "passkeyLoginInfo": "Passkey-Anmeldung ist erst nach Bestätigung deiner E-Mail und Hinzufügen eines Passkeys möglich"
   },
   "profile": {
-    "setNameTitle": "Willkommen! Wie hei\u00dft du?",
+    "setNameTitle": "Willkommen! Wie heißt du?",
     "setNameDescription": "Bitte nenne uns deinen Namen, um fortzufahren.",
     "saveButton": "Speichern",
-    "deleteButton": "Konto l\u00f6schen",
-    "confirmDeleteTitle": "Konto l\u00f6schen?",
+    "deleteButton": "Konto löschen",
+    "confirmDeleteTitle": "Konto löschen?",
     "confirmDeleteDescription": "Dein Konto und alle Buchungen werden dauerhaft entfernt.",
-    "confirmDeleteAction": "Konto l\u00f6schen",
+    "confirmDeleteAction": "Konto löschen",
     "accountSettings": "Kontoeinstellungen",
     "manageAccountDescription": "Verwalte deine persönlichen Informationen und Sicherheitseinstellungen.",
     "profileTab": "Profil",
@@ -320,7 +320,8 @@
     "itemHandoff": "{itemName} Abholung",
     "return": "Rückgabe",
     "purpose": "Zweck",
-    "at": "um"
+    "at": "um",
+    "multiDayAvailabilityNotice": "Die detaillierte Verf?gbarkeit wird bei mehrt?gigen Buchungen nicht angezeigt."
   },
   "timeSelect": {
     "placeholder": "Uhrzeit wählen",
@@ -342,7 +343,8 @@
     "agreeToRules": "Ich akzeptiere die Buchungsregeln",
     "cancel": "Abbrechen",
     "confirmBooking": "Buchung bestätigen",
-    "submitting": "Übermittle..."
+    "submitting": "Übermittle...",
+    "ruleNoGuarantee": "Die Buchung erfolgt nach bestem Bem?hen; bei Konflikten oder technischen Problemen k?nnen Termine verschoben oder abgesagt werden, ohne dass ein Rechtsanspruch besteht."
   },
   "bookingSuccess": {
     "title": "Buchung übermittelt",
@@ -381,7 +383,8 @@
     "maxBookingDuration": "Die Buchungsdauer darf {hours} Stunden nicht überschreiten. (Maximal 2 Tage gesamt)",
     "chatClosed": "Chat ist geschlossen.",
     "chatRateLimit": "Zu viele Nachrichten. Bitte langsamer.",
-    "chatWait": "Bitte warte auf eine Antwort."
+    "chatWait": "Bitte warte auf eine Antwort.",
+    "rangeTooLong": "Buchungen d?rfen h?chstens {days} Tage umfassen."
   },
   "contact": {
     "formTitle": "Kontaktformular",
@@ -517,7 +520,9 @@
     "storageTitle": "Wie lange werden Daten gespeichert?",
     "storageDesc": "Alle Buchungen werden sechs Monate nach Ende gelöscht. Wenn du dich ein Jahr lang nicht anmeldest, werden dein Konto und deine E-Mail automatisch entfernt.",
     "contactTitle": "Verantwortlich",
-    "contactDesc": "Studentische Selbstverwaltung (SV), Gustav‑Radbruch Haus, Borgfelderstr. 16, 20537 Hamburg. E-Mail: sv@grh-hamburg.de"
+    "contactDesc": "Studentische Selbstverwaltung (SV), Gustav‑Radbruch Haus, Borgfelderstr. 16, 20537 Hamburg. E-Mail: sv@grh-hamburg.de",
+    "disclaimerTitle": "Haftungsausschluss",
+    "disclaimerDesc": "Wir organisieren die Buchungen als studentischer Service. Unerwartete Konflikte oder technische Probleme k?nnen dazu f?hren, dass Reservierungen verschoben oder storniert werden. Ein rechtlicher Anspruch auf die Buchung besteht nicht."
   },
   "imprint": {
     "title": "Impressum",
@@ -541,10 +546,10 @@
     "subscribe": "Push-Benachrichtigungen aktivieren",
     "unsubscribe": "Push-Benachrichtigungen deaktivieren",
     "unsupported": "Push-Benachrichtigungen werden nicht unterstützt",
-    "newChat": "Neue Chat-Nachricht f\u00fcr {item}",
+    "newChat": "Neue Chat-Nachricht für {item}",
     "newChatMessage": "{sender}: {message}",
-    "autoBorrowed": "Buchung f\u00fcr {item} wurde automatisch als ausgeliehen markiert",
-    "autoCancelled": "Buchung f\u00fcr {item} wurde automatisch storniert",
+    "autoBorrowed": "Buchung für {item} wurde automatisch als ausgeliehen markiert",
+    "autoCancelled": "Buchung für {item} wurde automatisch storniert",
     "enable": "Aktivieren",
     "disable": "Deaktivieren",
     "enabled": "Benachrichtigungen aktiviert",
@@ -559,12 +564,12 @@
     "subscriptionFailed": "Aktivierung der Benachrichtigungen fehlgeschlagen. Bitte versuche es erneut.",
     "unsubscriptionFailed": "Deaktivierung der Benachrichtigungen fehlgeschlagen. Bitte versuche es erneut.",
     "status": {
-      "requested": "Buchung f\u00fcr {item} wurde angefragt",
-      "accepted": "Buchung f\u00fcr {item} wurde akzeptiert",
-      "declined": "Buchung f\u00fcr {item} wurde abgelehnt",
-      "borrowed": "Buchung f\u00fcr {item} wurde als ausgeliehen markiert",
-      "completed": "Buchung f\u00fcr {item} wurde abgeschlossen",
-      "cancelled": "Buchung f\u00fcr {item} wurde storniert"
+      "requested": "Buchung für {item} wurde angefragt",
+      "accepted": "Buchung für {item} wurde akzeptiert",
+      "declined": "Buchung für {item} wurde abgelehnt",
+      "borrowed": "Buchung für {item} wurde als ausgeliehen markiert",
+      "completed": "Buchung für {item} wurde abgeschlossen",
+      "cancelled": "Buchung für {item} wurde storniert"
     }
   },
   "install": {
