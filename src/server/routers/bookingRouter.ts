@@ -295,6 +295,52 @@ export const bookingsRouter = router({
       return { bookings, nextCursor }
     }),
 
+  addRentalNote: protectedProcedure
+    .input(
+      z.object({
+        bookingId: z.string(),
+        note: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!isRentalTeamMember(ctx)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." })
+      }
+
+      const trimmedNote = input.note.trim()
+      if (!trimmedNote) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Note cannot be empty." })
+      }
+
+      const booking = await ctx.prisma.booking.findUnique({
+        where: { id: input.bookingId },
+        select: { id: true, notes: true },
+      })
+      if (!booking) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+      }
+
+      const noteEntry = [
+        `Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):`,
+        trimmedNote,
+      ].join("\n")
+      const updatedNotes = booking.notes ? [booking.notes, noteEntry].join("\n\n") : noteEntry
+
+      const updated = await ctx.prisma.booking.update({
+        where: { id: input.bookingId },
+        data: { notes: updatedNotes },
+      })
+
+      await logAction({
+        type: LogType.BOOKING,
+        userId: ctx.session.user.id,
+        bookingId: updated.id,
+        message: "notes:added",
+      })
+
+      return updated
+    }),
+
   // updateBookingStatusByTeam - (already good, minor type safety)
   updateBookingStatusByTeam: protectedProcedure
     .input(

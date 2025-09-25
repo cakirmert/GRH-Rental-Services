@@ -607,7 +607,19 @@
     "statusUpdateSuccessTitle": "Buchungsstatus aktualisiert",
     "statusUpdateSuccessDesc": "Buchung {bookingId} wurde auf {status} aktualisiert.",
     "to": "bis",
-    "chatWithUser": "Chat mit {name}"
+    "chatWithUser": "Chat mit {name}",
+    "latestNoteLabel": "Neueste Notiz",
+    "notesButton": "Notizen ansehen/hinzufuegen",
+    "notesDialogTitle": "Buchungsnotizen",
+    "notesDialogDescription": "Teilen Sie interne Hinweise mit Ihrem Vermietungsteam.",
+    "notesForBooking": "Buchung",
+    "existingNotes": "Vorhandene Notizen",
+    "noNotes": "Noch keine Notizen.",
+    "addNoteLabel": "Notiz hinzufuegen",
+    "addNotePlaceholder": "Schreiben Sie Details, die sich das Vermietungsteam merken sollte...",
+    "addNoteSubmit": "Notiz speichern",
+    "addNoteSuccessTitle": "Notiz hinzugefuegt",
+    "addNoteSuccessDesc": "Notiz fuer Buchung {bookingId} gespeichert."
   },
   "helpPage": {
     "rentalTitle": "Einstieg ins Vermietungs-Dashboard",

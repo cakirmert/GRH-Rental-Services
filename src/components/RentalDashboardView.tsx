@@ -19,6 +19,7 @@ import {
   Package2,
   Edit3,
   MessageSquare,
+  StickyNote,
   Mail,
   Clock,
   Loader2,
@@ -95,6 +96,22 @@ const statusUiStyles: Record<BookingStatus, { colors: string; icon: React.Elemen
   },
 }
 
+const splitNoteEntries = (notes?: string | null) => {
+  if (!notes) return []
+  return notes
+    .split(/\r?\n\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+const getLatestNotePreview = (notes?: string | null) => {
+  const entries = splitNoteEntries(notes)
+  if (!entries.length) return null
+  const latest = entries[entries.length - 1]
+  const normalized = latest.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
+  return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized
+}
+
 export default function RentalDashboardView({ onGoBack }: RentalDashboardViewProps) {
   const { t, locale: i18nLocale } = useI18n()
   const { data: session } = useSession()
@@ -114,6 +131,8 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const [actionToConfirm, setActionToConfirm] = useState<BookingStatus | null>(null)
   const [rentalNotes, setRentalNotes] = useState("")
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list")
+  const [noteDialogBooking, setNoteDialogBooking] = useState<BookingForRentalTeam | null>(null)
+  const [noteEditorValue, setNoteEditorValue] = useState("")
 
   const queryInput = useMemo(
     () => ({
@@ -183,6 +202,32 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     },
   })
 
+  const addNoteMutation = trpc.bookings.addRentalNote.useMutation({
+    onSuccess: (updatedBooking) => {
+      toast({
+        title: t("rentalDashboard.addNoteSuccessTitle", {
+          defaultValue: "Note Added",
+        }),
+        description: t("rentalDashboard.addNoteSuccessDesc", {
+          defaultValue: "Saved note for booking {bookingId}.",
+          bookingId: updatedBooking.id.substring(0, 8),
+        }),
+      })
+      setNoteEditorValue("")
+      setNoteDialogBooking((prev) =>
+        prev ? { ...prev, notes: updatedBooking.notes ?? null } : prev,
+      )
+      trpcUtils.bookings.listForRentalTeam.invalidate(queryInput)
+    },
+    onError: (err) => {
+      toast({
+        title: t("errors.title"),
+        description: err.message || t("errors.unexpected"),
+        variant: "destructive",
+      })
+    },
+  })
+
   // Check if user has rental team access (RENTAL or ADMIN role)
   const isRentalTeamMember = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
   
@@ -195,6 +240,29 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     // Renamed to avoid conflict
     return dateInput instanceof Date ? dateInput : parseISO(dateInput)
   }
+
+  const openNotesDialog = (booking: BookingForRentalTeam) => {
+    setNoteDialogBooking({ ...booking })
+    setNoteEditorValue("")
+  }
+
+  const closeNotesDialog = () => {
+    setNoteDialogBooking(null)
+    setNoteEditorValue("")
+    addNoteMutation.reset()
+  }
+
+  const handleNoteSubmit = () => {
+    if (!noteDialogBooking) return
+    const trimmed = noteEditorValue.trim()
+    if (!trimmed) return
+    addNoteMutation.mutate({
+      bookingId: noteDialogBooking.id,
+      note: trimmed,
+    })
+  }
+
+  const noteEntries = noteDialogBooking ? splitNoteEntries(noteDialogBooking.notes) : []
 
   const handleActionClick = (booking: BookingForRentalTeam, newStatus: BookingStatus) => {
     setSelectedBookingForAction(booking)
@@ -463,6 +531,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                   statusUiStyles[booking.status] || statusUiStyles[BookingStatus.REQUESTED]
                 const borderColorClass = bookingStatusStyle.colors.split(" ")[0]
                 const headerBgClass = `${borderColorClass} bg-muted/20 dark:bg-muted/40`
+                const latestNotePreview = getLatestNotePreview(booking.notes)
 
                 return (
                   <Card
@@ -504,6 +573,16 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                               </span>
                             </div>
                           )}
+                        {latestNotePreview && (
+                          <div className="mt-3 rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-xs text-muted-foreground">
+                            <div className="font-medium text-card-foreground">
+                              {t("rentalDashboard.latestNoteLabel", { defaultValue: "Latest note" })}
+                            </div>
+                            <p className="mt-1 leading-relaxed">
+                              {latestNotePreview}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1.5">
                         <div className="flex items-center text-muted-foreground">
@@ -539,28 +618,39 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                         )}{" "}
                       </div>
                       <div className="md:text-right print:hidden">
-                        {/* Chat Button - Takes available space */}
-                        <Button
-                          size="default"
-                          variant="default"
-                          className="w-full booking-chat-btn"
-                          onClick={() => {
-                            localStorage.setItem("grh-open-chat-booking-id", booking.id)
-                            window.dispatchEvent(
-                              new CustomEvent("grh-open-chat", {
-                                detail: { bookingId: booking.id },
-                              }),
-                            )
-                          }}
-                        >
-                          <MessageSquare className="mr-1.5 h-4 w-4" />
-                          {t("rentalDashboard.chatWithUser", {
-                            defaultValue: `Chat with ${(booking.user?.name || booking.user?.email || "User").split(" ")[0]}`,
-                            name: booking.user?.name || booking.user?.email || "User",
-                          })}
-                        </Button>
+                        <div className="flex w-full flex-col gap-2">
+                          <Button
+                            size="default"
+                            variant="default"
+                            className="w-full booking-chat-btn"
+                            onClick={() => {
+                              localStorage.setItem("grh-open-chat-booking-id", booking.id)
+                              window.dispatchEvent(
+                                new CustomEvent("grh-open-chat", {
+                                  detail: { bookingId: booking.id },
+                                }),
+                              )
+                            }}
+                          >
+                            <MessageSquare className="mr-1.5 h-4 w-4" />
+                            {t("rentalDashboard.chatWithUser", {
+                              defaultValue: `Chat with ${(booking.user?.name || booking.user?.email || "User").split(" ")[0]}`,
+                              name: booking.user?.name || booking.user?.email || "User",
+                            })}
+                          </Button>
+                          <Button
+                            size="default"
+                            variant="outline"
+                            className="w-full booking-notes-btn"
+                            onClick={() => openNotesDialog(booking)}
+                          >
+                            <StickyNote className="mr-1.5 h-4 w-4" />
+                            {t("rentalDashboard.notesButton", { defaultValue: "View/Add Notes" })}
+                          </Button>
+                        </div>
                         <div className="flex mt-2 gap-2 w-full">{renderActionButtons(booking)}</div>
                       </div>
+
                     </CardContent>
                   </Card>
                 )
@@ -588,6 +678,93 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
           </Button>
         </div>
       )}
+
+      <Dialog open={Boolean(noteDialogBooking)} onOpenChange={(open) => {
+        if (!open) {
+          closeNotesDialog()
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {t("rentalDashboard.notesDialogTitle", { defaultValue: "Booking Notes" })}
+            </DialogTitle>
+            <DialogDescription>
+              {t("rentalDashboard.notesDialogDescription", {
+                defaultValue: "Share internal updates with your rental team.",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {noteDialogBooking && (
+              <div>
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t("rentalDashboard.notesForBooking", { defaultValue: "Booking" })}
+                </Label>
+                <div className="mt-1 text-sm font-semibold text-card-foreground">
+                  {getItemTitle(noteDialogBooking.item)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  #{noteDialogBooking.id.substring(0, 8)}
+                </div>
+              </div>
+            )}
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("rentalDashboard.existingNotes", { defaultValue: "Existing notes" })}
+              </Label>
+              {noteEntries.length ? (
+                <div className="mt-2 space-y-3 max-h-64 overflow-y-auto pr-1">
+                  {noteEntries.map((entry, index) => (
+                    <div
+                      key={`${noteDialogBooking?.id ?? "note"}-${index}`}
+                      className="rounded-md border border-dashed border-muted-foreground/40 bg-muted/40 p-3 text-sm whitespace-pre-wrap leading-relaxed"
+                    >
+                      {entry}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t("rentalDashboard.noNotes", { defaultValue: "No notes yet." })}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rental-add-note" className="text-xs font-medium text-muted-foreground">
+                {t("rentalDashboard.addNoteLabel", { defaultValue: "Add a note" })}
+              </Label>
+              <Textarea
+                id="rental-add-note"
+                value={noteEditorValue}
+                onChange={(event) => setNoteEditorValue(event.target.value)}
+                placeholder={t("rentalDashboard.addNotePlaceholder", {
+                  defaultValue: "Write details the rental team should remember...",
+                })}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                variant="outline"
+                onClick={closeNotesDialog}
+                disabled={addNoteMutation.isPending}
+              >
+                {t("common.cancel")}
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleNoteSubmit}
+              disabled={addNoteMutation.isPending || !noteEditorValue.trim()}
+            >
+              {addNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("rentalDashboard.addNoteSubmit", { defaultValue: "Save Note" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showActionModal} onOpenChange={setShowActionModal}>
         <DialogContent className="sm:max-w-md">

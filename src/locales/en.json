@@ -609,7 +609,19 @@
     "statusUpdateSuccessTitle": "Booking Status Updated",
     "statusUpdateSuccessDesc": "Booking {bookingId} has been updated to {status}.",
     "to": "to",
-    "chatWithUser": "Chat with {name}"
+    "chatWithUser": "Chat with {name}",
+    "latestNoteLabel": "Latest note",
+    "notesButton": "View/Add Notes",
+    "notesDialogTitle": "Booking Notes",
+    "notesDialogDescription": "Share internal updates with your rental team.",
+    "notesForBooking": "Booking",
+    "existingNotes": "Existing notes",
+    "noNotes": "No notes yet.",
+    "addNoteLabel": "Add a note",
+    "addNotePlaceholder": "Write details the rental team should remember...",
+    "addNoteSubmit": "Save Note",
+    "addNoteSuccessTitle": "Note Added",
+    "addNoteSuccessDesc": "Saved note for booking {bookingId}."
   },
   "helpPage": {
     "rentalTitle": "Getting Started with the Rental Dashboard",
