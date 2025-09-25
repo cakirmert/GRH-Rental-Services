@@ -47,7 +47,7 @@ export async function cancelExpiredBookings() {
       updated.assignedTo
         ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
         : null,
-    ].filter((recipient): recipient is { id: string; email?: string | null; name?: string | null } =>
+    ].filter((recipient): recipient is { id: string; email: string; name: string | null } =>
       Boolean(recipient && recipient.id),
     )
 
