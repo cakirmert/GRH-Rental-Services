@@ -321,7 +321,7 @@
     "return": "Rückgabe",
     "purpose": "Zweck",
     "at": "um",
-    "multiDayAvailabilityNotice": "Die detaillierte Verf?gbarkeit wird bei mehrt?gigen Buchungen nicht angezeigt."
+    "multiDayAvailabilityNotice": "Die detaillierte Verfügbarkeit wird nur für Buchungen bis zu 2 Tagen angezeigt."
   },
   "timeSelect": {
     "placeholder": "Uhrzeit wählen",
@@ -624,7 +624,9 @@
     "addNotePlaceholder": "Schreiben Sie Details, die sich das Vermietungsteam merken sollte...",
     "addNoteSubmit": "Notiz speichern",
     "addNoteSuccessTitle": "Notiz hinzugefuegt",
-    "addNoteSuccessDesc": "Notiz fuer Buchung {bookingId} gespeichert."
+    "addNoteSuccessDesc": "Notiz fuer Buchung {bookingId} gespeichert.",
+    "declineNoteReminderTitle": "Bitte Notiz zur Ablehnung hinzufügen",
+    "declineNoteReminderBody": "Hinterlassen Sie den Ablehnungsgrund als Notiz, damit das Rental-Team den Kontext hat."
   },
   "helpPage": {
     "rentalTitle": "Einstieg ins Vermietungs-Dashboard",

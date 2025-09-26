@@ -625,8 +625,12 @@ function BookingFormView(props: BookingFormViewProps) {
     })
   }
 
-  const isSingleDayForTimeSelect =
-    dateRange?.from != null && (dateRange.to == null || isSameDay(dateRange.from, dateRange.to)) // Use isSameDay
+  const selectedRangeSpanDays =
+    dateRange?.from && dateRange?.to ? differenceInCalendarDays(dateRange.to, dateRange.from) : 0
+  const isSingleDayRange =
+    !!dateRange?.from && (!dateRange?.to || selectedRangeSpanDays === 0)
+  const isTwoDayRange = !!dateRange?.from && !!dateRange?.to && selectedRangeSpanDays === 1
+  const shouldShowDetailedAvailability = isSingleDayRange || isTwoDayRange
   const translatedDescription = useMemo(() => {
     if (item.longDescriptionKey) {
       return t(`itemDescriptions.${item.longDescriptionKey}`)
@@ -1048,9 +1052,9 @@ function BookingFormView(props: BookingFormViewProps) {
                     label={t("bookingForm.startTimeLabel")}
                     placeholder={t("timeSelect.placeholder")}
                     disabled={!dateRange?.from}
-                    otherSelectedTime={isSingleDayForTimeSelect ? endTime : null}
+                    otherSelectedTime={isSingleDayRange ? endTime : null}
                     isEndTimeSelector={false}
-                    shouldFilterTimes={isSingleDayForTimeSelect}
+                    shouldFilterTimes={isSingleDayRange}
                   />
                   <TimeSelect
                     control={control}
@@ -1058,13 +1062,13 @@ function BookingFormView(props: BookingFormViewProps) {
                     label={t("bookingForm.endTimeLabel")}
                     placeholder={t("timeSelect.placeholder")}
                     disabled={!dateRange?.from}
-                    otherSelectedTime={isSingleDayForTimeSelect ? startTime : null}
+                    otherSelectedTime={isSingleDayRange ? startTime : null}
                     isEndTimeSelector={true}
-                    shouldFilterTimes={isSingleDayForTimeSelect}
+                    shouldFilterTimes={isSingleDayRange}
                   />
                 </div>
                 {dateRange?.from && item?.id ? (
-                  isSingleDayForTimeSelect ? (
+                  shouldShowDetailedAvailability ? (
                     <InteractiveTimeRangePicker
                       control={control}
                       itemId={item.id}

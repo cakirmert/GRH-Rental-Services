@@ -60,7 +60,6 @@ export async function cancelExpiredBookings() {
       endDate: updated.endDate,
       notes: updated.notes,
       recipients,
-      emailReason: AUTO_CANCEL_REASON,
     })
   }
 }

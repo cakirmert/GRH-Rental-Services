@@ -129,7 +129,6 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const [selectedBookingForAction, setSelectedBookingForAction] =
     useState<BookingForRentalTeam | null>(null)
   const [actionToConfirm, setActionToConfirm] = useState<BookingStatus | null>(null)
-  const [rentalNotes, setRentalNotes] = useState("")
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list")
   const [noteDialogBooking, setNoteDialogBooking] = useState<BookingForRentalTeam | null>(null)
   const [noteEditorValue, setNoteEditorValue] = useState("")
@@ -190,7 +189,6 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
       trpcUtils.bookings.listForRentalTeam.invalidate(queryInput)
       setShowActionModal(false)
       setSelectedBookingForAction(null)
-      setRentalNotes("")
     },
     onError: (err) => {
       toast({
@@ -267,29 +265,14 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const handleActionClick = (booking: BookingForRentalTeam, newStatus: BookingStatus) => {
     setSelectedBookingForAction(booking)
     setActionToConfirm(newStatus)
-    const existingNotes = booking.notes || ""
-    setRentalNotes(existingNotes.includes("Rental Team:") ? "" : existingNotes)
     setShowActionModal(true)
   }
 
   const confirmAction = () => {
     if (!selectedBookingForAction || !actionToConfirm) return
-    if (
-      actionToConfirm === BookingStatus.CANCELLED &&
-      selectedBookingForAction.status === BookingStatus.BORROWED &&
-      !rentalNotes.trim()
-    ) {
-      toast({
-        title: t("errors.title"),
-        description: t("rentalDashboard.notesRequiredBorrowedCancel"),
-        variant: "destructive",
-      })
-      return
-    }
     updateStatusMutation.mutate({
       bookingId: selectedBookingForAction.id,
       newStatus: actionToConfirm,
-      rentalNotes: rentalNotes.trim() || undefined,
     })
   }
 
@@ -784,22 +767,21 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 space-y-2">
-            <Label htmlFor="rentalNotesAction">
-              {t("rentalDashboard.rentalNotesLabel", {
-                defaultValue: "Notes for this action (optional, may be visible to user)",
-              })}
-            </Label>
-            <Textarea
-              id="rentalNotesAction"
-              value={rentalNotes}
-              onChange={(e) => setRentalNotes(e.target.value)}
-              placeholder={t("rentalDashboard.rentalNotesPlaceholder", {
-                defaultValue: "e.g., Reason for decline, pickup instructions...",
-              })}
-              rows={3}
-            />
-          </div>
+          {actionToConfirm === BookingStatus.DECLINED && (
+            <Alert variant="destructive" className="mb-4 flex items-start gap-3">
+              <AlertCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div className="text-sm leading-relaxed">
+                <p className="font-semibold">
+                  {t("rentalDashboard.declineNoteReminderTitle", { defaultValue: "Add a decline note" })}
+                </p>
+                <p>
+                  {t("rentalDashboard.declineNoteReminderBody", {
+                    defaultValue: "Please leave a note with the reason so the team has context.",
+                  })}
+                </p>
+              </div>
+            </Alert>
+          )}
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" disabled={updateStatusMutation.isPending}>
@@ -808,12 +790,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             </DialogClose>
             <Button
               onClick={confirmAction}
-              disabled={
-                updateStatusMutation.isPending ||
-                (actionToConfirm === BookingStatus.CANCELLED &&
-                  selectedBookingForAction?.status === BookingStatus.BORROWED &&
-                  !rentalNotes.trim())
-              }
+              disabled={updateStatusMutation.isPending}
               variant={actionToConfirm === BookingStatus.DECLINED ? "destructive" : "default"}
             >
               {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -144,7 +144,7 @@ export default function InteractiveTimeRangePicker({
       currentStartMinutes < MAX_MINUTES &&
       currentEndMinutes > MIN_MINUTES &&
       currentEndMinutes <= MAX_MINUTES &&
-      currentEndMinutes > currentStartMinutes
+      (isRangeSelection || currentEndMinutes > currentStartMinutes)
 
     if (hasValidExistingTimes) {
       // Don't override existing valid times
@@ -203,6 +203,7 @@ export default function InteractiveTimeRangePicker({
     watchS,
     watchE,
     s2m,
+    isRangeSelection,
   ]) // sField, eField are stable from useController
 
   const startM = s2m(watchS)
@@ -356,7 +357,7 @@ export default function InteractiveTimeRangePicker({
         <div key={row} className="relative h-24 select-none">
           {isRangeSelection && (
             <span className="absolute -left-14 top-[46px] px-2 py-0.5 rounded bg-muted text-[10px]">
-              {row === 0 ? "Day 1" : "Day 2"}
+              {`Day ${row + 1}`}
             </span>
           )}
           <div

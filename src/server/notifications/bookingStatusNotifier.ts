@@ -18,7 +18,6 @@ interface NotifyBookingStatusChangeArgs {
   endDate: Date
   notes?: string | null
   recipients: Recipient[]
-  emailReason?: string
 }
 
 const messageMap: Record<BookingStatus, string> = {
@@ -39,7 +38,6 @@ export async function notifyBookingStatusChange({
   endDate,
   notes,
   recipients,
-  emailReason,
 }: NotifyBookingStatusChangeArgs) {
   const dedupedRecipients = new Map<string, Recipient>()
   for (const recipient of recipients) {
@@ -75,7 +73,6 @@ export async function notifyBookingStatusChange({
           booking: { itemTitle, startDate, endDate },
           status,
           notes,
-          reason: emailReason,
         })
       } catch (error) {
         console.error("[mail] Failed to send booking status email", error)

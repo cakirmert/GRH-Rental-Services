@@ -380,7 +380,6 @@ export const bookingsRouter = router({
       z.object({
         bookingId: z.string(),
         newStatus: z.nativeEnum(BookingStatus),
-        rentalNotes: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -392,17 +391,6 @@ export const bookingsRouter = router({
         include: { item: { select: { titleEn: true } } },
       })
       if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-
-      if (
-        input.newStatus === BookingStatus.CANCELLED &&
-        booking.status === BookingStatus.BORROWED &&
-        !input.rentalNotes?.trim()
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Notes required when cancelling a borrowed booking.",
-        })
-      }
 
       if (input.newStatus === BookingStatus.COMPLETED && booking.startDate > new Date()) {
         throw new TRPCError({
@@ -422,9 +410,6 @@ export const bookingsRouter = router({
         where: { id: input.bookingId },
         data: {
           status: input.newStatus,
-          notes: input.rentalNotes
-            ? `${booking.notes ? booking.notes + "\n\n" : ""}Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):\n${input.rentalNotes}`
-            : booking.notes,
           assignedTo: assignedToUpdate,
         },
         include: {

@@ -322,7 +322,7 @@
     "return": "Return",
     "purpose": "Purpose",
     "at": "at",
-    "multiDayAvailabilityNotice": "Detailed availability is not shown for multi-day bookings."
+    "multiDayAvailabilityNotice": "Detailed availability is only shown for bookings up to 2 days."
   },
   "timeSelect": {
     "placeholder": "Select Time",
@@ -626,7 +626,9 @@
     "addNotePlaceholder": "Write details the rental team should remember...",
     "addNoteSubmit": "Save Note",
     "addNoteSuccessTitle": "Note Added",
-    "addNoteSuccessDesc": "Saved note for booking {bookingId}."
+    "addNoteSuccessDesc": "Saved note for booking {bookingId}.",
+    "declineNoteReminderTitle": "Add a decline note",
+    "declineNoteReminderBody": "Please leave a note with the reason so the rental admin team has context."
   },
   "helpPage": {
     "rentalTitle": "Getting Started with the Rental Dashboard",

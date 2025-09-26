@@ -65,5 +65,4 @@ export interface UpdateBookingInput {
 export interface BookingStatusUpdateInput {
   bookingId: string
   newStatus: string // BookingStatus enum
-  rentalNotes?: string
 }
