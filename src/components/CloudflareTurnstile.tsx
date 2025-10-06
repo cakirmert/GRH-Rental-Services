@@ -37,7 +37,7 @@ export function CloudflareTurnstile({
   theme = "auto",
 }: CloudflareTurnstileProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const widgetIdRef = useRef<string | undefined>()
+  const widgetIdRef = useRef<string | undefined>(undefined)
 
   const renderWidget = useCallback(() => {
     if (!window.turnstile || !containerRef.current) {
