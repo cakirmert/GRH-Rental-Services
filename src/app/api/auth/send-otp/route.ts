@@ -5,13 +5,89 @@ import prisma from "../../../../lib/prismadb"
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json()
+    const body = (await req.json()) as {
+      email?: unknown
+      turnstileToken?: unknown
+    }
 
-    if (!email || typeof email !== "string") {
+    const email = typeof body.email === "string" ? body.email : ""
+
+    if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
     const key = email.toLowerCase()
+
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim()
+
+    if (turnstileSecret) {
+      const token = typeof body.turnstileToken === "string" ? body.turnstileToken : ""
+
+      if (!token) {
+        return NextResponse.json(
+          { error: "Please verify you are human before requesting a code." },
+          { status: 400 },
+        )
+      }
+
+      try {
+        const clientIp =
+          req.headers.get("cf-connecting-ip") ??
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          undefined
+
+        const payload = new URLSearchParams()
+        payload.append("secret", turnstileSecret)
+        payload.append("response", token)
+        if (clientIp) {
+          payload.append("remoteip", clientIp)
+        }
+
+        const verificationResponse = await fetch(
+          "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: payload,
+          },
+        )
+
+        if (!verificationResponse.ok) {
+          console.error(
+            "Turnstile verification request failed",
+            verificationResponse.status,
+            verificationResponse.statusText,
+          )
+          return NextResponse.json(
+            { error: "Turnstile verification failed. Please try again." },
+            { status: 502 },
+          )
+        }
+
+        const verificationResult = (await verificationResponse.json()) as {
+          success?: boolean
+          "error-codes"?: string[]
+        }
+
+        if (!verificationResult.success) {
+          console.warn("Turnstile verification unsuccessful", {
+            email: key,
+            errors: verificationResult["error-codes"],
+          })
+          return NextResponse.json(
+            { error: "Please verify you are human before requesting a code." },
+            { status: 400 },
+          )
+        }
+      } catch (error) {
+        console.error("Error verifying Turnstile token:", error)
+        return NextResponse.json(
+          { error: "Turnstile verification failed. Please try again." },
+          { status: 502 },
+        )
+      }
+    }
+
     const now = Date.now()
 
     // Check rate limiting
@@ -26,7 +102,9 @@ export async function POST(req: Request) {
       entry.count += 1
     } else {
       otpRequests.set(key, { count: 1, ts: now })
-    } // Generate OTP code and token
+    }
+
+    // Generate OTP code and token
     const code = Math.floor(100000 + Math.random() * 900000).toString()
 
     if (!process.env.AUTH_SECRET) {
@@ -66,7 +144,7 @@ export async function POST(req: Request) {
     `
 
     if (isDev) {
-      console.log(`\n››› DEV OTP for ${key}: ${code}\n`)
+      console.log(`\nDEV OTP for ${key}: ${code}\n`)
     } else {
       await transporter!.sendMail({
         to: key,

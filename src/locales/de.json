@@ -186,6 +186,7 @@
     "themeSystem": "System",
     "toggleMenu": "Menü umschalten",
     "editProfileLink": "Profil einstellungen",
+    "completeProfileCta": "Profil vervollstaendigen",
     "signedInAs": "Angemeldet als {email}"
   },
   "languageSwitcher": {
@@ -384,7 +385,8 @@
     "chatClosed": "Chat ist geschlossen.",
     "chatRateLimit": "Zu viele Nachrichten. Bitte langsamer.",
     "chatWait": "Bitte warte auf eine Antwort.",
-    "rangeTooLong": "Buchungen d?rfen h?chstens {days} Tage umfassen."
+    "rangeTooLong": "Buchungen d?rfen h?chstens {days} Tage umfassen.",
+    "turnstileRequired": "Bitte bestaetige, dass du ein Mensch bist, bevor du einen Code anforderst."
   },
   "contact": {
     "formTitle": "Kontaktformular",

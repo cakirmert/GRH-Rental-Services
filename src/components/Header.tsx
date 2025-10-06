@@ -117,6 +117,9 @@ export default function Header() {
   }, [mounted, theme, resolvedTheme])
   const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
   const isAdmin = session?.user?.role === "ADMIN"
+  const userName = session?.user?.name
+  const hasProfileName = typeof userName === "string" && userName.trim().length > 0
+  const isProfileIncomplete = status === "authenticated" && !hasProfileName
   // Prevent hydration mismatches by using skeleton placeholders until mounted
   if (!mounted) {
     return (
@@ -217,6 +220,17 @@ export default function Header() {
               )}
             </nav>
 
+            {isProfileIncomplete && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={openPrompt}
+                className="font-semibold"
+              >
+                {t("header.completeProfileCta")}
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="sm"
@@ -268,7 +282,7 @@ export default function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={openPrompt}>
                     <UserCircle className="mr-2 h-4 w-4" />
-                    {t("header.editProfileLink")}
+                    {t(isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink")}
                   </DropdownMenuItem>
                   {isRentalTeam && (
                     <>
@@ -312,6 +326,19 @@ export default function Header() {
               <Globe className="h-5 w-5" />
               <span className="sr-only">{t("languageSwitcher.label")}</span>
             </Button>
+            {isProfileIncomplete && (
+              <Button
+                variant="default"
+                size="icon"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  openPrompt()
+                }}
+              >
+                <UserCircle className="h-5 w-5" />
+                <span className="sr-only">{t("header.completeProfileCta")}</span>
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -360,7 +387,7 @@ export default function Header() {
             )}{" "}
             {status === "authenticated" && (
               <Button
-                variant="ghost"
+                variant={isProfileIncomplete ? "default" : "ghost"}
                 className="justify-start"
                 onClick={() => {
                   setIsMenuOpen(false) // Close mobile menu
@@ -368,7 +395,7 @@ export default function Header() {
                 }}
               >
                 <UserCircle className="mr-2 h-4 w-4" />
-                {t("header.editProfileLink")}
+                {t(isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink")}
               </Button>
             )}
             {isRentalTeam && (

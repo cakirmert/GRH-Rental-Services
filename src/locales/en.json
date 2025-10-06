@@ -186,7 +186,8 @@
     "themeSystem": "System",
     "toggleMenu": "Toggle menu",
     "editProfileLink": "Profile Settings",
-    "signedInAs": "Signed in as {email}"
+    "signedInAs": "Signed in as {email}",
+    "completeProfileCta": "Complete Profile"
   },
   "languageSwitcher": {
     "label": "Language"
@@ -385,7 +386,8 @@
     "chatClosed": "Chat is closed.",
     "chatRateLimit": "Too many messages. Please slow down.",
     "chatWait": "Please wait for a response.",
-    "rangeTooLong": "Booking range cannot exceed {days} days."
+    "rangeTooLong": "Booking range cannot exceed {days} days.",
+    "turnstileRequired": "Please verify you are human before requesting a code."
   },
   "contact": {
     "formTitle": "Contact Form",

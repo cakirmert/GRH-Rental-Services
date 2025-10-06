@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp"
 import { Separator } from "@/components/ui/separator"
+import { CloudflareTurnstile } from "@/components/CloudflareTurnstile"
 import { useI18n } from "@/locales/i18n"
 import { signIn, useSession } from "next-auth/react"
 import { toast } from "@/components/ui/use-toast"
@@ -46,7 +47,12 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
   const onCloseCallbackRef = useRef<(() => void) | null>(null)
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const turnstileEnabled = Boolean(turnstileSiteKey)
 
   const { t } = useI18n()
   const { update: updateSessionHook } = useSession()
@@ -61,6 +67,8 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
     setOtp("")
     setAuthError(null)
     setIsSubmittingAuth(false)
+    setTurnstileToken(null)
+    setTurnstileResetKey((key) => key + 1)
     onCloseCallbackRef.current = onClose || null
     setAuthModalOpen(true)
   }
@@ -69,6 +77,8 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
     setOtp("")
     setAuthError(null)
     setIsSubmittingAuth(false)
+    setTurnstileToken(null)
+    setTurnstileResetKey((key) => key + 1)
     setAuthModalView("email")
 
     // Call the callback if provided (e.g., to close header menu)
@@ -84,13 +94,32 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
   }
   const handleSignInSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setIsSubmittingAuth(true)
     setAuthError(null)
+
+    if (!email) {
+      return
+    }
+
+    if (turnstileEnabled && !turnstileToken) {
+      setAuthError(t("errors.turnstileRequired"))
+      return
+    }
+
+    setIsSubmittingAuth(true)
+
+    let requestAttempted = false
+
     try {
+      requestAttempted = true
+      const payload: { email: string; turnstileToken?: string } = { email }
+      if (turnstileEnabled && turnstileToken) {
+        payload.turnstileToken = turnstileToken
+      }
+
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -120,6 +149,10 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
       setAuthError(t("errors.loginUnexpected"))
     } finally {
       setIsSubmittingAuth(false)
+      if (turnstileEnabled && requestAttempted) {
+        setTurnstileToken(null)
+        setTurnstileResetKey((key) => key + 1)
+      }
     }
   }
   const handleVerifyOtpSubmit = async (e: FormEvent) => {
@@ -420,6 +453,16 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                       className="h-11 text-base"
                     />
                   </div>
+                  {turnstileSiteKey && (
+                    <div className="rounded-md border border-border/40 bg-muted/20 p-3">
+                      <CloudflareTurnstile
+                        key={turnstileResetKey}
+                        siteKey={turnstileSiteKey}
+                        onToken={setTurnstileToken}
+                        className="flex justify-center"
+                      />
+                    </div>
+                  )}
                   <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
                     <DialogClose asChild>
                       <Button
@@ -433,7 +476,11 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                     </DialogClose>
                     <Button
                       type="submit"
-                      disabled={isSubmittingAuth || !email}
+                      disabled={
+                        isSubmittingAuth ||
+                        !email ||
+                        (turnstileEnabled && !turnstileToken)
+                      }
                       className="w-full sm:w-auto h-11"
                     >
                       {isSubmittingAuth ? (
