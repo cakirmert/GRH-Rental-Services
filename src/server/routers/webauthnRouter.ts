@@ -10,12 +10,38 @@ import {
   normalizeCredentialId,
 } from "@/lib/webauthn"
 import type { Prisma } from "@prisma/client"
-import type { RegistrationResponseJSON, AuthenticationResponseJSON } from "@simplewebauthn/types"
+import type {
+  RegistrationResponseJSON,
+  AuthenticationResponseJSON,
+  AuthenticatorTransportFuture,
+} from "@simplewebauthn/types"
 import type { UserPasskey } from "@/types/auth"
 
 const registrationChallenges = new Map<string, string>()
 const authenticationChallenges = new Map<string, string>()
 const rateLimit = new Map<string, { count: number; ts: number }>()
+const VALID_TRANSPORTS: ReadonlySet<AuthenticatorTransportFuture> = new Set([
+  "ble",
+  "cable",
+  "hybrid",
+  "internal",
+  "nfc",
+  "smart-card",
+  "usb",
+])
+
+function normalizeTransports(
+  transports?: unknown,
+): AuthenticatorTransportFuture[] | undefined {
+  if (!Array.isArray(transports)) return undefined
+  const normalized = transports
+    .map((value) => (typeof value === "string" ? value.toLowerCase() : null))
+    .filter((value): value is AuthenticatorTransportFuture => {
+      if (!value) return false
+      return VALID_TRANSPORTS.has(value as AuthenticatorTransportFuture)
+    })
+  return normalized.length ? normalized : undefined
+}
 
 function checkRateLimit(key: string, max: number, windowMs: number) {
   const now = Date.now()
@@ -79,7 +105,7 @@ export const webauthnRouter = router({
         credentialID: normalizedCredentialID,
         credentialPublicKey: publicKeyBytes.toString("base64url"),
         counter: credential.counter ?? 0,
-        transports: credential.transports && credential.transports.length > 0 ? credential.transports : undefined,
+        transports: normalizeTransports(credential.transports),
         deviceType: credentialDeviceType,
         backedUp: credentialBackedUp,
         createdAt: new Date().toISOString(),
@@ -109,7 +135,10 @@ export const webauthnRouter = router({
         60_000,
       )
 
-      let allowCredentials: Array<{ id: string; transports?: string[] }> = []
+      let allowCredentials: Array<{
+        id: string
+        transports?: AuthenticatorTransportFuture[]
+      }> = []
       let userIds: string[] = []
 
       if (input.usernameOrEmail) {
@@ -118,12 +147,15 @@ export const webauthnRouter = router({
           where: { OR: [{ email: input.usernameOrEmail }, { name: input.usernameOrEmail }] },
         })
         if (!user || !user.passkeys.length) throw new TRPCError({ code: "NOT_FOUND" })
-        allowCredentials = (user.passkeys as Array<{ credentialID: string; transports?: string[] }>).map(
-          (p) => ({
-            id: p.credentialID,
-            transports: Array.isArray(p.transports) ? p.transports : undefined,
-          }),
-        )
+        allowCredentials = (
+          user.passkeys as Array<{
+            credentialID: string
+            transports?: AuthenticatorTransportFuture[] | string[]
+          }>
+        ).map((p) => ({
+          id: p.credentialID,
+          transports: normalizeTransports(p.transports),
+        }))
         userIds = [user.id]
       } else {
         // Usernameless flow: get all users' passkeys for discoverable credentials
@@ -162,7 +194,7 @@ export const webauthnRouter = router({
             allowCredentials.push(
               ...userPasskeys.map((p: UserPasskey) => ({
                 id: p.credentialID,
-                transports: Array.isArray(p.transports) ? p.transports : undefined,
+                transports: normalizeTransports(p.transports),
               })),
             )
             userIds.push(user.id)
