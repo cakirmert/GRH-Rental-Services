@@ -24,4 +24,6 @@ export interface UserPasskey {
   credentialID: string
   name?: string
   createdAt?: string
+  lastUsed?: string
+  transports?: string[]
 }

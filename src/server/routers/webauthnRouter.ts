@@ -7,6 +7,7 @@ import {
   verifyRegistration,
   getAuthenticationOptions,
   verifyAuthentication,
+  normalizeCredentialId,
 } from "@/lib/webauthn"
 import type { Prisma } from "@prisma/client"
 import type { RegistrationResponseJSON, AuthenticationResponseJSON } from "@simplewebauthn/types"
@@ -57,21 +58,39 @@ export const webauthnRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST" })
       }
 
-      const { credential } = verification.registrationInfo
-      const { id: credentialID, publicKey: credentialPublicKey } = credential
-      const counter = 0 // New credentials start with counter 0
+      const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo
+
+      const rawCredentialId =
+        typeof credential.id === "string"
+          ? credential.id
+          : Buffer.from(credential.id).toString("base64url")
+      const normalizedCredentialID = normalizeCredentialId(rawCredentialId)
+
+      if (!normalizedCredentialID) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Unable to store credential ID" })
+      }
+
+      const publicKeyBytes =
+        typeof credential.publicKey === "string"
+          ? Buffer.from(credential.publicKey, "base64url")
+          : Buffer.from(credential.publicKey)
+
+      const passkeyRecord = {
+        credentialID: normalizedCredentialID,
+        credentialPublicKey: publicKeyBytes.toString("base64url"),
+        counter: credential.counter ?? 0,
+        transports: credential.transports && credential.transports.length > 0 ? credential.transports : undefined,
+        deviceType: credentialDeviceType,
+        backedUp: credentialBackedUp,
+        createdAt: new Date().toISOString(),
+        name: `Device ${Date.now()}`,
+      }
 
       await ctx.prisma.user.update({
         where: { id: ctx.session.user.id },
         data: {
           passkeys: {
-            push: {
-              credentialID: Buffer.from(credentialID).toString("base64url"),
-              credentialPublicKey: Buffer.from(credentialPublicKey).toString("base64url"),
-              counter,
-              createdAt: new Date().toISOString(),
-              name: `Device ${Date.now()}`, // Basic device identifier
-            },
+            push: passkeyRecord,
           },
         },
       })
@@ -90,7 +109,7 @@ export const webauthnRouter = router({
         60_000,
       )
 
-      let allowCredentials: string[] = []
+      let allowCredentials: Array<{ id: string; transports?: string[] }> = []
       let userIds: string[] = []
 
       if (input.usernameOrEmail) {
@@ -99,8 +118,11 @@ export const webauthnRouter = router({
           where: { OR: [{ email: input.usernameOrEmail }, { name: input.usernameOrEmail }] },
         })
         if (!user || !user.passkeys.length) throw new TRPCError({ code: "NOT_FOUND" })
-        allowCredentials = (user.passkeys as Array<{ credentialID: string }>).map(
-          (p) => p.credentialID,
+        allowCredentials = (user.passkeys as Array<{ credentialID: string; transports?: string[] }>).map(
+          (p) => ({
+            id: p.credentialID,
+            transports: Array.isArray(p.transports) ? p.transports : undefined,
+          }),
         )
         userIds = [user.id]
       } else {
@@ -137,7 +159,12 @@ export const webauthnRouter = router({
                 })),
               )
             }
-            allowCredentials.push(...userPasskeys.map((p: UserPasskey): string => p.credentialID))
+            allowCredentials.push(
+              ...userPasskeys.map((p: UserPasskey) => ({
+                id: p.credentialID,
+                transports: Array.isArray(p.transports) ? p.transports : undefined,
+              })),
+            )
             userIds.push(user.id)
           } else {
             if (process.env.NODE_ENV === "development") {
@@ -150,8 +177,9 @@ export const webauthnRouter = router({
           console.log(`🔐 Total passkeys found: ${allowCredentials.length}`)
           console.log(
             `📋 Credential IDs to be processed:`,
-            allowCredentials.map((id) => ({
+            allowCredentials.map(({ id, transports }) => ({
               id,
+              transports,
               length: id?.length,
               hasBase64Chars: id?.includes("+") || id?.includes("/") || id?.includes("="),
               hasBase64urlChars: id?.includes("-") || id?.includes("_"),
@@ -186,21 +214,26 @@ export const webauthnRouter = router({
         })
       }
 
-      if (input.userId === "auto-detect") {
-        // Auto-detect user from credential ID
-        const credentialId = input.credential.rawId || input.credential.id // Use rawId if available, fallback to id
+      const incomingCredentialCandidate = input.credential.rawId || input.credential.id
+      const normalizedIncomingCredentialId = normalizeCredentialId(incomingCredentialCandidate)
 
+      if (!normalizedIncomingCredentialId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid credential identifier" })
+      }
+
+      if (input.userId === "auto-detect") {
         if (process.env.NODE_ENV === "development") {
-          console.log("🔍 Looking for credential ID:", credentialId)
-          console.log("🔍 Credential ID type:", typeof credentialId)
-          console.log("🔍 Credential ID length:", credentialId?.length)
+          console.log("🔍 Looking for credential ID:", incomingCredentialCandidate)
+          console.log("🔍 Credential ID type:", typeof incomingCredentialCandidate)
+          console.log("🔍 Credential ID length:", incomingCredentialCandidate?.length)
           console.log("🔍 Using rawId vs id:", {
             rawId: input.credential.rawId || "undefined",
             id: input.credential.id,
             usingRawId: !!input.credential.rawId,
+            normalized: normalizedIncomingCredentialId,
           })
         }
-        // Find user by searching through all passkeys
+
         const users = await ctx.prisma.user.findMany({
           select: { id: true, email: true, passkeys: true },
         })
@@ -208,77 +241,62 @@ export const webauthnRouter = router({
         if (process.env.NODE_ENV === "development") {
           console.log("👥 Found users with passkeys:", users.length)
         }
+
         for (const u of users) {
-          if (u.passkeys && Array.isArray(u.passkeys)) {
-            const userPasskeys = u.passkeys as Array<{
-              credentialID: string
-              credentialPublicKey: string
-              counter: number
-            }>
+          if (!u.passkeys || !Array.isArray(u.passkeys)) continue
 
+          const userPasskeys = u.passkeys as Array<{
+            credentialID: string
+            credentialPublicKey: string
+            counter: number
+            transports?: string[]
+          }>
+
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `🔑 User ${u.email} has passkeys:`,
+              userPasskeys.map((p) => ({
+                id: p.credentialID,
+                length: p.credentialID?.length,
+                type: typeof p.credentialID,
+                normalized: normalizeCredentialId(p.credentialID),
+              })),
+            )
+          }
+
+          const foundPasskey = userPasskeys.find((p) => {
+            const normalizedStoredId = normalizeCredentialId(p.credentialID)
+            return normalizedStoredId === normalizedIncomingCredentialId
+          })
+
+          if (foundPasskey) {
             if (process.env.NODE_ENV === "development") {
-              console.log(
-                `🔑 User ${u.email} has passkeys:`,
-                userPasskeys.map((p) => ({
-                  id: p.credentialID,
-                  length: p.credentialID?.length,
-                  type: typeof p.credentialID,
-                })),
-              )
+              console.log("✅ Found matching passkey for user:", u.email)
+              console.log("🔍 Passkey data:", JSON.stringify(foundPasskey, null, 2))
             }
-
-            // Try exact match first
-            let foundPasskey = userPasskeys.find((p) => p.credentialID === credentialId)
-
-            // If not found, try converting between base64 and base64url
-            if (!foundPasskey && credentialId) {
-              // Try converting base64url to base64 (add padding)
-              const base64Version = credentialId.replace(/-/g, "+").replace(/_/g, "/")
-              const paddedBase64 = base64Version + "=".repeat((4 - (base64Version.length % 4)) % 4)
-              foundPasskey = userPasskeys.find((p) => p.credentialID === paddedBase64)
-
-              if (!foundPasskey) {
-                // Try converting base64 to base64url (remove padding)
-                const base64urlVersion = credentialId
-                  .replace(/\+/g, "-")
-                  .replace(/\//g, "_")
-                  .replace(/=+$/, "")
-                foundPasskey = userPasskeys.find((p) => p.credentialID === base64urlVersion)
-              }
-            }
-            if (foundPasskey) {
-              if (process.env.NODE_ENV === "development") {
-                console.log("✅ Found matching passkey for user:", u.email)
-                console.log("🔍 Passkey data:", JSON.stringify(foundPasskey, null, 2))
-              }
-              user = await ctx.prisma.user.findUnique({ where: { id: u.id } })
-              break
-            }
+            user = await ctx.prisma.user.findUnique({ where: { id: u.id } })
+            break
           }
         }
 
-        if (!user) {
+        if (!user && process.env.NODE_ENV === "development") {
           interface PasskeyCredential {
             credentialID: string
           }
-
-          const users = await ctx.prisma.user.findMany({
+          const usersWithPasskeys = await ctx.prisma.user.findMany({
             select: {
               id: true,
               email: true,
               passkeys: true,
             },
           })
-
-          // Log available credential IDs for debugging in development
-          if (process.env.NODE_ENV === "development") {
-            const availableCredentials = users.flatMap((u) => {
-              const passkeys = u.passkeys as unknown as PasskeyCredential[] | null
-              return (passkeys || []).map((p: PasskeyCredential) => p.credentialID)
-            })
-            console.log("❌ No user found for credential ID:", credentialId)
-            console.log("❌ Available credential IDs:", availableCredentials)
-          }
+          const availableCredentials = usersWithPasskeys.flatMap((u) => {
+            const passkeys = u.passkeys as unknown as PasskeyCredential[] | null
+            return (passkeys || []).map((p: PasskeyCredential) => p.credentialID)
+          })
+          console.log("❌ No user found for credential ID:", incomingCredentialCandidate)
+          console.log("❌ Normalized credential ID:", normalizedIncomingCredentialId)
+          console.log("❌ Available credential IDs:", availableCredentials)
         }
       } else {
         user = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
@@ -299,24 +317,13 @@ export const webauthnRouter = router({
           counter: number
         }>
       ).find((p) => {
-        const credentialId = input.credential.rawId || input.credential.id // Use same logic as above
-
-        // Try exact match first
-        if (p.credentialID === credentialId) return true
-
-        // Try base64url to base64 conversion
-        const base64Version = credentialId.replace(/-/g, "+").replace(/_/g, "/")
-        const paddedBase64 = base64Version + "=".repeat((4 - (base64Version.length % 4)) % 4)
-        if (p.credentialID === paddedBase64) return true
-
-        // Try base64 to base64url conversion
-        const base64urlVersion = credentialId
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/, "")
-        if (p.credentialID === base64urlVersion) return true
-
-        return false
+        const normalizedStoredId = normalizeCredentialId(p.credentialID)
+        if (!normalizedStoredId) return false
+        if (normalizedStoredId !== normalizedIncomingCredentialId) return false
+        if (normalizedStoredId !== p.credentialID) {
+          p.credentialID = normalizedStoredId
+        }
+        return true
       })
       if (!passkey) {
         if (process.env.NODE_ENV === "development") {
