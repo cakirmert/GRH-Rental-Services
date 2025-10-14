@@ -235,7 +235,7 @@
     "orContinueWith": "oder fortfahren mit",
     "signInWithPasskey": "Mit Passkey anmelden",
     "authenticating": "Authentifiziere...",
-    "passkeyLoginInfo": "Die Passkey-Anmeldung ist verfügbar, nachdem du deine E-Mail bestätigt und einen Passkey hinzugefügt hast. Wähle bei der Aufforderung \"Dieses Gerät verwenden\" oder nutze bei Bedarf ein anderes Gerät.",
+    "passkeyLoginInfo": "Die Passkey-Anmeldung ist verfügbar, nachdem du deine E-Mail bestätigt und einen Passkey hinzugefügt hast. ",
     "passkeyLoginRequiresExisting": "Für dieses Konto sind noch keine Passkeys registriert. Melde dich zuerst mit deiner E-Mail an und füge anschließend im Bereich Sicherheit einen Passkey hinzu."
   },
   "profile": {
