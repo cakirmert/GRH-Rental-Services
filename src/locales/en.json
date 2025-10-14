@@ -235,7 +235,8 @@
     "orContinueWith": "or continue with",
     "signInWithPasskey": "Sign in with Passkey",
     "authenticating": "Authenticating...",
-    "passkeyLoginInfo": "Passkey sign-in is available after verifying your email and adding a passkey"
+    "passkeyLoginInfo": "Passkey sign-in is available after verifying your email and adding a passkey. Choose \"Use this device\" when prompted, or switch to another device if needed.",
+    "passkeyLoginRequiresExisting": "No passkeys are registered for this account yet. Sign in with your email first and add a passkey in the Security section."
   },
   "profile": {
     "setNameTitle": "Welcome! What's your name?",

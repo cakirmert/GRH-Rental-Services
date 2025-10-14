@@ -24,6 +24,7 @@ import { Fingerprint, Loader2 } from "lucide-react"
 import { trpc } from "@/utils/trpc"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { type AuthenticationResponseJSON } from "@simplewebauthn/types"
+import { TRPCClientError } from "@trpc/client"
 
 /**
  * Check if passkey authentication is supported in the current browser
@@ -224,8 +225,18 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
     setAuthError(null)
 
     try {
+      const options = await passkeyLoginOptions.mutateAsync({}).catch((error) => {
+        if (error instanceof TRPCClientError && error.data?.code === "NOT_FOUND") {
+          setAuthError(t("auth.passkeyLoginRequiresExisting"))
+          return null
+        }
+        throw error
+      })
+
+      if (!options) return
+
       // Get authentication options (usernameless flow)
-      const options = await passkeyLoginOptions.mutateAsync({}) // Start authentication with the browser
+      // Start authentication with the browser
       let authenticationResponse: AuthenticationResponseJSON
       try {
         const credential = await startAuthentication({ optionsJSON: options })

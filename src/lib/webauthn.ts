@@ -6,13 +6,56 @@ import {
 } from "@simplewebauthn/server"
 import type {
   AuthenticationResponseJSON,
-  RegistrationResponseJSON,
+  AuthenticatorTransportFuture,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
 } from "@simplewebauthn/types"
 
 const rpID = process.env.RP_ID!
 const origin = process.env.ORIGIN!
+
+const BASE64URL_PATTERN = /^[A-Za-z0-9\-_]+$/
+const MIN_CREDENTIAL_ID_LENGTH = 16
+const DEFAULT_TRANSPORT_HINTS: AuthenticatorTransportFuture[] = [
+  "internal",
+  "hybrid",
+  "usb",
+  "nfc",
+  "ble",
+]
+
+/**
+ * Convert assorted credential ID encodings into a normalized base64url string.
+ * This also recovers IDs that were accidentally double-encoded when stored.
+ */
+export function normalizeCredentialId(id: string | null | undefined): string | null {
+  if (!id) return null
+  const trimmed = id.trim()
+  if (!trimmed) return null
+
+  const normalized = trimmed.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+  const candidate =
+    normalized.length >= MIN_CREDENTIAL_ID_LENGTH && BASE64URL_PATTERN.test(normalized)
+      ? normalized
+      : null
+
+  try {
+    const decoded = Buffer.from(trimmed, "base64url").toString("utf8")
+    const decodedNormalized = decoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+    if (
+      decodedNormalized.length >= MIN_CREDENTIAL_ID_LENGTH &&
+      BASE64URL_PATTERN.test(decodedNormalized) &&
+      decodedNormalized !== candidate
+    ) {
+      return decodedNormalized
+    }
+  } catch {
+    /* Ignore decoding errors; fall through */
+  }
+
+  return candidate
+}
 
 export async function getRegistrationOptions(
   userId: string,
@@ -49,53 +92,43 @@ export async function verifyRegistration(
 }
 
 export async function getAuthenticationOptions(
-  allowCredentials: string[],
+  allowCredentials: Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>,
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
-  console.log("🔐 Getting authentication options for credentials:", allowCredentials)
+  console.log(
+    "🔐 Getting authentication options for credentials:",
+    allowCredentials.map((cred) => cred.id),
+  )
+
   const processedCredentials = allowCredentials
-    .map((id) => {
+    .map(({ id, transports }) => {
       console.log(`🔍 Processing credential ID: "${id}" (length: ${id?.length})`)
 
-      if (!id || typeof id !== "string") {
-        console.warn("⚠️ Invalid credential ID (empty or not string):", id)
+      const normalizedId = normalizeCredentialId(id)
+      if (!normalizedId) {
+        console.warn("⚠️ Failed to normalize credential ID:", id)
         return null
       }
 
-      // Normalize to base64url format (remove padding and convert chars)
-      const normalizedId = id.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
-      console.log(`🔄 Normalized credential ID: "${id}" -> "${normalizedId}"`)
+      const transportHints =
+        transports && transports.length > 0 ? transports : DEFAULT_TRANSPORT_HINTS
 
-      try {
-        // In the new API, we use the string directly, not a Buffer
-        console.log(`✅ Using credential ID directly: ${normalizedId.substring(0, 20)}...`)
-        return { id: normalizedId, type: "public-key" as const }
-      } catch (e) {
-        console.error("❌ Failed to process credential ID:", normalizedId, e)
-        return null
-      }
+      console.log(`✅ Using credential ID: ${normalizedId.substring(0, 20)}...`, {
+        transports: transportHints,
+      })
+
+      return { id: normalizedId, type: "public-key" as const, transports: transportHints }
     })
-    .filter((cred) => cred !== null)
+    .filter((cred): cred is { id: string; type: "public-key"; transports: AuthenticatorTransportFuture[] } => cred !== null)
 
   console.log(
     `📋 Successfully processed ${processedCredentials.length}/${allowCredentials.length} credentials`,
   )
 
-  if (processedCredentials.length === 0) {
-    console.warn("⚠️ No valid credentials to process")
-    // Return empty allowCredentials for usernameless discovery
-    return generateAuthenticationOptions({
-      rpID,
-      timeout: 60_000,
-      userVerification: "required",
-      allowCredentials: [],
-    })
-  }
-
   return generateAuthenticationOptions({
     rpID,
     timeout: 60_000,
     userVerification: "required",
-    allowCredentials: processedCredentials,
+    allowCredentials: processedCredentials.length > 0 ? processedCredentials : undefined,
   })
 }
 
@@ -114,20 +147,40 @@ export async function verifyAuthentication(
     counter: authenticator.counter,
   })
 
+  const normalizedAuthenticatorID = normalizeCredentialId(authenticator.credentialID)
+  if (!normalizedAuthenticatorID) {
+    throw new Error(`Unable to normalize stored credential ID: ${authenticator.credentialID}`)
+  }
+
+  if (normalizedAuthenticatorID !== authenticator.credentialID) {
+    console.log(
+      `🔄 Updating stored credential ID "${authenticator.credentialID}" -> "${normalizedAuthenticatorID}"`,
+    )
+    authenticator.credentialID = normalizedAuthenticatorID
+  }
+
   // Normalize credential ID to base64url format (no padding)
-  const normalizedCredentialID = authenticator.credentialID
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "")
-  console.log(
-    `🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`,
-  )
+  const normalizedCredentialID = normalizedAuthenticatorID
+  console.log(`🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`)
 
   // Normalize the credential response itself to ensure all fields are base64url
+  const incomingCredentialId =
+    normalizeCredentialId(credential.rawId) || normalizeCredentialId(credential.id)
+  if (!incomingCredentialId) {
+    throw new Error(`Unable to normalize incoming credential ID: ${credential.id}`)
+  }
+
   const normalizedCredential = {
     ...credential,
-    id: normalizedCredentialID, // Ensure the credential ID matches our stored one
+    id: normalizedCredentialID,
     rawId: normalizedCredentialID,
+  }
+
+  if (incomingCredentialId !== normalizedCredentialID) {
+    console.log("⚠️ Incoming credential ID differs from stored value", {
+      incomingCredentialId,
+      normalizedCredentialID,
+    })
   }
 
   console.log("🔧 Normalized credential for verification:", {
