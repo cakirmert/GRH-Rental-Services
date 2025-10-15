@@ -54,6 +54,11 @@ export default function NamePrompt({
   const [pushSubscription, setPushSubscription] = useState<PushSubscription | null>(null)
   const [pushSupported, setPushSupported] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
+  const utils = trpc.useUtils()
+  const { data: userPreferences } = trpc.user.getPreferences.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  })
+  const [emailBookingEnabled, setEmailBookingEnabled] = useState(true)
   const updateName = trpc.user.updateName.useMutation({
     onSuccess: async () => {
       await update()
@@ -94,11 +99,36 @@ export default function NamePrompt({
       })
     },
   })
+  const updatePreferences = trpc.user.updatePreferences.useMutation({
+    onSuccess: (data) => {
+      utils.user.getPreferences.setData(undefined, data)
+      setEmailBookingEnabled(data.emailBookingNotifications)
+      toast({
+        title: data.emailBookingNotifications
+          ? t("security.bookingEmailsEnabledToast")
+          : t("security.bookingEmailsDisabledToast"),
+      })
+    },
+    onError: (error) => {
+      setEmailBookingEnabled(userPreferences?.emailBookingNotifications ?? true)
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      })
+    },
+  })
   useEffect(() => {
     if (status === "authenticated") {
       setName(session?.user?.name ?? "")
     }
   }, [status, session])
+
+  useEffect(() => {
+    if (typeof userPreferences?.emailBookingNotifications !== "undefined") {
+      setEmailBookingEnabled(userPreferences.emailBookingNotifications)
+    }
+  }, [userPreferences?.emailBookingNotifications])
 
   // Check push notification support and subscription
   useEffect(() => {
@@ -365,6 +395,30 @@ export default function NamePrompt({
                       />
                     </div>
                   )}
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <div>
+                      <h4 className="font-medium">
+                        {emailBookingEnabled
+                          ? t("security.bookingEmailsEnabled")
+                          : t("security.bookingEmailsDisabled")}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {emailBookingEnabled
+                          ? t("security.bookingEmailsEnabledDesc")
+                          : t("security.bookingEmailsDisabledDesc")}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={emailBookingEnabled}
+                      onCheckedChange={(checked) => {
+                        setEmailBookingEnabled(checked)
+                        updatePreferences.mutate({
+                          emailBookingNotifications: checked,
+                        })
+                      }}
+                      disabled={updatePreferences.isPending}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

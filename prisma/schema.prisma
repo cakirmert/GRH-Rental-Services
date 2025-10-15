@@ -57,6 +57,7 @@ model User {
   name          String?
   role          Role     @default(USER)
   passkeys      Json[]   @default([])
+  emailBookingNotifications Boolean @default(true)
 
   /* relations */
   sessions         Session[]

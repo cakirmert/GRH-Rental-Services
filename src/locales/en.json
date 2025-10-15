@@ -305,7 +305,13 @@
     "notificationsEnabled": "Notifications Enabled",
     "notificationsDisabled": "Notifications Disabled",
     "notificationsEnabledDesc": "You will receive push notifications for booking updates and messages",
-    "notificationsDisabledDesc": "Enable notifications to stay updated on booking status and new messages"
+    "notificationsDisabledDesc": "Enable notifications to stay updated on booking status and new messages",
+    "bookingEmailsEnabled": "Booking emails enabled",
+    "bookingEmailsDisabled": "Booking emails disabled",
+    "bookingEmailsEnabledDesc": "We will email the responsible team when a booking request is submitted.",
+    "bookingEmailsDisabledDesc": "Disable this if you prefer to check new booking requests manually.",
+    "bookingEmailsEnabledToast": "You'll receive booking request emails.",
+    "bookingEmailsDisabledToast": "Booking request emails turned off."
   },
   "bookingForm": {
     "selectDateAndTimeTitle": "Select Date and Time",

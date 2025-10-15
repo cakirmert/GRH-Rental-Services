@@ -305,7 +305,13 @@
     "notificationsEnabled": "Benachrichtigungen aktiviert",
     "notificationsDisabled": "Benachrichtigungen deaktiviert",
     "notificationsEnabledDesc": "Du erhältst Push-Benachrichtigungen für Buchungsupdates und Nachrichten",
-    "notificationsDisabledDesc": "Aktiviere Benachrichtigungen, um über den Buchungsstatus und neue Nachrichten informiert zu bleiben"
+    "notificationsDisabledDesc": "Aktiviere Benachrichtigungen, um über den Buchungsstatus und neue Nachrichten informiert zu bleiben",
+    "bookingEmailsEnabled": "Buchungs-E-Mails aktiviert",
+    "bookingEmailsDisabled": "Buchungs-E-Mails deaktiviert",
+    "bookingEmailsEnabledDesc": "Wir informieren das zuständige Team per E-Mail, sobald eine neue Buchungsanfrage vorliegt.",
+    "bookingEmailsDisabledDesc": "Deaktiviere dies, wenn du neue Anfragen lieber manuell im Dashboard prüfen möchtest.",
+    "bookingEmailsEnabledToast": "Du erhältst jetzt Buchungs-E-Mails.",
+    "bookingEmailsDisabledToast": "Buchungs-E-Mails wurden deaktiviert."
   },
   "bookingForm": {
     "selectDateAndTimeTitle": "Datum und Uhrzeit auswählen",

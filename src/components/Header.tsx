@@ -60,6 +60,11 @@ export default function Header() {
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false)
   const lastY = useRef(0)
   const helpShownRef = useRef(false)
+  const userName = session?.user?.name
+  const hasProfileName = typeof userName === "string" && userName.trim().length > 0
+  const isProfileIncomplete = status === "authenticated" && !hasProfileName
+  const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
+  const isAdmin = session?.user?.role === "ADMIN"
 
   useEffect(() => {
     setMounted(true)
@@ -139,11 +144,6 @@ export default function Header() {
     const current = theme === "system" ? resolvedTheme : theme
     return current === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />
   }, [mounted, theme, resolvedTheme])
-  const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
-  const isAdmin = session?.user?.role === "ADMIN"
-  const userName = session?.user?.name
-  const hasProfileName = typeof userName === "string" && userName.trim().length > 0
-  const isProfileIncomplete = status === "authenticated" && !hasProfileName
   const openHelpDialog = () => {
     setIsHelpDialogOpen(true)
     setIsMenuOpen(false)
