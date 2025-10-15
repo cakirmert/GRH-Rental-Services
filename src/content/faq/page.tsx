@@ -77,20 +77,25 @@ export default function FAQPage() {
       key: "cancel",
       question: t("faqPage.cancelQuestion"),
       answer: (
-        <p className="mt-2 text-base">
-          {t("faqPage.cancelAnswerPart1")} {t("faqPage.cancelAnswerPart2")}
-          <Button
-            variant="link"
-            className="px-0"
-            onClick={(event) => {
-              event.stopPropagation()
-              setView(View.CONTACT)
-            }}
-          >
-            {t("footer.contactFormLink")}
-          </Button>{" "}
-          {t("faqPage.cancelAnswerPart3")}
-        </p>
+        <div className="mt-2 text-base space-y-2">
+          <p>{t("faqPage.cancelAnswerPart1")}</p>
+          <p>{t("faqPage.cancelAnswerPart2")}</p>
+          <p>
+            {t("faqPage.cancelAnswerPart3")} {" "}
+            <Button
+              variant="link"
+              className="px-0"
+              onClick={(event) => {
+                event.stopPropagation()
+                setView(View.CONTACT)
+              }}
+            >
+              {t("footer.contactFormLink")}
+            </Button>
+            {" "}
+            {t("faqPage.cancelAnswerPart4")}
+          </p>
+        </div>
       ),
     },
     {

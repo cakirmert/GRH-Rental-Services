@@ -45,6 +45,8 @@ export default function NamePrompt({
   const { data: session, status, update } = useSession()
   const { t } = useI18n()
   const [name, setName] = useState("")
+  const isRentalTeam =
+    session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
 
   // Passkey state
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false)
@@ -57,6 +59,7 @@ export default function NamePrompt({
   const utils = trpc.useUtils()
   const { data: userPreferences } = trpc.user.getPreferences.useQuery(undefined, {
     refetchOnWindowFocus: false,
+    enabled: isRentalTeam,
   })
   const [emailBookingEnabled, setEmailBookingEnabled] = useState(true)
   const updateName = trpc.user.updateName.useMutation({
@@ -125,10 +128,13 @@ export default function NamePrompt({
   }, [status, session])
 
   useEffect(() => {
-    if (typeof userPreferences?.emailBookingNotifications !== "undefined") {
+    if (
+      isRentalTeam &&
+      typeof userPreferences?.emailBookingNotifications !== "undefined"
+    ) {
       setEmailBookingEnabled(userPreferences.emailBookingNotifications)
     }
-  }, [userPreferences?.emailBookingNotifications])
+  }, [isRentalTeam, userPreferences?.emailBookingNotifications])
 
   // Check push notification support and subscription
   useEffect(() => {
@@ -395,30 +401,32 @@ export default function NamePrompt({
                       />
                     </div>
                   )}
-                  <div className="flex items-center justify-between border-t pt-4">
-                    <div>
-                      <h4 className="font-medium">
-                        {emailBookingEnabled
-                          ? t("security.bookingEmailsEnabled")
-                          : t("security.bookingEmailsDisabled")}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {emailBookingEnabled
-                          ? t("security.bookingEmailsEnabledDesc")
-                          : t("security.bookingEmailsDisabledDesc")}
-                      </p>
+                  {isRentalTeam && (
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <div>
+                        <h4 className="font-medium">
+                          {emailBookingEnabled
+                            ? t("security.bookingEmailsEnabled")
+                            : t("security.bookingEmailsDisabled")}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {emailBookingEnabled
+                            ? t("security.bookingEmailsEnabledDesc")
+                            : t("security.bookingEmailsDisabledDesc")}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={emailBookingEnabled}
+                        onCheckedChange={(checked) => {
+                          setEmailBookingEnabled(checked)
+                          updatePreferences.mutate({
+                            emailBookingNotifications: checked,
+                          })
+                        }}
+                        disabled={updatePreferences.isPending}
+                      />
                     </div>
-                    <Switch
-                      checked={emailBookingEnabled}
-                      onCheckedChange={(checked) => {
-                        setEmailBookingEnabled(checked)
-                        updatePreferences.mutate({
-                          emailBookingNotifications: checked,
-                        })
-                      }}
-                      disabled={updatePreferences.isPending}
-                    />
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
