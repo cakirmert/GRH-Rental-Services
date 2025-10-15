@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server"
 import { format, parseISO, differenceInCalendarDays } from "date-fns" // format for notes
 import { logAction } from "@/lib/logger"
 import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusNotifier"
+import { sendBookingRequestEmail } from "@/server/email/sendBookingRequestEmail"
 
 // Helper (already defined)
 const isRentalTeamMember = (ctx: Context) => {
@@ -95,7 +96,19 @@ export const bookingsRouter = router({
 
       const item = await ctx.prisma.item.findUnique({
         where: { id: input.itemId },
-        select: { totalQuantity: true },
+        select: {
+          totalQuantity: true,
+          titleEn: true,
+          titleDe: true,
+          responsibleMembers: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              emailBookingNotifications: true,
+            },
+          },
+        },
       })
       if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
 
@@ -117,7 +130,7 @@ export const bookingsRouter = router({
         })
       }
 
-      return ctx.prisma.booking.create({
+      const booking = await ctx.prisma.booking.create({
         data: {
           userId: ctx.session.user.id,
           itemId: input.itemId,
@@ -128,6 +141,51 @@ export const bookingsRouter = router({
           notes: input.notes ?? null,
         },
       })
+
+      if (item?.responsibleMembers?.length) {
+        const recipients = item.responsibleMembers.filter(
+          (member) =>
+            Boolean(member?.email) &&
+            (member?.emailBookingNotifications ?? true),
+        )
+
+        if (recipients.length) {
+          const requester = await ctx.prisma.user.findUnique({
+            where: { id: ctx.session.user.id },
+            select: { name: true, email: true },
+          })
+
+          const itemTitle = item.titleEn || item.titleDe || "Booking"
+
+          const sendEmailPromises = recipients.map((recipient) =>
+            sendBookingRequestEmail({
+              to: {
+                email: recipient.email!,
+                name: recipient.name,
+              },
+              requester: {
+                email: requester?.email,
+                name: requester?.name,
+              },
+              booking: {
+                itemTitle,
+                startDate,
+                endDate,
+                notes: input.notes,
+              },
+            }),
+          )
+
+          const results = await Promise.allSettled(sendEmailPromises)
+          results.forEach((result) => {
+            if (result.status === "rejected") {
+              console.error("[mail] Booking request email failed", result.reason)
+            }
+          })
+        }
+      }
+
+      return booking
     }),
 
   // User updating their own booking

@@ -13,6 +13,45 @@ export const userRouter = router({
         select: { id: true, name: true, email: true },
       })
     }),
+  getPreferences: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: { emailBookingNotifications: true },
+    })
+    return {
+      emailBookingNotifications:
+        user?.emailBookingNotifications ?? true,
+    }
+  }),
+  updatePreferences: protectedProcedure
+    .input(
+      z.object({
+        emailBookingNotifications: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (typeof input.emailBookingNotifications === "undefined") {
+        const current = await ctx.prisma.user.findUnique({
+          where: { id: ctx.session.user.id },
+          select: { emailBookingNotifications: true },
+        })
+        return {
+          emailBookingNotifications:
+            current?.emailBookingNotifications ?? true,
+        }
+      }
+
+      const updated = await ctx.prisma.user.update({
+        where: { id: ctx.session.user.id },
+        data: { emailBookingNotifications: input.emailBookingNotifications },
+        select: { emailBookingNotifications: true },
+      })
+
+      return {
+        emailBookingNotifications:
+          updated.emailBookingNotifications ?? true,
+      }
+    }),
   deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
     const userId = ctx.session.user.id
 
