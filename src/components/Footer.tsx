@@ -125,11 +125,11 @@ export default function Footer() {
         </div>
         {/* Bottom section */}
         <div className="mt-8 pt-8 border-t border-border">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>{t("footer.broughtToYou")}</p>
+          <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4 text-sm text-muted-foreground text-center sm:text-left">
+            <p className="w-full sm:w-auto">{t("footer.broughtToYou")}</p>
 
-            <div className="flex items-center gap-4">
-              <address className="not-italic">
+            <div className="flex w-full sm:w-auto justify-center sm:justify-end">
+              <address className="not-italic max-w-xs sm:max-w-none text-center sm:text-right leading-relaxed">
                 Gustav‑Radbruch Haus, Borgfelder Straße 16, 20537 Hamburg
               </address>
             </div>
