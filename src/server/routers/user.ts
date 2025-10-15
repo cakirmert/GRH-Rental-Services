@@ -14,6 +14,10 @@ export const userRouter = router({
       })
     }),
   getPreferences: protectedProcedure.query(async ({ ctx }) => {
+    const role = ctx.session.user.role
+    if (role !== "RENTAL" && role !== "ADMIN") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not allowed" })
+    }
     const user = await ctx.prisma.user.findUnique({
       where: { id: ctx.session.user.id },
       select: { emailBookingNotifications: true },
@@ -30,6 +34,10 @@ export const userRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const role = ctx.session.user.role
+      if (role !== "RENTAL" && role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not allowed" })
+      }
       if (typeof input.emailBookingNotifications === "undefined") {
         const current = await ctx.prisma.user.findUnique({
           where: { id: ctx.session.user.id },
