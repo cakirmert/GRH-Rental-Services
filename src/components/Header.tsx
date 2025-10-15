@@ -25,6 +25,7 @@ import {
   CalendarCheck,
   UserCog,
   UserCircle,
+  HelpCircle,
 } from "lucide-react"
 import NotificationBell from "@/components/NotificationBell"
 import {
@@ -34,6 +35,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 export default function Header() {
   const { data: session, status } = useSession()
@@ -48,7 +57,9 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [hidden, setHidden] = useState(false)
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false)
   const lastY = useRef(0)
+  const helpShownRef = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -110,6 +121,19 @@ export default function Header() {
     }
   }
 
+  useEffect(() => {
+    if (status === "authenticated" && !hasProfileName && !helpShownRef.current) {
+      setIsHelpDialogOpen(true)
+      helpShownRef.current = true
+    }
+  }, [status, hasProfileName])
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      helpShownRef.current = false
+    }
+  }, [status])
+
   const ThemeIcon = React.useCallback(() => {
     if (!mounted) return <Sun className="h-5 w-5" />
     const current = theme === "system" ? resolvedTheme : theme
@@ -120,6 +144,14 @@ export default function Header() {
   const userName = session?.user?.name
   const hasProfileName = typeof userName === "string" && userName.trim().length > 0
   const isProfileIncomplete = status === "authenticated" && !hasProfileName
+  const openHelpDialog = () => {
+    setIsHelpDialogOpen(true)
+    setIsMenuOpen(false)
+  }
+  const handleFaqOpen = () => {
+    navigateToView(View.FAQ)
+    setIsHelpDialogOpen(false)
+  }
   // Prevent hydration mismatches by using skeleton placeholders until mounted
   if (!mounted) {
     return (
@@ -233,6 +265,19 @@ export default function Header() {
 
             <Button
               variant="ghost"
+              size="icon"
+              onClick={openHelpDialog}
+              className="relative"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span className="sr-only">{t("header.helpButton")}</span>
+              {isProfileIncomplete && (
+                <span className="absolute top-1 right-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-primary" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => setLocale(locale === "en" ? "de" : "en")}
               className="flex items-center gap-1 text-sm"
@@ -326,6 +371,18 @@ export default function Header() {
               <Globe className="h-5 w-5" />
               <span className="sr-only">{t("languageSwitcher.label")}</span>
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openHelpDialog}
+              className="relative"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span className="sr-only">{t("header.helpButton")}</span>
+              {isProfileIncomplete && (
+                <span className="absolute top-1 right-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-primary" />
+              )}
+            </Button>
             {isProfileIncomplete && (
               <Button
                 variant="default"
@@ -418,6 +475,10 @@ export default function Header() {
                 {t("header.adminDashboardLink")}
               </Button>
             )}
+            <Button variant="ghost" className="justify-start" onClick={openHelpDialog}>
+              <HelpCircle className="mr-2 h-4 w-4" />
+              {t("header.helpButton")}
+            </Button>
             {status === "authenticated" ? (
               <Button variant="ghost" className="justify-start" onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -436,7 +497,63 @@ export default function Header() {
         </nav>
       )}
 
-      {/* Removed local Dialog for Sign In / OTP. It's now handled by AuthModalContext */}
+      <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("header.helpDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("header.helpDialogIntro")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {status === "authenticated" ? (
+              <>
+                <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>{t("header.helpDialogSignedInStep1")}</li>
+                  <li>{t("header.helpDialogSignedInStep2")}</li>
+                  <li>{t("header.helpDialogSignedInStep3")}</li>
+                </ol>
+                {!hasProfileName && (
+                  <p className="text-sm text-destructive">
+                    {t("header.helpDialogIncompleteProfileNote")}
+                  </p>
+                )}
+              </>
+            ) : (
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                <li>{t("header.helpDialogSignedOutStep1")}</li>
+                <li>{t("header.helpDialogSignedOutStep2")}</li>
+                <li>{t("header.helpDialogSignedOutStep3")}</li>
+                <li>{t("header.helpDialogSignedOutStep4")}</li>
+              </ol>
+            )}
+          </div>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {status !== "authenticated" ? (
+              <Button
+                onClick={() => {
+                  setIsHelpDialogOpen(false)
+                  openAuthModal("email", "", () => setIsMenuOpen(false))
+                }}
+              >
+                {t("header.helpDialogSignIn")}
+              </Button>
+            ) : (
+              !hasProfileName && (
+                <Button
+                  onClick={() => {
+                    setIsHelpDialogOpen(false)
+                    openPrompt()
+                  }}
+                >
+                  {t("header.helpDialogCompleteProfile")}
+                </Button>
+              )
+            )}
+            <Button variant="secondary" onClick={handleFaqOpen}>
+              {t("header.helpDialogOpenFaq")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
