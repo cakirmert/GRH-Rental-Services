@@ -53,10 +53,11 @@ export default function CancelledByStaffTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("common.item")}</TableHead>
-                  <TableHead>{t("common.user")}</TableHead>
-                  <TableHead>{t("common.when")}</TableHead>
-                  <TableHead>{t("common.notes")}</TableHead>
+                  <TableHead>{t("adminDashboard.cancellations.headers.item")}</TableHead>
+                  <TableHead>{t("adminDashboard.cancellations.headers.requester")}</TableHead>
+                  <TableHead>{t("adminDashboard.cancellations.headers.cancelledBy")}</TableHead>
+                  <TableHead>{t("adminDashboard.cancellations.headers.cancelledOn")}</TableHead>
+                  <TableHead>{t("adminDashboard.cancellations.headers.notes")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -66,7 +67,11 @@ export default function CancelledByStaffTab() {
                       {locale === "de" ? b.item?.titleDe || b.item?.titleEn : b.item?.titleEn}
                     </TableCell>
                     <TableCell>{b.user?.name || b.user?.email}</TableCell>
-                    <TableCell>{format(new Date(b.updatedAt), "PP")}</TableCell>
+                    <TableCell>
+                      {b.cancelledBy?.name || b.cancelledBy?.email ||
+                        t("adminDashboard.cancellations.unknownStaff")}
+                    </TableCell>
+                    <TableCell>{format(new Date(b.cancelledAt ?? b.updatedAt), "PP")}</TableCell>
                     <TableCell className="whitespace-pre-wrap max-w-xs">{b.notes}</TableCell>
                   </TableRow>
                 ))}

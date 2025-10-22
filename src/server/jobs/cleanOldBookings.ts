@@ -1,4 +1,3 @@
-import cron from "node-cron"
 import prisma from "@/lib/prismadb"
 
 export async function deleteOldBookings() {
@@ -9,8 +8,3 @@ export async function deleteOldBookings() {
     },
   })
 }
-
-cron.schedule("0 3 * * *", deleteOldBookings)
-
-// Run once on startup
-deleteOldBookings().catch((err) => console.error(err))

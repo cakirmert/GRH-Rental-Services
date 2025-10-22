@@ -4,6 +4,22 @@ import { imageCache } from "@/lib/imageCache"
 
 export const config = { runtime: "edge" }
 
+const toUint8Array = (data: ArrayBuffer | ArrayBufferView): Uint8Array => {
+  if (data instanceof Uint8Array) {
+    return data
+  }
+  if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data)
+  }
+  return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+}
+
+const toArrayBuffer = (view: Uint8Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(view.byteLength)
+  new Uint8Array(buffer).set(view)
+  return buffer
+}
+
 /**
  * Edge function for optimizing and serving images with format conversion and caching
  * @param request - The incoming request with image URL parameter
@@ -40,7 +56,7 @@ export async function GET(request: NextRequest) {
     const cached = imageCache.get(imageUrl, format)
     
     if (cached) {
-      return new NextResponse(cached.buffer, {
+      return new NextResponse(toArrayBuffer(cached.buffer), {
         status: 200,
         headers: {
           "Content-Type": cached.contentType,
@@ -58,13 +74,14 @@ export async function GET(request: NextRequest) {
     }
     const imageBuffer = new Uint8Array(await originalResponse.arrayBuffer())
 
-    let optimizedBuffer: Buffer
+    let optimizedBuffer: Uint8Array
     let contentType: string
     if (format) {
-      optimizedBuffer = await sharp(imageBuffer)[format]({ quality: 80 }).toBuffer()
+      const rendered = await sharp(imageBuffer)[format]({ quality: 80 }).toBuffer()
+      optimizedBuffer = toUint8Array(rendered)
       contentType = `image/${format}`
     } else {
-      optimizedBuffer = Buffer.from(imageBuffer)
+      optimizedBuffer = toUint8Array(imageBuffer)
       contentType = originalResponse.headers.get("Content-Type") || "image/jpeg"
     }
 
@@ -76,7 +93,7 @@ export async function GET(request: NextRequest) {
       imageCache.cleanup()
     }
 
-    const response = new NextResponse(optimizedBuffer, {
+    const response = new NextResponse(toArrayBuffer(optimizedBuffer), {
       status: 200,
       headers: {
         "Content-Type": contentType,

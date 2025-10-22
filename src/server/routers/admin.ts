@@ -8,6 +8,7 @@ import { put } from "@vercel/blob"
 import { TRPCError } from "@trpc/server"
 import type { Context } from "@/server/context"
 import { logAction } from "@/lib/logger"
+import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 
 // Define LogType enum locally since it's not in Prisma schema
 enum LogType {
@@ -39,11 +40,18 @@ export const adminRouter = router({
 
     // Get pending bookings count (REQUESTED status)
     const pendingBookings = await ctx.prisma.booking.count({
-      where: { status: BookingStatus.REQUESTED },
+      where: {
+        status: BookingStatus.REQUESTED,
+        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
+      },
     })
 
     const upcomingBookings = await ctx.prisma.booking.count({
-      where: { startDate: { gte: new Date() } },
+      where: {
+        startDate: { gte: new Date() },
+        status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
+        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
+      },
     })
 
     return {
@@ -270,19 +278,76 @@ export const adminRouter = router({
 
   staffCancelledBookings: protectedProcedure.query(async ({ ctx }) => {
     ensureAdmin(ctx)
+    const cutoffDate = new Date("2025-10-22T00:00:00.000Z")
+
     const bookings = await ctx.prisma.booking.findMany({
       where: {
         status: BookingStatus.CANCELLED,
-        notes: { contains: "Rental Team" },
+        updatedAt: { gte: cutoffDate },
+        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
       },
       include: {
         item: { select: { id: true, titleEn: true, titleDe: true, type: true } },
         user: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
       },
       orderBy: { updatedAt: "desc" },
     })
+
+    if (bookings.length === 0) return []
+
+    const bookingIds = bookings.map((b) => b.id)
+
+    const cancellationLogs = await ctx.prisma.log.findMany({
+      where: {
+        bookingId: { in: bookingIds },
+        message: "status:CANCELLED",
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    const latestCancellationLogByBooking = new Map<string, typeof cancellationLogs[number]>()
+    for (const log of cancellationLogs) {
+      if (log.bookingId && !latestCancellationLogByBooking.has(log.bookingId)) {
+        latestCancellationLogByBooking.set(log.bookingId, log)
+      }
+    }
+
+    const staffIds = Array.from(
+      new Set(
+        Array.from(latestCancellationLogByBooking.values())
+          .map((log) => log.userId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    )
+
+    const staffMembers = staffIds.length
+      ? await ctx.prisma.user.findMany({
+          where: { id: { in: staffIds } },
+          select: { id: true, name: true, email: true, role: true },
+        })
+      : []
+
+    const staffById = new Map(staffMembers.map((staff) => [staff.id, staff]))
+    const allowedRoles = new Set<Role>([Role.ADMIN, Role.RENTAL])
+
     return bookings
+      .map((booking) => {
+        const log = latestCancellationLogByBooking.get(booking.id)
+        if (!log?.userId) return null
+        const staff = staffById.get(log.userId)
+        if (!staff || !allowedRoles.has(staff.role)) return null
+        return {
+          ...booking,
+          cancelledBy: {
+            id: staff.id,
+            name: staff.name,
+            email: staff.email,
+            role: staff.role,
+          },
+          cancelledAt: log.createdAt,
+        }
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
   }),
 })
 

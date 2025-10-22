@@ -1,11 +1,10 @@
-import cron from "node-cron"
 import prisma from "@/lib/prismadb"
 import { BookingStatus, NotificationType } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
 
 /**
  * Automatically mark accepted bookings as borrowed when their start time approaches
- * Runs every minute to check for bookings starting within 15 minutes
+ * Should be triggered periodically via scheduled cron endpoints.
  */
 export async function markUpcomingBookingsBorrowed() {
   const now = new Date()
@@ -41,8 +40,3 @@ export async function markUpcomingBookingsBorrowed() {
     }
   }
 }
-
-cron.schedule("* * * * *", markUpcomingBookingsBorrowed)
-
-// Run once on startup
-markUpcomingBookingsBorrowed().catch((err) => console.error(err))
