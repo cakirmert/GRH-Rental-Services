@@ -73,7 +73,12 @@ export async function getRegistrationOptions(
     attestationType: "none",
     authenticatorSelection: {
       residentKey: "required",
+      requireResidentKey: true,
       userVerification: "required",
+      authenticatorAttachment: "platform",
+    },
+    extensions: {
+      credProps: true,
     },
   })
 }

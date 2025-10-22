@@ -24,9 +24,68 @@ export function useWebAuthn() {
 
   const register = async (userId: string) => {
     const opts = await registerOptions.mutateAsync({ userId })
-    const cred = (await navigator.credentials.create({
-      publicKey: opts as unknown as PublicKeyCredentialCreationOptions,
-    })) as PublicKeyCredential
+    const basePublicKey = opts as unknown as PublicKeyCredentialCreationOptions
+
+    let platformAvailable = false
+    if (
+      typeof window !== "undefined" &&
+      typeof PublicKeyCredential !== "undefined" &&
+      typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+    ) {
+      try {
+        platformAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+      } catch {
+        platformAvailable = false
+      }
+    }
+
+    const withPlatformPreference: PublicKeyCredentialCreationOptions = {
+      ...basePublicKey,
+      authenticatorSelection: {
+        ...(basePublicKey.authenticatorSelection ?? {}),
+        residentKey: basePublicKey.authenticatorSelection?.residentKey ?? "required",
+        userVerification: basePublicKey.authenticatorSelection?.userVerification ?? "required",
+        requireResidentKey:
+          (basePublicKey.authenticatorSelection as { requireResidentKey?: boolean } | undefined)
+            ?.requireResidentKey ?? true,
+        authenticatorAttachment: "platform",
+      },
+    }
+
+    const fallbackOptions: PublicKeyCredentialCreationOptions = {
+      ...basePublicKey,
+      authenticatorSelection: {
+        ...(basePublicKey.authenticatorSelection ?? {}),
+      },
+    }
+    if (fallbackOptions.authenticatorSelection) {
+      delete (fallbackOptions.authenticatorSelection as { authenticatorAttachment?: string })
+        .authenticatorAttachment
+    }
+
+    const tryCreateCredential = async (
+      publicKey: PublicKeyCredentialCreationOptions,
+    ): Promise<PublicKeyCredential> => {
+      return (await navigator.credentials.create({ publicKey })) as PublicKeyCredential
+    }
+
+    let cred: PublicKeyCredential
+    try {
+      cred = await tryCreateCredential(
+        platformAvailable ? withPlatformPreference : fallbackOptions,
+      )
+    } catch (error) {
+      if (
+        platformAvailable &&
+        error instanceof DOMException &&
+        (error.name === "NotAllowedError" || error.name === "InvalidStateError")
+      ) {
+        cred = await tryCreateCredential(fallbackOptions)
+      } else {
+        throw error
+      }
+    }
+
     const credential = {
       id: cred.id,
       rawId: arrayBufferToB64(cred.rawId),

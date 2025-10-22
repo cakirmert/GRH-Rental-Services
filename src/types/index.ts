@@ -15,6 +15,7 @@ export type {
   CreateBookingInput,
   UpdateBookingInput,
   BookingStatusUpdateInput,
+  BlockRecurrenceFrequency,
 } from "./booking"
 
 // Internationalization types

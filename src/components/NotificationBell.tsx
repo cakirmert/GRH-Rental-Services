@@ -57,6 +57,7 @@ export default function NotificationBell() {
     if (n.bookingId) {
       localStorage.setItem("grh-highlight-booking-id", n.bookingId)
       let isChat = false
+      let targetView: View = View.MY_BOOKINGS
       try {
         const parsed = JSON.parse(n.message) as { key: string; vars?: Record<string, string> }
         if (
@@ -83,7 +84,10 @@ export default function NotificationBell() {
           )
         }, 50)
       } else {
-        setTimeout(() => setView(View.MY_BOOKINGS), 50)
+        if (n.type === "BOOKING_REQUEST") {
+          targetView = View.RENTAL_DASHBOARD
+        }
+        setTimeout(() => setView(targetView), 50)
       }
     }
   }

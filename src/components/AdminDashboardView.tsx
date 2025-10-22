@@ -316,22 +316,37 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
           onValueChange={(value) => setCurrentViewOrTab(value as AdminView)}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-4 md:w-auto md:inline-flex">
-            <TabsTrigger value="assignees" className="text-sm px-3 py-1.5 h-auto">
+          <TabsList className="w-full flex flex-wrap gap-2 overflow-x-auto md:w-auto md:flex-nowrap md:gap-0 md:overflow-visible">
+            <TabsTrigger
+              value="assignees"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
               {" "}
               {/* Custom padding for smaller tabs */}
               <ListChecks className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.defaults")}
             </TabsTrigger>
-            <TabsTrigger value="items" className="text-sm px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="items"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
               <Package className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.items")}
             </TabsTrigger>
-            <TabsTrigger value="members" className="text-sm px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="members"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
               <UsersIcon className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.members")}
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="text-sm px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="calendar"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
               <CalendarDays className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.calendar")}
             </TabsTrigger>
-            <TabsTrigger value="cancellations" className="text-sm px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="cancellations"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
               <XCircle className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.cancellations")}
             </TabsTrigger>
           </TabsList>
