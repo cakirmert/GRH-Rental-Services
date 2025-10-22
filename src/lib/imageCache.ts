@@ -2,7 +2,7 @@
 // Edge-runtime compatible image cache using Map instead of LRU cache
 
 export interface CachedImage {
-  buffer: Buffer
+  buffer: Uint8Array
   contentType: string
   timestamp: number
   originalUrl: string
@@ -53,15 +53,28 @@ class ImageCacheManager {
     }
   }
 
-  set(imageUrl: string, buffer: Buffer, contentType: string, format?: string): void {
+  private toUint8Array(data: ArrayBuffer | ArrayBufferView): Uint8Array {
+    if (data instanceof Uint8Array) {
+      return data
+    }
+
+    if (data instanceof ArrayBuffer) {
+      return new Uint8Array(data)
+    }
+
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+  }
+
+  set(imageUrl: string, buffer: ArrayBuffer | ArrayBufferView, contentType: string, format?: string): void {
     const key = this.getCacheKey(imageUrl, format)
+    const normalized = this.toUint8Array(buffer)
     const item: CachedImage = {
-      buffer,
+      buffer: normalized,
       contentType,
       timestamp: Date.now(),
       originalUrl: imageUrl,
       format,
-      size: buffer.length
+      size: normalized.byteLength
     }
     
     // Remove old item if exists

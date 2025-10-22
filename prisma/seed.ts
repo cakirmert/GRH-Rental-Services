@@ -57,7 +57,11 @@ async function main() {
         // Otherwise, compress and resize to get under 1MB
         let quality = 90
         let width: number | undefined = undefined
-        let finalBuffer = data
+        // Ensure finalBuffer is a concrete Node.js Buffer to avoid
+        // TypeScript's generic Buffer<ArrayBufferLike> vs NonSharedBuffer
+        // mismatch. Create a new Buffer from the data which gives a
+        // concrete Buffer type and is safe for reassigning later.
+        let finalBuffer: Buffer = Buffer.from(data)
         const image = sharp(data).rotate().withMetadata({ exif: undefined })
         const metadata = await image.metadata()
         // Try quality reduction first
@@ -65,13 +69,13 @@ async function main() {
           let tempImage = image
           if (width) tempImage = tempImage.resize({ width })
           if (metadata.format === "jpeg" || metadata.format === "jpg") {
-            finalBuffer = await tempImage.jpeg({ quality, mozjpeg: true }).toBuffer()
+            finalBuffer = (await tempImage.jpeg({ quality, mozjpeg: true }).toBuffer()) as Buffer
           } else if (metadata.format === "png") {
-            finalBuffer = await tempImage.png({ compressionLevel: 9 }).toBuffer()
+            finalBuffer = (await tempImage.png({ compressionLevel: 9 }).toBuffer()) as Buffer
           } else if (metadata.format === "webp") {
-            finalBuffer = await tempImage.webp({ quality }).toBuffer()
+            finalBuffer = (await tempImage.webp({ quality }).toBuffer()) as Buffer
           } else {
-            finalBuffer = await tempImage.toBuffer()
+            finalBuffer = (await tempImage.toBuffer()) as Buffer
           }
           if (finalBuffer.length < 1024 * 1024) break
         }
@@ -80,13 +84,13 @@ async function main() {
           width = width ? Math.floor(width * 0.8) : Math.floor((metadata.width || 2000) * 0.8)
           const tempImage = image.resize({ width })
           if (metadata.format === "jpeg" || metadata.format === "jpg") {
-            finalBuffer = await tempImage.jpeg({ quality: 70, mozjpeg: true }).toBuffer()
+            finalBuffer = (await tempImage.jpeg({ quality: 70, mozjpeg: true }).toBuffer()) as Buffer
           } else if (metadata.format === "png") {
-            finalBuffer = await tempImage.png({ compressionLevel: 9 }).toBuffer()
+            finalBuffer = (await tempImage.png({ compressionLevel: 9 }).toBuffer()) as Buffer
           } else if (metadata.format === "webp") {
-            finalBuffer = await tempImage.webp({ quality: 70 }).toBuffer()
+            finalBuffer = (await tempImage.webp({ quality: 70 }).toBuffer()) as Buffer
           } else {
-            finalBuffer = await tempImage.toBuffer()
+            finalBuffer = (await tempImage.toBuffer()) as Buffer
           }
         }
         const ext = path.extname(p)
