@@ -354,10 +354,18 @@ export const bookingsRouter = router({
       }
       if (input.status) {
         whereClause.status = input.status
+        if (input.status === BookingStatus.ACCEPTED) {
+          whereClause.NOT = {
+            notes: { startsWith: ADMIN_BLOCK_PREFIX },
+          }
+        }
       } else {
         // Default: Show active, actionable bookings
         whereClause.status = {
           in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED],
+        }
+        whereClause.NOT = {
+          notes: { startsWith: ADMIN_BLOCK_PREFIX },
         }
       }
 
