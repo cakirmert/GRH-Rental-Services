@@ -66,6 +66,12 @@ export function BookingDialog() {
   if (!selectedBooking) return null
 
   const booking = selectedBooking as CalendarBooking
+  const now = new Date()
+  const startTime = new Date(booking.startDate)
+  const CAN_MARK_BORROWED_BEFORE_HOURS = 4
+  const canMarkBorrowed =
+    booking.status === BookingStatus.ACCEPTED &&
+    startTime.getTime() <= now.getTime() + CAN_MARK_BORROWED_BEFORE_HOURS * 60 * 60 * 1000
   const isAdminBlock = isAdminBlockBooking(booking)
   const blockReason = getAdminBlockReason(booking.notes)
 
@@ -152,11 +158,19 @@ export function BookingDialog() {
                   )}
                 </>
               )}
-              {booking.status === BookingStatus.ACCEPTED &&
-                renderAction(
-                  BookingStatus.CANCELLED,
-                  t("rentalDashboard.cancel", { defaultValue: "Cancel" }),
-                )}
+              {booking.status === BookingStatus.ACCEPTED && (
+                <>
+                  {canMarkBorrowed &&
+                    renderAction(
+                      BookingStatus.BORROWED,
+                      t("rentalDashboard.markBorrowed", { defaultValue: "Mark Borrowed" }),
+                    )}
+                  {renderAction(
+                    BookingStatus.CANCELLED,
+                    t("rentalDashboard.cancel", { defaultValue: "Cancel" }),
+                  )}
+                </>
+              )}
               {booking.status === BookingStatus.BORROWED && (
                 <>
                   {renderAction(

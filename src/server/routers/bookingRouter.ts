@@ -10,6 +10,7 @@ import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusN
 import { notificationEmitter } from "@/lib/notifications"
 import { sendBookingRequestEmail } from "@/server/email/sendBookingRequestEmail"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
+import { markUpcomingBookingsBorrowed } from "@/server/jobs/autoBorrowed"
 
 // Helper (already defined)
 const isRentalTeamMember = (ctx: Context) => {
@@ -347,6 +348,8 @@ export const bookingsRouter = router({
       if (!isRentalTeamMember(ctx)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." })
       }
+
+      await markUpcomingBookingsBorrowed()
 
       const whereClause: Prisma.BookingWhereInput = {}
       if (ctx.session.user.role !== "ADMIN") {
@@ -711,11 +714,16 @@ export const bookingsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const role = ctx.session.user.role
+
+      if (role === "ADMIN" || role === "RENTAL") {
+        await markUpcomingBookingsBorrowed()
+      }
+
       const where: Prisma.BookingWhereInput = {
         AND: [{ startDate: { lte: input.end } }, { endDate: { gte: input.start } }],
       }
 
-      const role = ctx.session.user.role
       if (role === "ADMIN") {
         // no additional filter
       } else if (role === "RENTAL") {

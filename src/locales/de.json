@@ -165,7 +165,15 @@
     "cancellations": {
       "title": "Team-Stornierungen",
       "description": "Vom Team stornierte Buchungen.",
-      "none": "Keine Team-Stornierungen gefunden."
+      "none": "Keine Team-Stornierungen gefunden.",
+      "headers": {
+        "item": "Artikel",
+        "requester": "Anfragende Person",
+        "cancelledBy": "Storniert von",
+        "cancelledOn": "Storniert am",
+        "notes": "Notizen"
+      },
+      "unknownStaff": "Unbekannte Team-Person"
     }
   },
   "header": {
@@ -628,7 +636,7 @@
     "searchPlaceholder": "Artikel, Benutzername/-mail...",
     "statusFilterLabel": "Nach Status filtern",
     "statusAllActive": "Alle Aktiven (Standard)",
-    "autoBorrowInfo": "Buchungen werden 15 Minuten vor Beginn automatisch als ausgeliehen markiert.",
+    "autoBorrowInfo": "Buchungen werden automatisch als ausgeliehen markiert, sobald die Nutzungszeit beginnt.",
     "noBookingsFound": "Keine Buchungen entsprechen deinen aktuellen Filtern.",
     "tryDifferentFilters": "Versuche, deine Suchbegriffe oder den Statusfilter anzupassen.",
     "unknownItem": "Unbekannter Artikel",

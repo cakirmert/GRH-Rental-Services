@@ -1,4 +1,3 @@
-﻿import cron from "node-cron"
 import prisma from "@/lib/prismadb"
 import { BookingStatus } from "@prisma/client"
 import { format } from "date-fns"
@@ -9,7 +8,7 @@ const AUTO_CANCEL_REASON =
 
 /**
  * Cancel bookings that have expired (end date has passed) but are still pending/accepted
- * Runs every 30 minutes to clean up expired bookings
+ * Should be invoked via scheduled cron endpoints.
  */
 export async function cancelExpiredBookings() {
   const now = new Date()
@@ -63,7 +62,3 @@ export async function cancelExpiredBookings() {
     })
   }
 }
-
-cron.schedule("*/30 * * * *", cancelExpiredBookings)
-
-cancelExpiredBookings().catch((err) => console.error(err))

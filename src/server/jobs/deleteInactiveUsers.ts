@@ -1,4 +1,3 @@
-import cron from "node-cron"
 import prisma from "@/lib/prismadb"
 
 export async function deleteInactiveUsers() {
@@ -15,8 +14,3 @@ export async function deleteInactiveUsers() {
     await prisma.user.delete({ where: { id } })
   }
 }
-
-cron.schedule("30 3 * * *", deleteInactiveUsers)
-
-// Run once on startup
-deleteInactiveUsers().catch((err) => console.error(err))
