@@ -3,8 +3,8 @@ import { BookingStatus, NotificationType } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
 
 /**
- * Automatically mark accepted bookings as borrowed when their start time approaches
- * Should be triggered periodically via scheduled cron endpoints.
+ * Automatically mark accepted bookings as borrowed when the start time is imminent.
+ * Designed to be executed by scheduled cron hits or opportunistic triggers.
  */
 export async function markUpcomingBookingsBorrowed() {
   const now = new Date()
@@ -13,10 +13,14 @@ export async function markUpcomingBookingsBorrowed() {
   const upcoming = await prisma.booking.findMany({
     where: {
       status: BookingStatus.ACCEPTED,
-      startDate: { lte: soon, gte: now },
+      startDate: {
+        lte: soon,
+      },
     },
     include: { item: { select: { titleEn: true } } },
   })
+
+  if (upcoming.length === 0) return
 
   for (const booking of upcoming) {
     await prisma.booking.update({

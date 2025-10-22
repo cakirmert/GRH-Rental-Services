@@ -636,7 +636,7 @@
     "searchPlaceholder": "Artikel, Benutzername/-mail...",
     "statusFilterLabel": "Nach Status filtern",
     "statusAllActive": "Alle Aktiven (Standard)",
-    "autoBorrowInfo": "Buchungen werden 15 Minuten vor Beginn automatisch als ausgeliehen markiert.",
+    "autoBorrowInfo": "Buchungen werden automatisch als ausgeliehen markiert, sobald die Nutzungszeit beginnt.",
     "noBookingsFound": "Keine Buchungen entsprechen deinen aktuellen Filtern.",
     "tryDifferentFilters": "Versuche, deine Suchbegriffe oder den Statusfilter anzupassen.",
     "unknownItem": "Unbekannter Artikel",

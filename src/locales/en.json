@@ -638,7 +638,7 @@
     "searchPlaceholder": "Item, user name/email...",
     "statusFilterLabel": "Filter by Status",
     "statusAllActive": "All Active (Default)",
-    "autoBorrowInfo": "Bookings are automatically marked as borrowed 15 minutes before the start time.",
+    "autoBorrowInfo": "Bookings are automatically marked as borrowed once the start time is reached.",
     "noBookingsFound": "No bookings match your current filters.",
     "tryDifferentFilters": "Try adjusting your search or status filter.",
     "unknownItem": "Unknown Item",

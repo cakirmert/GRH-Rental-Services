@@ -309,6 +309,11 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   }
   const renderActionButtons = (booking: BookingForRentalTeam) => {
     const buttonClass = "flex-1 mt-1" // Use flex-1 to make buttons expand equally
+    const startDate = new Date(booking.startDate)
+    const CAN_MARK_BORROWED_BEFORE_HOURS = 4
+    const canMarkBorrowed =
+      booking.status === BookingStatus.ACCEPTED &&
+      startDate.getTime() <= Date.now() + CAN_MARK_BORROWED_BEFORE_HOURS * 60 * 60 * 1000
 
     switch (booking.status) {
       case BookingStatus.REQUESTED:
@@ -336,15 +341,28 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
         )
       case BookingStatus.ACCEPTED:
         return (
-          <Button
-            size="sm"
-            variant="destructive"
-            className={buttonClass}
-            onClick={() => handleActionClick(booking, BookingStatus.CANCELLED)}
-          >
-            <XCircle className="mr-1.5 h-4 w-4" />
-            {t("rentalDashboard.cancel", { defaultValue: "Cancel" })}
-          </Button>
+          <>
+            {canMarkBorrowed && (
+              <Button
+                size="sm"
+                variant="constructive"
+                className={buttonClass}
+                onClick={() => handleActionClick(booking, BookingStatus.BORROWED)}
+              >
+                <Loader2 className="mr-1.5 h-4 w-4" />
+                {t("rentalDashboard.markBorrowed", { defaultValue: "Mark Borrowed" })}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              className={buttonClass}
+              onClick={() => handleActionClick(booking, BookingStatus.CANCELLED)}
+            >
+              <XCircle className="mr-1.5 h-4 w-4" />
+              {t("rentalDashboard.cancel", { defaultValue: "Cancel" })}
+            </Button>
+          </>
         )
       case BookingStatus.BORROWED:
         return (
@@ -402,9 +420,6 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
           defaultValue: "Manage incoming booking requests and view the schedule.",
         })}
       </p>
-      <Alert variant="default" className="text-xs sm:text-sm">
-        <AlertDescription>{t("rentalDashboard.autoBorrowInfo")}</AlertDescription>
-      </Alert>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Button
           id="rental-refresh-btn"

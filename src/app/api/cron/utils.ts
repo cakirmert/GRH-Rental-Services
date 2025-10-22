@@ -1,4 +1,3 @@
-"use server"
 import type { NextRequest } from "next/server"
 
 type CronTask = {
