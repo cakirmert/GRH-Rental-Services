@@ -1,0 +1,1 @@
+export const ADMIN_BLOCK_PREFIX = "[ADMIN BLOCK]"

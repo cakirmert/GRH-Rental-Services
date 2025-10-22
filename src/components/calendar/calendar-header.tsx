@@ -3,9 +3,15 @@
 import { useCalendar } from "./calendar-provider"
 import { format, addMonths, addWeeks, addDays } from "date-fns"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/locales/i18n"
 
-export function CalendarHeader() {
+interface CalendarHeaderProps {
+  onBlockSlot?: () => void
+}
+
+export function CalendarHeader({ onBlockSlot }: CalendarHeaderProps) {
   const { currentDate, setCurrentDate, view, setView } = useCalendar()
+  const { t } = useI18n()
 
   const prev = () => {
     setCurrentDate(
@@ -64,6 +70,16 @@ export function CalendarHeader() {
           Day
         </Button>
       </div>
+      {onBlockSlot && (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={onBlockSlot}
+          className="ml-2 whitespace-nowrap"
+        >
+          {t("adminCalendar.block.button")}
+        </Button>
+      )}
     </div>
   )
 }

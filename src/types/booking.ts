@@ -66,3 +66,5 @@ export interface BookingStatusUpdateInput {
   bookingId: string
   newStatus: string // BookingStatus enum
 }
+
+export type BlockRecurrenceFrequency = "NONE" | "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY"
