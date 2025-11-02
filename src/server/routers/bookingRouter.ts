@@ -162,7 +162,6 @@ export const bookingsRouter = router({
         await Promise.allSettled(
           responsibleMembers.map(async (member) => {
             if (!member?.id) return
-            if (member.id === ctx.session.user.id) return
 
             try {
               const notification = await ctx.prisma.notification.create({
