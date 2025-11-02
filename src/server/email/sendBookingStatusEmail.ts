@@ -18,6 +18,7 @@ interface SendBookingStatusEmailArgs {
   booking: BookingSummary
   status: BookingStatus
   notes?: string | null
+  performedBy?: string
 }
 
 const statusSubjectMap: Record<BookingStatus, string> = {
@@ -116,11 +117,13 @@ function buildEmailContent({
   booking,
   status,
   notes,
+  handledBy,
 }: {
   recipientName?: string | null
   booking: BookingSummary
   status: BookingStatus
   notes?: string | null
+  handledBy?: string
 }) {
   const greetingName = recipientName ? recipientName.split(" ")[0] : undefined
   const greeting = greetingName ? `Hello ${greetingName},` : "Hello,"
@@ -131,6 +134,7 @@ function buildEmailContent({
   const startLabel = format(booking.startDate, "PPpp")
   const endLabel = format(booking.endDate, "PPpp")
   const notesText = notes?.trim()
+  const handledByText = handledBy?.trim()
 
   const textLines = [
     greeting,
@@ -138,6 +142,10 @@ function buildEmailContent({
     `Your booking for ${booking.itemTitle} has been ${statusLabel}.`,
     `Reserved period: ${startLabel} to ${endLabel}.`,
   ]
+
+  if (handledByText) {
+    textLines.push("", `Handled by: ${handledByText}`)
+  }
 
   if (notesText) {
     textLines.push("", "Notes:", notesText)
@@ -151,6 +159,14 @@ function buildEmailContent({
   )
 
   const text = textLines.join("\n")
+
+  const handledByHtml = handledByText
+    ? `
+            <div style="margin-top: 28px; padding: 16px 20px; border-radius: 14px; background: #eef2ff; border: 1px solid #e0e7ff; text-align: left;">
+              <p style="margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #4338ca; font-weight: 600;">Handled by</p>
+              <p style="margin: 0; font-size: 16px; font-weight: 600; color: #312e81;">${escapeHtml(handledByText)}</p>
+            </div>`
+    : ""
 
   const html = `
     <div style="background: #f5f6f8; padding: 32px 16px; font-family: 'Inter', 'Segoe UI', sans-serif; color: #111827;">
@@ -174,6 +190,7 @@ function buildEmailContent({
                 <p style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">${escapeHtml(endLabel)}</p>
               </div>
             </div>
+            ${handledByHtml}
             ${formatNotesHtml(notes)}
             <div style="margin-top: 32px; padding: 24px 20px; border-radius: 16px; background: #eff6ff; text-align: left;">
               <p style="margin: 0 0 4px; font-weight: 600; color: #1d4ed8;">Need help?</p>
@@ -191,7 +208,13 @@ function buildEmailContent({
   return { text, html }
 }
 
-export async function sendBookingStatusEmail({ to, booking, status, notes }: SendBookingStatusEmailArgs) {
+export async function sendBookingStatusEmail({
+  to,
+  booking,
+  status,
+  notes,
+  performedBy,
+}: SendBookingStatusEmailArgs) {
   const subjectStatus = statusSubjectMap[status] ?? "updated"
   const subject = `Booking ${subjectStatus}: ${booking.itemTitle}`
   const { text, html } = buildEmailContent({
@@ -199,6 +222,7 @@ export async function sendBookingStatusEmail({ to, booking, status, notes }: Sen
     booking,
     status,
     notes,
+    handledBy: performedBy,
   })
 
   if (!transporter || isDev) {

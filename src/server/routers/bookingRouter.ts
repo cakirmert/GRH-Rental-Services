@@ -322,6 +322,10 @@ export const bookingsRouter = router({
             ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
             : null,
         ]),
+        performedBy: {
+          name: ctx.session.user.name ?? null,
+          email: ctx.session.user.email ?? null,
+        },
       })
 
       await logAction({
@@ -517,6 +521,10 @@ export const bookingsRouter = router({
             ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
             : null,
         ]),
+        performedBy: {
+          name: ctx.session.user.name ?? null,
+          email: ctx.session.user.email ?? null,
+        },
       })
       await logAction({
         type: LogType.BOOKING,
