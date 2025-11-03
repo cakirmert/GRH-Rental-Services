@@ -609,11 +609,17 @@
     "unsubscriptionFailed": "Deaktivierung der Benachrichtigungen fehlgeschlagen. Bitte versuche es erneut.",
     "status": {
       "requested": "Buchung für {item} wurde angefragt",
+      "requestedBy": "Buchung für {item} wurde von {actor} angefragt",
       "accepted": "Buchung für {item} wurde akzeptiert",
+      "acceptedBy": "Buchung für {item} wurde von {actor} bestätigt",
       "declined": "Buchung für {item} wurde abgelehnt",
+      "declinedBy": "Buchung für {item} wurde von {actor} abgelehnt",
       "borrowed": "Buchung für {item} wurde als ausgeliehen markiert",
+      "borrowedBy": "Buchung für {item} wurde von {actor} als ausgeliehen markiert",
       "completed": "Buchung für {item} wurde abgeschlossen",
-      "cancelled": "Buchung für {item} wurde storniert"
+      "completedBy": "Buchung für {item} wurde von {actor} abgeschlossen",
+      "cancelled": "Buchung für {item} wurde storniert",
+      "cancelledBy": "Buchung für {item} wurde von {actor} storniert"
     }
   },
   "install": {
@@ -649,7 +655,7 @@
     "loadMore": "Weitere Buchungen laden",
     "notesRequiredBorrowedCancel": "Bitte gib eine Notiz an, wenn eine ausgeliehene Buchung storniert wird.",
     "confirmActionTitle": "Aktion bestätigen",
-    "confirmActionGenericDesc": "Möchtest du diese Buchung für '{itemName}' von {userName} wirklich {action}?",
+    "confirmActionGenericDesc": "Möchtest du die Buchung für '{itemName}' von {userName} als {statusLabel} markieren?",
     "confirmActionBtn": "Bestätigen",
     "rentalNotesLabel": "Notizen für diese Aktion (optional, ggf. für Benutzer sichtbar)",
     "rentalNotesPlaceholder": "z.B. Grund für Ablehnung, Abholanweisungen...",
@@ -670,7 +676,7 @@
     "addNoteSuccessTitle": "Notiz hinzugefuegt",
     "addNoteSuccessDesc": "Notiz fuer Buchung {bookingId} gespeichert.",
     "declineNoteReminderTitle": "Bitte Notiz zur Ablehnung hinzufügen",
-    "declineNoteReminderBody": "Hinterlassen Sie den Ablehnungsgrund als Notiz, damit das Rental-Team den Kontext hat."
+    "declineNoteReminderBody": "Bitte trag den Grund unten ein, damit das Rental-Team den Kontext hat."
   },
   "adminCalendar": {
     "block": {

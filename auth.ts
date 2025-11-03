@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import EmailProvider from "next-auth/providers/nodemailer"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { normalizeEmail } from "@/utils/email"
+import { Prisma } from "@prisma/client"
 
 const otpRequests = new Map<string, { count: number; ts: number }>()
 export const otpFailures = new Map<string, { count: number; locked: number }>()
@@ -77,7 +79,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return `${code}.${h}`
       },
       async sendVerificationRequest({ identifier, token, provider, url }) {
-        const key = identifier.toLowerCase()
+        const key = normalizeEmail(identifier)
         const now = Date.now()
         const entry = otpRequests.get(key)
         if (entry && now - entry.ts < 60 * 60 * 1000) {
@@ -165,15 +167,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
-        const email = (credentials.email as string).toLowerCase()
+        const email = normalizeEmail(credentials.email as string)
 
         // Find or create user
-        let user = await prisma.user.findUnique({
-          where: { email },
+        let user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
           select: { id: true, email: true, name: true, role: true },
         })
 
-        if (!user) {
+        if (user) {
+          if (user.email !== email) {
+            try {
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: { email },
+                select: { id: true, email: true, name: true, role: true },
+              })
+            } catch (error) {
+              if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === "P2002"
+              ) {
+                const normalized = await prisma.user.findUnique({
+                  where: { email },
+                  select: { id: true, email: true, name: true, role: true },
+                })
+                if (normalized) {
+                  user = normalized
+                } else {
+                  throw error
+                }
+              } else {
+                throw error
+              }
+            }
+          }
+        } else {
           // Create new user if they don't exist
           user = await prisma.user.create({
             data: { email },

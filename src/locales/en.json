@@ -611,11 +611,17 @@
     "unsubscriptionFailed": "Failed to disable notifications. Please try again.",
     "status": {
       "requested": "Booking for {item} was requested",
+      "requestedBy": "Booking for {item} was requested by {actor}",
       "accepted": "Booking for {item} was accepted",
+      "acceptedBy": "Booking for {item} was accepted by {actor}",
       "declined": "Booking for {item} was declined",
+      "declinedBy": "Booking for {item} was declined by {actor}",
       "borrowed": "Booking for {item} was marked as borrowed",
+      "borrowedBy": "Booking for {item} was marked as borrowed by {actor}",
       "completed": "Booking for {item} was completed",
-      "cancelled": "Booking for {item} was cancelled"
+      "completedBy": "Booking for {item} was completed by {actor}",
+      "cancelled": "Booking for {item} was cancelled",
+      "cancelledBy": "Booking for {item} was cancelled by {actor}"
     }
   },
   "install": {
@@ -651,7 +657,7 @@
     "loadMore": "Load More Bookings",
     "notesRequiredBorrowedCancel": "Please provide notes when cancelling a borrowed booking.",
     "confirmActionTitle": "Confirm Action",
-    "confirmActionGenericDesc": "Are you sure you want to {action} this booking for '{itemName}' by {userName}?",
+    "confirmActionGenericDesc": "Do you want to mark the booking for '{itemName}' by {userName} as {statusLabel}?",
     "confirmActionBtn": "Confirm",
     "rentalNotesLabel": "Notes for this action (optional, may be visible to user)",
     "rentalNotesPlaceholder": "e.g., Reason for decline, pickup instructions...",
@@ -672,7 +678,7 @@
     "addNoteSuccessTitle": "Note Added",
     "addNoteSuccessDesc": "Saved note for booking {bookingId}.",
     "declineNoteReminderTitle": "Add a decline note",
-    "declineNoteReminderBody": "Please leave a note with the reason so the rental admin team has context."
+    "declineNoteReminderBody": "Please leave a short note below so everyone knows why this booking was declined."
   },
   "adminCalendar": {
     "block": {

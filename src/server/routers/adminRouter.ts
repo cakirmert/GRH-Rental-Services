@@ -9,6 +9,7 @@ import { TRPCError } from "@trpc/server"
 import type { Context } from "@/server/context"
 import { logAction } from "@/lib/logger"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
+import { normalizeEmail } from "@/utils/email"
 
 // Define LogType enum locally since it's not in Prisma schema
 enum LogType {
@@ -208,13 +209,16 @@ export const adminRouter = router({
       .input(z.object({ email: z.string().email("Invalid email format") }))
       .mutation(async ({ ctx, input }) => {
         ensureAdmin(ctx)
-        const existingUser = await ctx.prisma.user.findUnique({
-          where: { email: input.email },
+        const normalizedEmail = normalizeEmail(input.email)
+        const normalizedUser = await ctx.prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          select: { id: true, email: true, name: true, role: true },
         })
-        if (existingUser) {
-          if (existingUser.role === Role.USER) {
+
+        if (normalizedUser) {
+          if (normalizedUser.role === Role.USER) {
             const updated = await ctx.prisma.user.update({
-              where: { email: input.email },
+              where: { id: normalizedUser.id },
               data: { role: Role.RENTAL },
               select: { id: true, email: true, name: true, role: true },
             })
@@ -225,19 +229,46 @@ export const adminRouter = router({
             })
             return updated
           }
-          return { ...existingUser, message: "User is already a rental team member or admin." }
-        } else {
-          const created = await ctx.prisma.user.create({
-            data: { email: input.email, role: Role.RENTAL },
+          return { ...normalizedUser, message: "User is already a rental team member or admin." }
+        }
+
+        const existingUser = await ctx.prisma.user.findFirst({
+          where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+          select: { id: true, email: true, name: true, role: true },
+        })
+
+        if (existingUser) {
+          if (existingUser.role === Role.USER) {
+            const updated = await ctx.prisma.user.update({
+              where: { id: existingUser.id },
+              data: { role: Role.RENTAL, email: normalizedEmail },
+              select: { id: true, email: true, name: true, role: true },
+            })
+            await logAction({
+              type: LogType.ADMIN,
+              userId: ctx.session.user.id,
+              message: `promoted:${updated.id}`,
+            })
+            return updated
+          }
+          const updated = await ctx.prisma.user.update({
+            where: { id: existingUser.id },
+            data: { email: normalizedEmail },
             select: { id: true, email: true, name: true, role: true },
           })
-          await logAction({
-            type: LogType.ADMIN,
-            userId: ctx.session.user.id,
-            message: `added:${created.id}`,
-          })
-          return created
+          return { ...updated, message: "User is already a rental team member or admin." }
         }
+
+        const created = await ctx.prisma.user.create({
+          data: { email: normalizedEmail, role: Role.RENTAL },
+          select: { id: true, email: true, name: true, role: true },
+        })
+        await logAction({
+          type: LogType.ADMIN,
+          userId: ctx.session.user.id,
+          message: `added:${created.id}`,
+        })
+        return created
       }),
     remove: protectedProcedure
       .input(z.object({ userId: z.string() }))

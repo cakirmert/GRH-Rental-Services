@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { otpRequests, generateHmacSha256 } from "../../../../../auth"
 import { transporter, isDev, CONTACT_EMAIL } from "../../../../lib/mail"
 import prisma from "../../../../lib/prismadb"
+import { normalizeEmail } from "@/utils/email"
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    const key = email.toLowerCase()
+    const key = normalizeEmail(email)
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim()
 

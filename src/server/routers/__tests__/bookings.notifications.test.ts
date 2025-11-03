@@ -58,5 +58,7 @@ describe("notifications on status update", () => {
     const { caller } = await createCaller()
     await caller.updateBookingStatusByTeam({ bookingId: "b1", newStatus: BookingStatus.ACCEPTED })
     expect(notifyMock).toHaveBeenCalled()
+    const callArgs = notifyMock.mock.calls[0][0]
+    expect(callArgs.performedBy).toEqual({ name: null, email: "admin@example.com" })
   })
 })

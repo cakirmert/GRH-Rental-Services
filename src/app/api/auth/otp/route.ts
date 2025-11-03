@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { otpFailures } from "../../../../../auth"
 import prisma from "../../../../lib/prismadb"
+import { normalizeEmail } from "@/utils/email"
 
 // Helper function for HMAC SHA256 using Web Crypto
 async function generateHmacSha256(data: string, secret: string): Promise<string> {
@@ -32,7 +33,7 @@ function handleSignInFailure(
 
 export async function POST(req: Request) {
   const { token, email } = await req.json() // token here is the code part from user input
-  const key = email.toLowerCase()
+  const key = normalizeEmail(email)
   const fail = otpFailures.get(key)
   const now = Date.now()
 

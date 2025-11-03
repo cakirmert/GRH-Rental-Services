@@ -1,7 +1,7 @@
 // src/components/RentalDashboardView.tsx
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/i18n"
 import { de as deLocaleFn, enUS as enUSLocaleFn } from "date-fns/locale"
@@ -132,6 +132,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list")
   const [noteDialogBooking, setNoteDialogBooking] = useState<BookingForRentalTeam | null>(null)
   const [noteEditorValue, setNoteEditorValue] = useState("")
+  const [actionNote, setActionNote] = useState("")
 
   const queryInput = useMemo(
     () => ({
@@ -226,6 +227,16 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     },
   })
 
+  const addActionNoteMutation = trpc.bookings.addRentalNote.useMutation()
+  const { reset: resetActionNoteMutation } = addActionNoteMutation
+
+  useEffect(() => {
+    if (!showActionModal) {
+      setActionNote("")
+      resetActionNoteMutation()
+    }
+  }, [showActionModal, resetActionNoteMutation])
+
   // Check if user has rental team access (RENTAL or ADMIN role)
   const isRentalTeamMember = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
   
@@ -265,11 +276,43 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const handleActionClick = (booking: BookingForRentalTeam, newStatus: BookingStatus) => {
     setSelectedBookingForAction(booking)
     setActionToConfirm(newStatus)
+    setActionNote("")
     setShowActionModal(true)
   }
 
-  const confirmAction = () => {
-    if (!selectedBookingForAction || !actionToConfirm) return
+  const confirmAction = async () => {
+    if (
+      !selectedBookingForAction ||
+      !actionToConfirm ||
+      updateStatusMutation.isPending ||
+      addActionNoteMutation.isPending
+    ) {
+      return
+    }
+
+    const trimmedNote = actionNote.trim()
+
+    if (actionToConfirm === BookingStatus.DECLINED && !trimmedNote) {
+      return
+    }
+
+    try {
+      if (trimmedNote) {
+        await addActionNoteMutation.mutateAsync({
+          bookingId: selectedBookingForAction.id,
+          note: trimmedNote,
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("errors.unexpected")
+      toast({
+        title: t("errors.title"),
+        description: message,
+        variant: "destructive",
+      })
+      return
+    }
+
     updateStatusMutation.mutate({
       bookingId: selectedBookingForAction.id,
       newStatus: actionToConfirm,
@@ -279,6 +322,12 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const getItemTitle = (item: BookingForRentalTeam["item"]) => {
     if (!item) return t("rentalDashboard.unknownItem", { defaultValue: "Unknown Item" })
     return i18nLocale === "de" && item.titleDe ? item.titleDe : item.titleEn
+  }
+
+  const getStatusLabelForAction = (status?: BookingStatus | null) => {
+    if (!status) return "updated"
+    const translation = t(`myBookings.tabs.${status.toLowerCase()}`, { defaultValue: status })
+    return translation ? translation.toLowerCase() : status.toLowerCase()
   }
 
   const getItemTypeIcon = (type?: ItemType | null) => {
@@ -772,9 +821,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             </DialogTitle>
             <DialogDescription>
               {t("rentalDashboard.confirmActionGenericDesc", {
-                action: t(`myBookings.tabs.${actionToConfirm?.toLowerCase() ?? "update"}`, {
-                  defaultValue: actionToConfirm || "update",
-                }),
+                statusLabel: getStatusLabelForAction(actionToConfirm),
                 itemName: selectedBookingForAction?.item
                   ? getItemTitle(selectedBookingForAction.item)
                   : t("rentalDashboard.unknownItem", { defaultValue: "Item" }),
@@ -783,32 +830,64 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             </DialogDescription>
           </DialogHeader>
           {actionToConfirm === BookingStatus.DECLINED && (
-            <Alert variant="destructive" className="mb-4 flex items-start gap-3">
-              <AlertCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <div className="text-sm leading-relaxed">
-                <p className="font-semibold">
-                  {t("rentalDashboard.declineNoteReminderTitle", { defaultValue: "Add a decline note" })}
-                </p>
-                <p>
-                  {t("rentalDashboard.declineNoteReminderBody", {
-                    defaultValue: "Please leave a note with the reason so the team has context.",
+            <>
+              <Alert variant="destructive" className="mb-4 flex items-start gap-3">
+                <AlertCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div className="text-sm leading-relaxed">
+                  <p className="font-semibold">
+                    {t("rentalDashboard.declineNoteReminderTitle", { defaultValue: "Add a decline note" })}
+                  </p>
+                  <p>
+                    {t("rentalDashboard.declineNoteReminderBody", {
+                      defaultValue: "Please leave a note with the reason so the team has context.",
+                    })}
+                  </p>
+                </div>
+              </Alert>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="rental-action-note"
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  {t("rentalDashboard.rentalNotesLabel", {
+                    defaultValue: "Notes for this action (optional, may be visible to user)",
                   })}
-                </p>
+                </Label>
+                <Textarea
+                  id="rental-action-note"
+                  value={actionNote}
+                  onChange={(event) => setActionNote(event.target.value)}
+                  placeholder={t("rentalDashboard.rentalNotesPlaceholder", {
+                    defaultValue: "e.g., Reason for decline, pickup instructions...",
+                  })}
+                  rows={4}
+                />
               </div>
-            </Alert>
+            </>
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={updateStatusMutation.isPending}>
+              <Button
+                variant="outline"
+                disabled={
+                  updateStatusMutation.isPending || addActionNoteMutation.isPending
+                }
+              >
                 {t("common.cancel")}
               </Button>
             </DialogClose>
             <Button
               onClick={confirmAction}
-              disabled={updateStatusMutation.isPending}
+              disabled={
+                updateStatusMutation.isPending ||
+                addActionNoteMutation.isPending ||
+                (actionToConfirm === BookingStatus.DECLINED && !actionNote.trim())
+              }
               variant={actionToConfirm === BookingStatus.DECLINED ? "destructive" : "default"}
             >
-              {updateStatusMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(updateStatusMutation.isPending || addActionNoteMutation.isPending) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
 
               {t("common.confirm")}
             </Button>

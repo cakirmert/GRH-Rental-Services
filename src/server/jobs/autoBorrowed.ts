@@ -1,6 +1,5 @@
 import prisma from "@/lib/prismadb"
-import { BookingStatus, NotificationType } from "@prisma/client"
-import { notificationEmitter } from "@/lib/notifications"
+import { BookingStatus } from "@prisma/client"
 
 /**
  * Automatically mark accepted bookings as borrowed when the start time is imminent.
@@ -27,20 +26,6 @@ export async function markUpcomingBookingsBorrowed() {
       where: { id: booking.id },
       data: { status: BookingStatus.BORROWED },
     })
-    const targets = [booking.userId, booking.assignedToId].filter(Boolean) as string[]
-    for (const id of targets) {
-      const n = await prisma.notification.create({
-        data: {
-          userId: id,
-          bookingId: booking.id,
-          type: NotificationType.BOOKING_RESPONSE,
-          message: JSON.stringify({
-            key: "notifications.autoBorrowed",
-            vars: { item: booking.item.titleEn },
-          }),
-        },
-      })
-      notificationEmitter.emit("new", n)
-    }
+    // Automatic updates should stay silent for blocked slots and scheduled transitions.
   }
 }
