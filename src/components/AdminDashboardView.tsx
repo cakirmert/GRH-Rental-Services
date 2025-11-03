@@ -4,12 +4,12 @@
 import React, { useState } from "react"
 import { useI18n } from "@/locales/i18n"
 import { trpc } from "@/utils/trpc"
-import { CalendarDays, XCircle } from "lucide-react"
+import { CalendarDays, XCircle, Hourglass } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ArrowLeft, Package, Users as UsersIcon, ListChecks, Loader2 } from "lucide-react"
+import { ArrowLeft, Package, Users as UsersIcon, ListChecks } from "lucide-react"
 import { useSession } from "next-auth/react"
 
 import ProfilesTab from "./admin/ProfilesTab"
@@ -211,7 +211,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
                         defaultValue: "Pending Bookings",
                       })}
                     </CardTitle>
-                    <Loader2 className="h-4 w-4 text-muted-foreground" />
+                    <Hourglass className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.pendingBookings}</div>

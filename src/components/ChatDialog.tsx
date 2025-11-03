@@ -4,13 +4,14 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Send, Check, Loader2 } from "lucide-react"
+import { ArrowLeft, Send, Check } from "lucide-react"
 import clsx from "clsx"
 import { useSession } from "next-auth/react"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { toast } from "@/components/ui/use-toast"
 import { useRef, useEffect, useMemo, useState } from "react"
+import { Spinner } from "@/components/ui/spinner"
 
 interface Props {
   open: boolean
@@ -155,9 +156,7 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
               onScroll={onListScroll}
               className="flex-1 min-h-[220px] overflow-y-auto space-y-4 px-4 py-4 bg-background/80 rounded-b-xl"
             >
-              {msgsQry.isInitialLoading && (
-                <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin" />
-              )}
+              {msgsQry.isInitialLoading && <Spinner className="mx-auto mt-10 size-6" />}
 
               <div ref={topSentinelRef} />
 
@@ -235,11 +234,7 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
                   size="lg"
                   className="flex-1 min-h-[80px] rounded-xl px-4 py-2"
                 >
-                  {sendMut.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+                  {sendMut.isPending ? <Spinner className="size-4" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{t("Chat.sendInstructions")}</p>

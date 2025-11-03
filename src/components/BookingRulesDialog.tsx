@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from "@/locales/i18n"
+import { Spinner } from "@/components/ui/spinner"
 
 interface BookingRulesDialogProps {
   open: boolean
@@ -84,7 +84,7 @@ export function BookingRulesDialog({
           <Button onClick={onConfirm} disabled={!agreeToRules || isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 size-4" />
                 {t("bookingRulesDialog.submitting")}
               </>
             ) : (

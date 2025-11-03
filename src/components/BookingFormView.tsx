@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   format,
   isBefore,
@@ -43,6 +43,7 @@ import type { Session } from "next-auth"
 import { type DateRange, type Modifiers } from "react-day-picker" // Use Modifiers instead of DayModifiers
 import { trpc } from "@/utils/trpc"
 import InteractiveTimeRangePicker from "@/components/InteractiveTimeRangePicker"
+import { Spinner } from "@/components/ui/spinner"
 import { useAuthModal } from "@/contexts/AuthModalContext"
 
 import { useView, View } from "@/contexts/ViewContext" // Import View type
@@ -1215,7 +1216,7 @@ function BookingFormView(props: BookingFormViewProps) {
                   {authStatus === "authenticated" ? (
                     submittingBooking ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Spinner className="mr-2 size-4" />
                         {t("common.submitting")}
                       </>
                     ) : (

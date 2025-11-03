@@ -61,6 +61,7 @@ import { CalendarProvider } from "@/components/calendar/calendar-provider"
 import { Calendar } from "@/components/calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
 import NotAuthorized from "./NotAuthorized"
+import { Spinner } from "@/components/ui/spinner"
 
 interface RentalDashboardViewProps {
   onGoBack: () => void
@@ -720,7 +721,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             variant="outline"
             size="sm"
           >
-            {isFetchingNextPage && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isFetchingNextPage && <Spinner className="mr-2 size-4" />}
             {t("rentalDashboard.loadMore", { defaultValue: "Load More Bookings" })}
           </Button>
         </div>
@@ -806,7 +807,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
               onClick={handleNoteSubmit}
               disabled={addNoteMutation.isPending || !noteEditorValue.trim()}
             >
-              {addNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {addNoteMutation.isPending && <Spinner className="mr-2 size-4" />}
               {t("rentalDashboard.addNoteSubmit", { defaultValue: "Save Note" })}
             </Button>
           </DialogFooter>
@@ -886,7 +887,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
               variant={actionToConfirm === BookingStatus.DECLINED ? "destructive" : "default"}
             >
               {(updateStatusMutation.isPending || addActionNoteMutation.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 size-4" />
               )}
 
               {t("common.confirm")}
