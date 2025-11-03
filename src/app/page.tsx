@@ -2,6 +2,7 @@
 "use client"
 
 import { useCallback, useEffect, useState, useRef, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { trpc } from "@/utils/trpc"
 import { SearchBar } from "@/components/SearchBar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,22 +16,10 @@ import { useSession, signIn } from "next-auth/react"
 import { enGB, de } from "date-fns/locale"
 import type { Locale } from "date-fns"
 import { ItemCard } from "@/components/ItemCard"
-import BookingFormView from "@/components/BookingFormView"
-import MyBookingsComponent from "@/components/MyBookings"
-import RentalDashboardView from "@/components/RentalDashboardView" // Create this new component
-import ChatDialog from "@/components/ChatDialog"
 import { useView, View } from "@/contexts/ViewContext" // Import View type
 import type { Item } from "@/components/ItemCard" // Ensure this type path is correct
 import type { inferRouterOutputs } from "@trpc/server"
 import type { AppRouter } from "@/server/routers/appRouter"
-
-// Import content components
-import AboutPage from "@/content/about/page"
-import ContactPage from "@/content/contact/page"
-import DevelopersPage from "@/content/developers/page"
-import FaqPage from "@/content/faq/page"
-import ImprintPage from "@/content/imprint/page"
-import PrivacyPage from "@/content/privacy/page"
 
 type DbItem =
   | inferRouterOutputs<AppRouter>["items"]["all"][number]
@@ -87,9 +76,6 @@ function mapDbItemToClient(it: DbItem, locale: string): Item {
     rules,
   }
 }
-
-import AdminDashboardView from "@/components/AdminDashboardView"
-
 function BookingViewSkeleton() {
   return (
     <div className="space-y-8 mx-auto">
@@ -131,6 +117,69 @@ function BookingViewSkeleton() {
     </div>
   )
 }
+
+function SectionFallback() {
+  return (
+    <div className="py-16 text-center text-muted-foreground">
+      <p>Loading…</p>
+    </div>
+  )
+}
+
+const BookingFormView = dynamic(() => import("@/components/BookingFormView"), {
+  ssr: false,
+  loading: () => <BookingViewSkeleton />,
+})
+
+const MyBookingsComponent = dynamic(() => import("@/components/MyBookings"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const RentalDashboardView = dynamic(() => import("@/components/RentalDashboardView"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const AdminDashboardView = dynamic(() => import("@/components/AdminDashboardView"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const ChatDialog = dynamic(() => import("@/components/ChatDialog"), {
+  ssr: false,
+  loading: () => null,
+})
+
+const AboutPage = dynamic(() => import("@/content/about/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const ContactPage = dynamic(() => import("@/content/contact/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const DevelopersPage = dynamic(() => import("@/content/developers/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const FaqPage = dynamic(() => import("@/content/faq/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const ImprintPage = dynamic(() => import("@/content/imprint/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
+
+const PrivacyPage = dynamic(() => import("@/content/privacy/page"), {
+  ssr: false,
+  loading: SectionFallback,
+})
 
 // Define a more specific type for the view if not already in ViewContext
 // type AppView = "list" | "booking" | "myBookings" | "rentalDashboard" | "adminDashboard";
