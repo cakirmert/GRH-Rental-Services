@@ -460,14 +460,15 @@
   "myBookings": {
     "title": "My Bookings",
     "tabs": {
-      "all": "All",
+      "all": "All statuses",
+      "upcoming": "Upcoming",
+      "past": "Past",
       "requested": "Requested",
       "accepted": "Accepted",
       "borrowed": "Borrowed",
       "completed": "Completed",
       "declined": "Declined",
-      "cancelled": "Cancelled",
-      "allLower": "all"
+      "cancelled": "Cancelled"
     },
     "browseItemsButton": "Browse Items to Book",
     "viewDetailsButton": "View Details",
@@ -497,6 +498,8 @@
     "editSuccessReRequestedDesc": "Booking updated and re-submitted for approval.",
     "errorPrepareEdit": "Could not prepare edit form.",
     "noBookingsFound": "No {status} bookings found.",
+    "noUpcomingBookings": "No upcoming bookings found.",
+    "noPastBookings": "No past bookings found.",
     "noBookingsFoundDesc": "It looks like you don't have any bookings with this status yet. Why not explore some items?",
     "nextDayIndicator": "next day",
     "bookedOn": "Booked on {date}",

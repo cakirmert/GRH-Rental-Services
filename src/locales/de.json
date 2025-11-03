@@ -459,14 +459,15 @@
   "myBookings": {
     "title": "Meine Buchungen",
     "tabs": {
-      "all": "Alle",
+      "all": "Alle Status",
+      "upcoming": "Bevorstehend",
+      "past": "Vergangen",
       "requested": "Angefragt",
       "accepted": "Akzeptiert",
       "borrowed": "Ausgeliehen",
       "completed": "Abgeschlossen",
       "declined": "Abgelehnt",
-      "cancelled": "Storniert",
-      "allLower": "alle"
+      "cancelled": "Storniert"
     },
     "browseItemsButton": "Artikel durchsuchen & buchen",
     "viewDetailsButton": "Details ansehen",
@@ -496,6 +497,8 @@
     "editSuccessReRequestedDesc": "Buchung aktualisiert und erneut zur Genehmigung eingereicht.",
     "errorPrepareEdit": "Bearbeitungsformular konnte nicht vorbereitet werden.",
     "noBookingsFound": "Keine Buchungen mit Status {status} gefunden.",
+    "noUpcomingBookings": "Keine bevorstehenden Buchungen gefunden.",
+    "noPastBookings": "Keine vergangenen Buchungen gefunden.",
     "noBookingsFoundDesc": "Du hast noch keine Buchungen mit diesem Status. Schau dir doch unsere Artikel an!",
     "nextDayIndicator": "nächster Tag",
     "bookedOn": "Gebucht am {date}",
