@@ -10,6 +10,8 @@ import type { Context } from "@/server/context"
 import { logAction } from "@/lib/logger"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 import { normalizeEmail } from "@/utils/email"
+import { revalidateTag } from "next/cache"
+import { EQUIPMENT_CACHE_TAG } from "@/app/_data/equipment"
 
 // Define LogType enum locally since it's not in Prisma schema
 enum LogType {
@@ -84,10 +86,12 @@ export const adminRouter = router({
       .input(z.object({ itemId: z.string(), memberIds: z.string().array() }))
       .mutation(async ({ ctx, input }) => {
         ensureAdmin(ctx)
-        return ctx.prisma.item.update({
+        const result = await ctx.prisma.item.update({
           where: { id: input.itemId },
           data: { responsibleMembers: { set: input.memberIds.map((id) => ({ id })) } },
         })
+        await revalidateTag(EQUIPMENT_CACHE_TAG)
+        return result
       }),
   }),
 
@@ -122,6 +126,7 @@ export const adminRouter = router({
             imagesJson: images && images.length > 0 ? JSON.stringify(images) : undefined,
           },
         })
+        await revalidateTag(EQUIPMENT_CACHE_TAG)
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -157,6 +162,7 @@ export const adminRouter = router({
             imagesJson: images ? JSON.stringify(images) : undefined,
           },
         })
+        await revalidateTag(EQUIPMENT_CACHE_TAG)
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -172,6 +178,7 @@ export const adminRouter = router({
           where: { id: input.itemId },
           data: { active: input.isEnabled },
         })
+        await revalidateTag(EQUIPMENT_CACHE_TAG)
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -299,6 +306,7 @@ export const adminRouter = router({
         where: { id: input.itemId },
         data: { imagesJson: JSON.stringify(input.images) },
       })
+      await revalidateTag(EQUIPMENT_CACHE_TAG)
       await logAction({
         type: LogType.ADMIN,
         userId: ctx.session.user.id,

@@ -24,9 +24,10 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
-import { Loader2, Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
+import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser"
+import { Spinner } from "@/components/ui/spinner"
 
 // Simple passkey support check
 function isPasskeySupported(): boolean {
@@ -319,7 +320,7 @@ export default function NamePrompt({
                       disabled={updateName.isPending || !name.trim()}
                       className="h-11 sm:h-10"
                     >
-                      {updateName.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {updateName.isPending && <Spinner className="mr-2 size-4" />}
                       {updateName.isPending ? t("common.submitting") : t("profile.saveButton")}
                     </Button>
                   </form>
@@ -465,7 +466,7 @@ export default function NamePrompt({
                           className="h-10 sm:h-9"
                         >
                           {isRegisteringPasskey ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Spinner className="mr-2 size-4" />
                           ) : (
                             <Plus className="mr-2 h-4 w-4" />
                           )}
@@ -615,7 +616,7 @@ export default function NamePrompt({
                           disabled={deleteAccount.isPending}
                         >
                           {deleteAccount.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Spinner className="mr-2 size-4" />
                           )}
                           {t("profile.confirmDeleteAction")}
                         </AlertDialogAction>

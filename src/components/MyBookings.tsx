@@ -8,7 +8,6 @@ import { de as deLocale } from "date-fns/locale"
 import {
   Calendar as CalendarIcon,
   Clock,
-  Loader2,
   Mail,
   Edit,
   X,
@@ -52,6 +51,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/i18n"
 import TimeSelect from "@/components/TimeSelect"
+import { Spinner } from "@/components/ui/spinner"
 import { type DateRange } from "react-day-picker"
 import { BookingStatus, ItemType } from "@prisma/client"
 
@@ -909,7 +909,7 @@ export default function MyBookingsComponent({
               </Button>
             </DialogClose>
             <Button onClick={handleUpdateBooking} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Spinner className="mr-2 size-4" />}
               {t("common.saveChanges")}
             </Button>
           </DialogFooter>
@@ -963,7 +963,7 @@ export default function MyBookingsComponent({
               }
               disabled={cancelBookingMutation.isPending}
             >
-              {cancelBookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {cancelBookingMutation.isPending && <Spinner className="mr-2 size-4" />}
               {t("myBookings.confirmCancelButton")}
             </Button>
           </DialogFooter>

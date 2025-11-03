@@ -1,17 +1,12 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import Providers from "./providers"
-import Header from "@/components/Header"
-import Footer from "@/components/Footer"
-import PushNotificationManager from "@/components/PushNotificationManager"
-import InstallPrompt from "@/components/InstallPrompt"
-import { FlickeringGrid } from "@/components/ui/shadcn-io/flickering-grid"
 import { auth } from "../../auth"
 import type { Session } from "next-auth"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import type { ReactNode } from "react"
+import AppLayoutClient from "./layout-client"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,26 +43,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         `}</style>
       </head>
       <body className={`${inter.className} antialiased`}>
-        <Providers session={session}>
-          <div className="relative flex flex-col min-h-screen tabindex--1">
-            <FlickeringGrid
-              className="absolute inset-0 -z-10 h-full w-full pointer-events-none"
-              color="rgb(148, 163, 184)"
-              squareSize={4}
-              gridGap={10}
-              maxOpacity={0.25}
-            />
-            <div className="relative z-10 flex flex-col min-h-screen">
-            <Header />
-            <main role="main" className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-            <PushNotificationManager />
-            <InstallPrompt />
-            </div>
-          </div>
-        </Providers>
+        <AppLayoutClient session={session}>{children}</AppLayoutClient>
         <SpeedInsights />
         <Analytics />
       </body>
