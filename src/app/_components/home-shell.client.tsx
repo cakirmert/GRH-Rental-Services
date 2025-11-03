@@ -16,6 +16,7 @@ import type { Item } from "@/components/ItemCard"
 import { trpc } from "@/utils/trpc"
 import { mapDbItemToClient } from "@/lib/mapItem"
 import type { MappableItem } from "@/lib/mapItem"
+import { Spinner } from "@/components/ui/spinner"
 
 function BookingViewSkeleton() {
   return (
@@ -59,24 +60,10 @@ function BookingViewSkeleton() {
 
 function SectionFallback() {
   return (
-    <div className="space-y-4 rounded-xl border bg-muted/50 p-6 shadow-sm">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-4 w-11/12" />
-      <Skeleton className="h-4 w-10/12" />
-      <Skeleton className="h-4 w-8/12" />
-    </div>
-  )
-}
-
-function InfoPageFallback() {
-  return (
-    <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-11/12" />
-      <Skeleton className="h-4 w-9/12" />
-      <Skeleton className="h-4 w-10/12" />
-      <Skeleton className="h-4 w-full" />
+    <div className="flex items-center justify-center rounded-xl border bg-muted/40 p-6 shadow-sm">
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <Spinner className="size-6" />
+      </div>
     </div>
   )
 }
@@ -108,35 +95,84 @@ const ChatDialog = dynamic(() => import("@/components/ChatDialog"), {
 
 const AboutPage = dynamic(() => import("@/content/about/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const ContactPage = dynamic(() => import("@/content/contact/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const DevelopersPage = dynamic(() => import("@/content/developers/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const FaqPage = dynamic(() => import("@/content/faq/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const ImprintPage = dynamic(() => import("@/content/imprint/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const PrivacyPage = dynamic(() => import("@/content/privacy/page"), {
   ssr: false,
-  loading: InfoPageFallback,
+  loading: SectionFallback,
 })
 
 const SELECTED_ITEM_KEY = "grh-selected-item-id"
+
+type IdleCapableWindow = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+    cancelIdleCallback?: (handle: number) => void
+  }
+
+function usePrefetchViewBundles() {
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    let cancelled = false
+
+    const loadBundles = () => {
+      Promise.all([
+        import("@/components/BookingFormView"),
+        import("@/components/MyBookings"),
+        import("@/components/RentalDashboardView"),
+        import("@/components/AdminDashboardView"),
+        import("@/components/ChatDialog"),
+      ]).catch(() => {
+        // swallow prefetch errors; runtime load path will retry
+      })
+    }
+
+    const idleWindow = window as IdleCapableWindow
+    const cancel =
+      idleWindow.requestIdleCallback != null
+        ? (() => {
+            const idleId = idleWindow.requestIdleCallback!(
+              () => {
+                if (!cancelled) loadBundles()
+              },
+              { timeout: 2000 },
+            )
+            return () => idleWindow.cancelIdleCallback?.(idleId)
+          })()
+        : (() => {
+            const timeoutId = setTimeout(() => {
+              if (!cancelled) loadBundles()
+            }, 1200)
+            return () => clearTimeout(timeoutId)
+          })()
+
+    return () => {
+      cancelled = true
+      cancel()
+    }
+  }, [])
+}
 
 interface HomeShellProps {
   catalog: ReactNode
@@ -154,6 +190,8 @@ export default function HomeShell({ catalog }: HomeShellProps) {
   const mainContentRef = useRef<HTMLDivElement>(null)
   const [items, setItems] = useState<Item[]>([])
   const [listReady, setListReady] = useState(false)
+
+  usePrefetchViewBundles()
 
   const openChatWindow = useCallback(
     (bookingId: string, itemTitle?: string | null, options?: { force?: boolean }) => {
