@@ -59,8 +59,24 @@ function BookingViewSkeleton() {
 
 function SectionFallback() {
   return (
-    <div className="py-16 text-center text-muted-foreground">
-      <p>Loading…</p>
+    <div className="space-y-4 rounded-xl border bg-muted/50 p-6 shadow-sm">
+      <Skeleton className="h-6 w-40" />
+      <Skeleton className="h-4 w-11/12" />
+      <Skeleton className="h-4 w-10/12" />
+      <Skeleton className="h-4 w-8/12" />
+    </div>
+  )
+}
+
+function InfoPageFallback() {
+  return (
+    <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-11/12" />
+      <Skeleton className="h-4 w-9/12" />
+      <Skeleton className="h-4 w-10/12" />
+      <Skeleton className="h-4 w-full" />
     </div>
   )
 }
@@ -92,32 +108,32 @@ const ChatDialog = dynamic(() => import("@/components/ChatDialog"), {
 
 const AboutPage = dynamic(() => import("@/content/about/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const ContactPage = dynamic(() => import("@/content/contact/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const DevelopersPage = dynamic(() => import("@/content/developers/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const FaqPage = dynamic(() => import("@/content/faq/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const ImprintPage = dynamic(() => import("@/content/imprint/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const PrivacyPage = dynamic(() => import("@/content/privacy/page"), {
   ssr: false,
-  loading: SectionFallback,
+  loading: InfoPageFallback,
 })
 
 const SELECTED_ITEM_KEY = "grh-selected-item-id"
