@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, FormEvent } from "react"
+import { useEffect, useState, FormEvent, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
@@ -28,6 +28,7 @@ import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide
 import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser"
 import { Spinner } from "@/components/ui/spinner"
+import type { NamePromptTarget } from "@/types/view"
 
 // Simple passkey support check
 function isPasskeySupported(): boolean {
@@ -39,15 +40,20 @@ function isPasskeySupported(): boolean {
 export default function NamePrompt({
   open,
   onOpenChange,
+  initialSection,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialSection?: NamePromptTarget
 }) {
   const { data: session, status, update } = useSession()
   const { t } = useI18n()
   const [name, setName] = useState("")
   const isRentalTeam =
     session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
+
+  const passkeySectionRef = useRef<HTMLDivElement | null>(null)
+  const addPasskeyButtonRef = useRef<HTMLButtonElement | null>(null)
 
   // Passkey state
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false)
@@ -147,6 +153,14 @@ export default function NamePrompt({
       })
     }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    if (initialSection === "passkeys") {
+      passkeySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      setTimeout(() => addPasskeyButtonRef.current?.focus(), 250)
+    }
+  }, [initialSection, open])
   // Track if the window has focus to prevent closing on tab switch
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -431,126 +445,129 @@ export default function NamePrompt({
                 </CardContent>
               </Card>
 
+
               {/* Passkeys Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Fingerprint className="h-5 w-5" />
-                    {t("security.passkeysTitle")}
-                  </CardTitle>
-                  <CardDescription>{t("security.passkeysDescription")}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Passkey Support Check */}
-                  {!isPasskeySupported() ? (
-                    <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        {t("security.passkeyNotSupported")}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Add Passkey Button */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{t("security.addPasskey")}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {t("security.addPasskeyDesc")}
-                          </p>
-                        </div>{" "}
-                        <Button
-                          onClick={handleRegisterPasskey}
-                          disabled={isRegisteringPasskey}
-                          variant="outline"
-                          size="sm"
-                          className="h-10 sm:h-9"
-                        >
-                          {isRegisteringPasskey ? (
-                            <Spinner className="mr-2 size-4" />
-                          ) : (
-                            <Plus className="mr-2 h-4 w-4" />
-                          )}
-                          {isRegisteringPasskey
-                            ? t("security.registering")
-                            : t("security.addPasskey")}
-                        </Button>
+              <div ref={passkeySectionRef}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Fingerprint className="h-5 w-5" />
+                      {t("security.passkeysTitle")}
+                    </CardTitle>
+                    <CardDescription>{t("security.passkeysDescription")}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Passkey Support Check */}
+                    {!isPasskeySupported() ? (
+                      <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          {t("security.passkeyNotSupported")}
+                        </p>
                       </div>
-
-                      {passkeyError && (
-                        <div className="p-3 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20">
-                          <p className="text-sm text-red-800 dark:text-red-200">{passkeyError}</p>
-                        </div>
-                      )}
-
-                      <Separator />
-
-                      {/* Passkey List */}
-                      <div className="space-y-3">
-                        <h4 className="font-medium">{t("security.yourPasskeys")}</h4>
-                        {userPasskeys.length === 0 ? (
-                          <div className="p-4 border border-dashed rounded-lg text-center">
-                            <Key className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    ) : (
+                      <>
+                        {/* Add Passkey Button */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium">{t("security.addPasskey")}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {t("security.noPasskeys")}
+                              {t("security.addPasskeyDesc")}
                             </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {userPasskeys.map((passkey) => (
-                              <div
-                                key={passkey.id}
-                                className="flex items-center justify-between p-3 border rounded-lg"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Key className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <p className="font-medium text-sm">{passkey.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {t("security.createdOn")} {formatDate(passkey.createdAt)}
-                                    </p>
-                                    {passkey.lastUsed && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {t("security.lastUsed")} {formatDate(passkey.lastUsed)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        {t("security.deletePasskeyTitle")}
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        {t("security.deletePasskeyDesc", { name: passkey.name })}
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => handleDeletePasskey(passkey.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        {t("security.deletePasskey")}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            ))}
+                          </div>{" "}
+                          <Button
+                            ref={addPasskeyButtonRef}
+                            onClick={handleRegisterPasskey}
+                            disabled={isRegisteringPasskey}
+                            variant="outline"
+                            size="sm"
+                            className="h-10 sm:h-9"
+                          >
+                            {isRegisteringPasskey ? (
+                              <Spinner className="mr-2 size-4" />
+                            ) : (
+                              <Plus className="mr-2 h-4 w-4" />
+                            )}
+                            {isRegisteringPasskey
+                              ? t("security.registering")
+                              : t("security.addPasskey")}
+                          </Button>
+                        </div>
+
+                        {passkeyError && (
+                          <div className="p-3 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20">
+                            <p className="text-sm text-red-800 dark:text-red-200">{passkeyError}</p>
                           </div>
                         )}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
 
+                        <Separator />
+
+                        {/* Passkey List */}
+                        <div className="space-y-3">
+                          <h4 className="font-medium">{t("security.yourPasskeys")}</h4>
+                          {userPasskeys.length === 0 ? (
+                            <div className="p-4 border border-dashed rounded-lg text-center">
+                              <Key className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                {t("security.noPasskeys")}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {userPasskeys.map((passkey) => (
+                                <div
+                                  key={passkey.id}
+                                  className="flex items-center justify-between p-3 border rounded-lg"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Key className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="font-medium text-sm">{passkey.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {t("security.createdOn")} {formatDate(passkey.createdAt)}
+                                      </p>
+                                      {passkey.lastUsed && (
+                                        <p className="text-xs text-muted-foreground">
+                                          {t("security.lastUsed")} {formatDate(passkey.lastUsed)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>
+                                          {t("security.deletePasskeyTitle")}
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          {t("security.deletePasskeyDesc", { name: passkey.name })}
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeletePasskey(passkey.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          {t("security.deletePasskey")}
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
               {/* Login Methods */}
               <Card>
                 <CardHeader>

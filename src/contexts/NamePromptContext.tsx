@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useSession } from "next-auth/react"
 import NamePrompt from "@/components/NamePrompt"
-import type { NamePromptContextType } from "@/types/view"
+import type { NamePromptContextType, NamePromptTarget } from "@/types/view"
 
 const NamePromptContext = createContext<NamePromptContextType | undefined>(undefined)
 
@@ -16,6 +16,7 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const [isManuallyOpened, setIsManuallyOpened] = useState(false)
+  const [initialSection, setInitialSection] = useState<NamePromptTarget | undefined>()
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -38,21 +39,26 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
   /**
    * Manually open the name prompt dialog
    */
-  const openPrompt = () => {
+  const openPrompt = (targetSection?: NamePromptTarget) => {
     setIsManuallyOpened(true)
+    setInitialSection(targetSection)
     setOpen(true)
   }
+  const openPasskeyPrompt = () => openPrompt("passkeys")
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
       setIsManuallyOpened(false)
+      setInitialSection(undefined)
     }
   }
 
   return (
-    <NamePromptContext.Provider value={{ openPrompt }}>
+    <NamePromptContext.Provider value={{ openPrompt, openPasskeyPrompt }}>
       {children}
-      {status === "authenticated" && <NamePrompt open={open} onOpenChange={handleOpenChange} />}
+      {status === "authenticated" && (
+        <NamePrompt open={open} onOpenChange={handleOpenChange} initialSection={initialSection} />
+      )}
     </NamePromptContext.Provider>
   )
 }

@@ -26,6 +26,7 @@ import {
   UserCog,
   UserCircle,
   HelpCircle,
+  Fingerprint,
 } from "lucide-react"
 import NotificationBell from "@/components/NotificationBell"
 import {
@@ -51,7 +52,7 @@ export default function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const { view, setView } = useView()
-  const { openPrompt } = useNamePrompt()
+  const { openPrompt, openPasskeyPrompt } = useNamePrompt()
   const { openAuthModal } = useAuthModal()
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -263,6 +264,18 @@ export default function Header() {
               </Button>
             )}
 
+            {status === "authenticated" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openPasskeyPrompt()}
+                className="font-semibold"
+              >
+                <Fingerprint className="mr-1.5 h-4 w-4" />
+                {t("header.addPasskeyCta")}
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="icon"
@@ -453,6 +466,19 @@ export default function Header() {
               >
                 <UserCircle className="mr-2 h-4 w-4" />
                 {t(isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink")}
+              </Button>
+            )}
+            {status === "authenticated" && (
+              <Button
+                variant="secondary"
+                className="justify-start"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  openPasskeyPrompt()
+                }}
+              >
+                <Fingerprint className="mr-2 h-4 w-4" />
+                {t("header.addPasskeyCta")}
               </Button>
             )}
             {isRentalTeam && (

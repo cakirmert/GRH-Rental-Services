@@ -196,6 +196,7 @@
     "editProfileLink": "Profile Settings",
     "signedInAs": "Signed in as {email}",
     "completeProfileCta": "Complete Profile",
+    "addPasskeyCta": "Add a passkey",
     "helpButton": "Quick help",
     "helpDialogTitle": "Need help getting started?",
     "helpDialogIntro": "Here’s how sign-in and bookings work.",

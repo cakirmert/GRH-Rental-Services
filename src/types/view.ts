@@ -29,6 +29,9 @@ export interface ViewContextType {
 }
 
 // Name prompt context
+export type NamePromptTarget = "profile" | "passkeys"
+
 export interface NamePromptContextType {
-  openPrompt: () => void
+  openPrompt: (targetSection?: NamePromptTarget) => void
+  openPasskeyPrompt: () => void
 }
