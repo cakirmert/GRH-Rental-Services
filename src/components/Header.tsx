@@ -10,6 +10,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useView, View } from "@/contexts/ViewContext"
 import { useNamePrompt } from "@/contexts/NamePromptContext"
 import { useAuthModal } from "@/contexts/AuthModalContext"
+import { trpc } from "@/utils/trpc"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -26,6 +27,7 @@ import {
   UserCog,
   UserCircle,
   HelpCircle,
+  Fingerprint,
 } from "lucide-react"
 import NotificationBell from "@/components/NotificationBell"
 import {
@@ -58,6 +60,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false)
+  const [supportsPasskeys, setSupportsPasskeys] = useState(false)
   const lastY = useRef(0)
   const helpShownRef = useRef(false)
   const userName = session?.user?.name
@@ -65,9 +68,24 @@ export default function Header() {
   const isProfileIncomplete = status === "authenticated" && !hasProfileName
   const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
   const isAdmin = session?.user?.role === "ADMIN"
+  const { data: userPasskeys = [], isLoading: passkeysLoading } = trpc.user.getPasskeys.useQuery(
+    undefined,
+    { enabled: status === "authenticated" },
+  )
+  const hasPasskeys = (userPasskeys?.length ?? 0) > 0
+  const showPasskeyCta =
+    status === "authenticated" && supportsPasskeys && !passkeysLoading && !hasPasskeys
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const supported =
+      typeof window !== "undefined" &&
+      "credentials" in navigator &&
+      typeof navigator.credentials?.create === "function"
+    setSupportsPasskeys(supported)
   }, [])
 
   useEffect(() => setIsMenuOpen(false), [pathname, view])
@@ -124,6 +142,11 @@ export default function Header() {
     if (!isMenuOpen) {
       setHidden(false)
     }
+  }
+
+  const handleOpenPasskeySetup = () => {
+    setIsMenuOpen(false)
+    openPrompt({ focusSection: "passkeys" })
   }
 
   useEffect(() => {
@@ -251,6 +274,29 @@ export default function Header() {
                 </Button>
               )}
             </nav>
+
+            {showPasskeyCta && (
+              <div className="hidden md:flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 shadow-sm">
+                <div className="flex flex-col leading-tight">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                    <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-0.5 uppercase tracking-wide">
+                      {t("header.passkeyPromoBadge")}
+                    </span>
+                    <span>{t("header.passkeyPromoTitle")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("header.passkeyPromoBody")}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleOpenPasskeySetup}
+                  className="font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Fingerprint className="mr-1.5 h-4 w-4" />
+                  {t("header.addPasskeyCta")}
+                </Button>
+              </div>
+            )}
 
             {isProfileIncomplete && (
               <Button
@@ -383,6 +429,17 @@ export default function Header() {
                 <span className="absolute top-1 right-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-primary" />
               )}
             </Button>
+            {showPasskeyCta && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleOpenPasskeySetup}
+                className="bg-primary/10 text-primary border-primary/40 hover:bg-primary/20"
+              >
+                <Fingerprint className="h-5 w-5" />
+                <span className="sr-only">{t("header.addPasskeyCta")}</span>
+              </Button>
+            )}
             {isProfileIncomplete && (
               <Button
                 variant="default"
@@ -442,6 +499,25 @@ export default function Header() {
                 {t("header.myBookingsLink")}
               </Button>
             )}{" "}
+            {showPasskeyCta && (
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                    {t("header.passkeyPromoBadge")}
+                  </span>
+                  <p className="text-sm font-semibold text-primary">{t("header.passkeyPromoTitle")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("header.passkeyPromoBody")}</p>
+                <Button
+                  variant="secondary"
+                  className="w-full font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={handleOpenPasskeySetup}
+                >
+                  <Fingerprint className="mr-2 h-4 w-4" />
+                  {t("header.addPasskeyCta")}
+                </Button>
+              </div>
+            )}
             {status === "authenticated" && (
               <Button
                 variant={isProfileIncomplete ? "default" : "ghost"}

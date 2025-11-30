@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { useSession } from "next-auth/react"
 import NamePrompt from "@/components/NamePrompt"
-import type { NamePromptContextType } from "@/types/view"
+import type { NamePromptContextType, NamePromptSection } from "@/types/view"
 
 const NamePromptContext = createContext<NamePromptContextType | undefined>(undefined)
 
@@ -16,11 +16,13 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const [open, setOpen] = useState(false)
   const [isManuallyOpened, setIsManuallyOpened] = useState(false)
+  const [focusSection, setFocusSection] = useState<NamePromptSection | undefined>(undefined)
 
   useEffect(() => {
     if (status !== "authenticated") {
       setOpen(false)
       setIsManuallyOpened(false)
+      setFocusSection(undefined)
       return
     }
 
@@ -29,30 +31,36 @@ export function NamePromptProvider({ children }: { children: ReactNode }) {
     }
 
     if (!session?.user?.name) {
+      setFocusSection("profile")
       setOpen(true)
     } else {
       setOpen(false)
+      setFocusSection(undefined)
     }
   }, [status, session, isManuallyOpened, open])
 
   /**
    * Manually open the name prompt dialog
    */
-  const openPrompt = () => {
+  const openPrompt = (options?: { focusSection?: NamePromptSection }) => {
     setIsManuallyOpened(true)
+    setFocusSection(options?.focusSection)
     setOpen(true)
   }
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
       setIsManuallyOpened(false)
+      setFocusSection(undefined)
     }
   }
 
   return (
     <NamePromptContext.Provider value={{ openPrompt }}>
       {children}
-      {status === "authenticated" && <NamePrompt open={open} onOpenChange={handleOpenChange} />}
+      {status === "authenticated" && (
+        <NamePrompt open={open} onOpenChange={handleOpenChange} focusSection={focusSection} />
+      )}
     </NamePromptContext.Provider>
   )
 }

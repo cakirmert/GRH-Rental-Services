@@ -28,7 +28,9 @@ export interface ViewContextType {
   currentRoute: AppRoute
 }
 
+export type NamePromptSection = "profile" | "passkeys"
+
 // Name prompt context
 export interface NamePromptContextType {
-  openPrompt: () => void
+  openPrompt: (options?: { focusSection?: NamePromptSection }) => void
 }

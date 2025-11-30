@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, FormEvent } from "react"
+import { useEffect, useState, useRef, FormEvent } from "react"
 import { useSession, signOut } from "next-auth/react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
@@ -24,9 +24,12 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
-import { Loader2, Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
+import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser"
+import { Spinner } from "@/components/ui/spinner"
+import { cn } from "@/lib/utils"
+import type { NamePromptSection } from "@/types/view"
 
 // Simple passkey support check
 function isPasskeySupported(): boolean {
@@ -38,9 +41,11 @@ function isPasskeySupported(): boolean {
 export default function NamePrompt({
   open,
   onOpenChange,
+  focusSection,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  focusSection?: NamePromptSection
 }) {
   const { data: session, status, update } = useSession()
   const { t } = useI18n()
@@ -51,6 +56,7 @@ export default function NamePrompt({
   // Passkey state
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false)
   const [passkeyError, setPasskeyError] = useState<string | null>(null)
+  const [highlightPasskeys, setHighlightPasskeys] = useState(false)
 
   // Push notification state
   const [pushSubscription, setPushSubscription] = useState<PushSubscription | null>(null)
@@ -126,6 +132,7 @@ export default function NamePrompt({
       setName(session?.user?.name ?? "")
     }
   }, [status, session])
+  const passkeySectionRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (
@@ -178,6 +185,21 @@ export default function NamePrompt({
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
       window.removeEventListener("blur", () => {})
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (open && focusSection === "passkeys" && passkeySectionRef.current) {
+      passkeySectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      setHighlightPasskeys(true)
+      const timeout = window.setTimeout(() => setHighlightPasskeys(false), 2400)
+      return () => window.clearTimeout(timeout)
+    }
+  }, [open, focusSection])
+
+  useEffect(() => {
+    if (!open) {
+      setHighlightPasskeys(false)
     }
   }, [open])
 
@@ -319,7 +341,7 @@ export default function NamePrompt({
                       disabled={updateName.isPending || !name.trim()}
                       className="h-11 sm:h-10"
                     >
-                      {updateName.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {updateName.isPending && <Spinner className="mr-2 size-4" />}
                       {updateName.isPending ? t("common.submitting") : t("profile.saveButton")}
                     </Button>
                   </form>
@@ -431,7 +453,13 @@ export default function NamePrompt({
               </Card>
 
               {/* Passkeys Section */}
-              <Card>
+              <Card
+                ref={passkeySectionRef}
+                className={cn(
+                  highlightPasskeys &&
+                    "ring-2 ring-primary/50 shadow-lg shadow-primary/20 transition-shadow"
+                )}
+              >
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Fingerprint className="h-5 w-5" />
@@ -465,7 +493,7 @@ export default function NamePrompt({
                           className="h-10 sm:h-9"
                         >
                           {isRegisteringPasskey ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Spinner className="mr-2 size-4" />
                           ) : (
                             <Plus className="mr-2 h-4 w-4" />
                           )}
@@ -615,7 +643,7 @@ export default function NamePrompt({
                           disabled={deleteAccount.isPending}
                         >
                           {deleteAccount.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Spinner className="mr-2 size-4" />
                           )}
                           {t("profile.confirmDeleteAction")}
                         </AlertDialogAction>
