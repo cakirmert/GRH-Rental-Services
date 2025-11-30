@@ -464,14 +464,15 @@
   "myBookings": {
     "title": "My Bookings",
     "tabs": {
-      "all": "All",
+      "all": "All statuses",
+      "upcoming": "Upcoming",
+      "past": "Past",
       "requested": "Requested",
       "accepted": "Accepted",
       "borrowed": "Borrowed",
       "completed": "Completed",
       "declined": "Declined",
-      "cancelled": "Cancelled",
-      "allLower": "all"
+      "cancelled": "Cancelled"
     },
     "browseItemsButton": "Browse Items to Book",
     "viewDetailsButton": "View Details",
@@ -501,6 +502,8 @@
     "editSuccessReRequestedDesc": "Booking updated and re-submitted for approval.",
     "errorPrepareEdit": "Could not prepare edit form.",
     "noBookingsFound": "No {status} bookings found.",
+    "noUpcomingBookings": "No upcoming bookings found.",
+    "noPastBookings": "No past bookings found.",
     "noBookingsFoundDesc": "It looks like you don't have any bookings with this status yet. Why not explore some items?",
     "nextDayIndicator": "next day",
     "bookedOn": "Booked on {date}",
@@ -615,11 +618,17 @@
     "unsubscriptionFailed": "Failed to disable notifications. Please try again.",
     "status": {
       "requested": "Booking for {item} was requested",
+      "requestedBy": "Booking for {item} was requested by {actor}",
       "accepted": "Booking for {item} was accepted",
+      "acceptedBy": "Booking for {item} was accepted by {actor}",
       "declined": "Booking for {item} was declined",
+      "declinedBy": "Booking for {item} was declined by {actor}",
       "borrowed": "Booking for {item} was marked as borrowed",
+      "borrowedBy": "Booking for {item} was marked as borrowed by {actor}",
       "completed": "Booking for {item} was completed",
-      "cancelled": "Booking for {item} was cancelled"
+      "completedBy": "Booking for {item} was completed by {actor}",
+      "cancelled": "Booking for {item} was cancelled",
+      "cancelledBy": "Booking for {item} was cancelled by {actor}"
     }
   },
   "install": {
@@ -655,7 +664,7 @@
     "loadMore": "Load More Bookings",
     "notesRequiredBorrowedCancel": "Please provide notes when cancelling a borrowed booking.",
     "confirmActionTitle": "Confirm Action",
-    "confirmActionGenericDesc": "Are you sure you want to {action} this booking for '{itemName}' by {userName}?",
+    "confirmActionGenericDesc": "Do you want to mark the booking for '{itemName}' by {userName} as {statusLabel}?",
     "confirmActionBtn": "Confirm",
     "rentalNotesLabel": "Notes for this action (optional, may be visible to user)",
     "rentalNotesPlaceholder": "e.g., Reason for decline, pickup instructions...",
@@ -676,7 +685,7 @@
     "addNoteSuccessTitle": "Note Added",
     "addNoteSuccessDesc": "Saved note for booking {bookingId}.",
     "declineNoteReminderTitle": "Add a decline note",
-    "declineNoteReminderBody": "Please leave a note with the reason so the rental admin team has context."
+    "declineNoteReminderBody": "Please leave a short note below so everyone knows why this booking was declined."
   },
   "adminCalendar": {
     "block": {

@@ -8,7 +8,6 @@ import { de as deLocale } from "date-fns/locale"
 import {
   Calendar as CalendarIcon,
   Clock,
-  Loader2,
   Mail,
   Edit,
   X,
@@ -52,8 +51,15 @@ import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/i18n"
 import TimeSelect from "@/components/TimeSelect"
+import { Spinner } from "@/components/ui/spinner"
 import { type DateRange } from "react-day-picker"
 import { BookingStatus, ItemType } from "@prisma/client"
+
+const FINISHED_BOOKING_STATUSES: BookingStatus[] = [
+  BookingStatus.COMPLETED,
+  BookingStatus.CANCELLED,
+  BookingStatus.DECLINED,
+]
 
 interface ItemFromBooking {
   // Renamed to avoid conflict with Prisma's ItemType
@@ -111,6 +117,7 @@ export default function MyBookingsComponent({
   const dateFnsLocale = i18nLocale === "de" ? deLocale : undefined
 
   const [activeTab, setActiveTab] = useState<BookingStatus | "all">("all")
+  const [timeFilter, setTimeFilter] = useState<"upcoming" | "past">("upcoming")
   const [selectedBooking, setSelectedBooking] = useState<BookingFromList | null>(null)
 
   const [showDetails, setShowDetails] = useState(false)
@@ -127,6 +134,7 @@ export default function MyBookingsComponent({
 
   const highlightedBookingRef = useRef<HTMLDivElement>(null)
   const isDesktop = useMediaQuery("(min-width: 768px)")
+  const activeHighlightId = highlightBookingId || notifHighlightId
 
   useEffect(() => {
     const id = localStorage.getItem("grh-highlight-booking-id")
@@ -171,7 +179,22 @@ export default function MyBookingsComponent({
     }
   }, [sessionStatus, onGoBackToList])
 
-  const activeHighlightId = highlightBookingId || notifHighlightId
+  useEffect(() => {
+    setActiveTab("all")
+  }, [timeFilter])
+
+  useEffect(() => {
+    if (!activeHighlightId) return
+    const highlightedBooking = allBookings.find((booking) => booking.id === activeHighlightId)
+    if (!highlightedBooking) return
+
+    const isFinishedStatus = FINISHED_BOOKING_STATUSES.includes(highlightedBooking.status)
+    const endedInPast = isPast(ensureDateObject(highlightedBooking.endDate))
+
+    if ((isFinishedStatus || endedInPast) && timeFilter !== "past") {
+      setTimeFilter("past")
+    }
+  }, [activeHighlightId, allBookings, timeFilter])
 
   useEffect(() => {
     if (
@@ -203,6 +226,29 @@ export default function MyBookingsComponent({
   const ensureDateObject = (dateInput: Date | string): Date => {
     return dateInput instanceof Date ? dateInput : parseISO(dateInput)
   }
+
+  const bookingsByTime = useMemo(() => {
+    const upcoming: BookingFromList[] = []
+    const past: BookingFromList[] = []
+
+    for (const booking of allBookings) {
+      const isFinishedStatus = FINISHED_BOOKING_STATUSES.includes(booking.status)
+      const endsInPast = isPast(ensureDateObject(booking.endDate))
+
+      if (isFinishedStatus || endsInPast) {
+        past.push(booking)
+      } else {
+        upcoming.push(booking)
+      }
+    }
+
+    return { upcoming, past }
+  }, [allBookings])
+
+  const timeFilteredBookings = useMemo(
+    () => (timeFilter === "past" ? bookingsByTime.past : bookingsByTime.upcoming),
+    [bookingsByTime, timeFilter],
+  )
 
   const prepareEditForm = (booking: BookingFromList) => {
     try {
@@ -377,6 +423,11 @@ export default function MyBookingsComponent({
     return status === BookingStatus.REQUESTED || status === BookingStatus.ACCEPTED
   }
 
+  const filteredBookingsToDisplay = useMemo(
+    () => (activeTab === "all" ? timeFilteredBookings : timeFilteredBookings.filter((b) => b.status === activeTab)),
+    [activeTab, timeFilteredBookings],
+  )
+
   if (isLoading || sessionStatus === "loading") {
     /* ... skeleton UI (same as your working version) ... */
     return (
@@ -393,9 +444,6 @@ export default function MyBookingsComponent({
     )
   }
 
-  const filteredBookingsToDisplay =
-    activeTab === "all" ? allBookings : allBookings.filter((b) => b.status === activeTab)
-
   return (
     <div className="w-full mx-auto py-8 px-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -406,7 +454,21 @@ export default function MyBookingsComponent({
         </Button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-3">
+        <Tabs
+          value={timeFilter}
+          onValueChange={(value) => setTimeFilter(value as "upcoming" | "past")}
+          className="w-full"
+        >
+          <TabsList className="grid w-full h-auto grid-cols-2">
+            <TabsTrigger value="upcoming" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto">
+              {t("myBookings.tabs.upcoming", { defaultValue: "Upcoming" })}
+            </TabsTrigger>
+            <TabsTrigger value="past" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto">
+              {t("myBookings.tabs.past", { defaultValue: "Past" })}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as BookingStatus | "all")}
@@ -466,12 +528,15 @@ export default function MyBookingsComponent({
           <CardContent className="flex flex-col items-center justify-center py-16 text-center min-h-[250px]">
             <Info className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-lg font-medium text-muted-foreground mb-2">
-              {t("myBookings.noBookingsFound", {
-                status:
-                  activeTab !== "all"
-                    ? formatStatusDisplay(activeTab)
-                    : t("myBookings.tabs.allLower", { defaultValue: "all" }),
-              })}
+              {activeTab !== "all"
+                ? t("myBookings.noBookingsFound", {
+                    status: formatStatusDisplay(activeTab),
+                  })
+                : t(
+                    timeFilter === "past"
+                      ? "myBookings.noPastBookings"
+                      : "myBookings.noUpcomingBookings",
+                  )}
             </p>
             <p className="text-sm text-muted-foreground mb-6 max-w-md">
               {t("myBookings.noBookingsFoundDesc", {
@@ -844,7 +909,7 @@ export default function MyBookingsComponent({
               </Button>
             </DialogClose>
             <Button onClick={handleUpdateBooking} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Spinner className="mr-2 size-4" />}
               {t("common.saveChanges")}
             </Button>
           </DialogFooter>
@@ -898,7 +963,7 @@ export default function MyBookingsComponent({
               }
               disabled={cancelBookingMutation.isPending}
             >
-              {cancelBookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {cancelBookingMutation.isPending && <Spinner className="mr-2 size-4" />}
               {t("myBookings.confirmCancelButton")}
             </Button>
           </DialogFooter>

@@ -18,15 +18,50 @@ interface NotifyBookingStatusChangeArgs {
   endDate: Date
   notes?: string | null
   recipients: Recipient[]
+  performedBy?: {
+    name?: string | null
+    email?: string | null
+  }
 }
 
-const messageMap: Record<BookingStatus, string> = {
-  [BookingStatus.REQUESTED]: "notifications.status.requested",
-  [BookingStatus.ACCEPTED]: "notifications.status.accepted",
-  [BookingStatus.DECLINED]: "notifications.status.declined",
-  [BookingStatus.BORROWED]: "notifications.status.borrowed",
-  [BookingStatus.COMPLETED]: "notifications.status.completed",
-  [BookingStatus.CANCELLED]: "notifications.status.cancelled",
+const messageMap: Record<
+  BookingStatus,
+  { base: string; withActor?: string }
+> = {
+  [BookingStatus.REQUESTED]: {
+    base: "notifications.status.requested",
+    withActor: "notifications.status.requestedBy",
+  },
+  [BookingStatus.ACCEPTED]: {
+    base: "notifications.status.accepted",
+    withActor: "notifications.status.acceptedBy",
+  },
+  [BookingStatus.DECLINED]: {
+    base: "notifications.status.declined",
+    withActor: "notifications.status.declinedBy",
+  },
+  [BookingStatus.BORROWED]: {
+    base: "notifications.status.borrowed",
+    withActor: "notifications.status.borrowedBy",
+  },
+  [BookingStatus.COMPLETED]: {
+    base: "notifications.status.completed",
+    withActor: "notifications.status.completedBy",
+  },
+  [BookingStatus.CANCELLED]: {
+    base: "notifications.status.cancelled",
+    withActor: "notifications.status.cancelledBy",
+  },
+}
+
+const fallbackActorLabel = "GRH Rental Services"
+
+const getActorName = (performedBy?: { name?: string | null; email?: string | null }) => {
+  if (!performedBy) return null
+  const { name, email } = performedBy
+  if (name?.trim()) return name.trim()
+  if (email?.trim()) return email.trim()
+  return fallbackActorLabel
 }
 
 export async function notifyBookingStatusChange({
@@ -38,6 +73,7 @@ export async function notifyBookingStatusChange({
   endDate,
   notes,
   recipients,
+  performedBy,
 }: NotifyBookingStatusChangeArgs) {
   const dedupedRecipients = new Map<string, Recipient>()
   for (const recipient of recipients) {
@@ -49,6 +85,14 @@ export async function notifyBookingStatusChange({
 
   if (dedupedRecipients.size === 0) return
 
+  const actorName = getActorName(performedBy)
+  const statusMessage = messageMap[status] ?? messageMap[BookingStatus.REQUESTED]
+  const key = actorName && statusMessage.withActor ? statusMessage.withActor : statusMessage.base
+
+  if (status === BookingStatus.BORROWED && !actorName) {
+    return
+  }
+
   for (const recipient of dedupedRecipients.values()) {
     const notification = await prisma.notification.create({
       data: {
@@ -56,8 +100,11 @@ export async function notifyBookingStatusChange({
         bookingId,
         type: NotificationType.BOOKING_RESPONSE,
         message: JSON.stringify({
-          key: messageMap[status] ?? messageMap[BookingStatus.REQUESTED],
-          vars: { item: itemTitle },
+          key,
+          vars: {
+            item: itemTitle,
+            ...(actorName ? { actor: actorName } : {}),
+          },
         }),
       },
     })
@@ -73,6 +120,7 @@ export async function notifyBookingStatusChange({
           booking: { itemTitle, startDate, endDate },
           status,
           notes,
+          performedBy: actorName ?? undefined,
         })
       } catch (error) {
         console.error("[mail] Failed to send booking status email", error)
