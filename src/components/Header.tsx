@@ -302,7 +302,7 @@ export default function Header() {
               <Button
                 variant="default"
                 size="sm"
-                onClick={openPrompt}
+                onClick={() => openPrompt()}
                 className="font-semibold"
               >
                 {t("header.completeProfileCta")}
@@ -371,7 +371,7 @@ export default function Header() {
                     <ListChecks className="mr-2 h-4 w-4" />
                     {t("header.myBookingsLink")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={openPrompt}>
+                  <DropdownMenuItem onClick={() => openPrompt()}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     {t(isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink")}
                   </DropdownMenuItem>

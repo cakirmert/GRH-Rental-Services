@@ -25,13 +25,11 @@ import { Switch } from "@/components/ui/switch"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
-import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import type { NamePromptSection } from "@/types/view"
-import { Spinner } from "@/components/ui/spinner"
 
 // Simple passkey support check
 function isPasskeySupported(): boolean {
