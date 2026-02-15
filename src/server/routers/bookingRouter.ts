@@ -1,4 +1,3 @@
-// src/server/routers/bookings.ts
 import { router, protectedProcedure, publicProcedure } from "@/lib/trpcServer"
 import type { Context } from "@/server/context"
 import { z } from "zod"

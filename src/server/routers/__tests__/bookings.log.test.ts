@@ -15,7 +15,7 @@ const prisma = {
 vi.mock("@/lib/prismadb", () => ({ __esModule: true, default: prisma }))
 
 async function createCaller() {
-  const { bookingsRouter } = await import("../bookings")
+  const { bookingsRouter } = await import("../bookingRouter")
   const booking = {
     id: "b1",
     userId: "u1",
