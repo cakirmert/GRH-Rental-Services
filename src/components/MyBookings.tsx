@@ -424,7 +424,10 @@ export default function MyBookingsComponent({
   }
 
   const filteredBookingsToDisplay = useMemo(
-    () => (activeTab === "all" ? timeFilteredBookings : timeFilteredBookings.filter((b) => b.status === activeTab)),
+    () =>
+      activeTab === "all"
+        ? timeFilteredBookings
+        : timeFilteredBookings.filter((b) => b.status === activeTab),
     [activeTab, timeFilteredBookings],
   )
 

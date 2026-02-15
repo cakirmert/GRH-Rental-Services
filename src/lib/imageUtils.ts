@@ -24,7 +24,10 @@ export function getOptimizedImageUrl(originalUrl: string): string {
   // If it's an external image from our configured domain, optimize it
   if (typeof process !== "undefined" && process.env.IMAGE_DOMAIN) {
     const imageDomain = process.env.IMAGE_DOMAIN
-    if (originalUrl.startsWith(`https://${imageDomain}/`) || originalUrl.startsWith(`http://${imageDomain}/`)) {
+    if (
+      originalUrl.startsWith(`https://${imageDomain}/`) ||
+      originalUrl.startsWith(`http://${imageDomain}/`)
+    ) {
       return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
     }
   }

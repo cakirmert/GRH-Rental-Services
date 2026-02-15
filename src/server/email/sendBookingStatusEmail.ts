@@ -39,38 +39,39 @@ const statusHeadlineMap: Record<BookingStatus, string> = {
   [BookingStatus.CANCELLED]: "Booking Cancelled",
 }
 
-const statusAccentMap: Record<BookingStatus, { text: string; badgeBg: string; badgeText: string }> = {
-  [BookingStatus.REQUESTED]: {
-    text: "#1f2937",
-    badgeBg: "#e0ecff",
-    badgeText: "#1d4ed8",
-  },
-  [BookingStatus.ACCEPTED]: {
-    text: "#0b6b3c",
-    badgeBg: "#dcfce7",
-    badgeText: "#15803d",
-  },
-  [BookingStatus.DECLINED]: {
-    text: "#991b1b",
-    badgeBg: "#fee2e2",
-    badgeText: "#b91c1c",
-  },
-  [BookingStatus.BORROWED]: {
-    text: "#1e3a8a",
-    badgeBg: "#e0ecff",
-    badgeText: "#1d4ed8",
-  },
-  [BookingStatus.COMPLETED]: {
-    text: "#047857",
-    badgeBg: "#dcfce7",
-    badgeText: "#15803d",
-  },
-  [BookingStatus.CANCELLED]: {
-    text: "#92400e",
-    badgeBg: "#fef3c7",
-    badgeText: "#c2410c",
-  },
-}
+const statusAccentMap: Record<BookingStatus, { text: string; badgeBg: string; badgeText: string }> =
+  {
+    [BookingStatus.REQUESTED]: {
+      text: "#1f2937",
+      badgeBg: "#e0ecff",
+      badgeText: "#1d4ed8",
+    },
+    [BookingStatus.ACCEPTED]: {
+      text: "#0b6b3c",
+      badgeBg: "#dcfce7",
+      badgeText: "#15803d",
+    },
+    [BookingStatus.DECLINED]: {
+      text: "#991b1b",
+      badgeBg: "#fee2e2",
+      badgeText: "#b91c1c",
+    },
+    [BookingStatus.BORROWED]: {
+      text: "#1e3a8a",
+      badgeBg: "#e0ecff",
+      badgeText: "#1d4ed8",
+    },
+    [BookingStatus.COMPLETED]: {
+      text: "#047857",
+      badgeBg: "#dcfce7",
+      badgeText: "#15803d",
+    },
+    [BookingStatus.CANCELLED]: {
+      text: "#92400e",
+      badgeBg: "#fef3c7",
+      badgeText: "#c2410c",
+    },
+  }
 
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (match) => {
@@ -101,7 +102,10 @@ const formatNotesHtml = (notes?: string | null) => {
   if (!blocks.length) return ""
 
   const paragraphs = blocks
-    .map((block) => `<p style="margin: 0 0 8px; line-height: 1.5; color: #374151; white-space: pre-line;">${escapeHtml(block)}</p>`)
+    .map(
+      (block) =>
+        `<p style="margin: 0 0 8px; line-height: 1.5; color: #374151; white-space: pre-line;">${escapeHtml(block)}</p>`,
+    )
     .join("")
 
   return `

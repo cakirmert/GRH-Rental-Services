@@ -123,7 +123,12 @@ export async function getAuthenticationOptions(
 
       return { id: normalizedId, type: "public-key" as const, transports: transportHints }
     })
-    .filter((cred): cred is { id: string; type: "public-key"; transports: AuthenticatorTransportFuture[] } => cred !== null)
+    .filter(
+      (
+        cred,
+      ): cred is { id: string; type: "public-key"; transports: AuthenticatorTransportFuture[] } =>
+        cred !== null,
+    )
 
   console.log(
     `📋 Successfully processed ${processedCredentials.length}/${allowCredentials.length} credentials`,
@@ -166,7 +171,9 @@ export async function verifyAuthentication(
 
   // Normalize credential ID to base64url format (no padding)
   const normalizedCredentialID = normalizedAuthenticatorID
-  console.log(`🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`)
+  console.log(
+    `🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`,
+  )
 
   // Normalize the credential response itself to ensure all fields are base64url
   const incomingCredentialId =

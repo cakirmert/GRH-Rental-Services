@@ -44,7 +44,11 @@ export async function cancelExpiredBookings() {
     const recipients = [
       { id: updated.userId, email: updated.user.email, name: updated.user.name },
       updated.assignedTo
-        ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
+        ? {
+            id: updated.assignedTo.id,
+            email: updated.assignedTo.email,
+            name: updated.assignedTo.name,
+          }
         : null,
     ].filter((recipient): recipient is { id: string; email: string; name: string | null } =>
       Boolean(recipient && recipient.id),

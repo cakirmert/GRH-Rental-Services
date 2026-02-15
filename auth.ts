@@ -184,10 +184,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 select: { id: true, email: true, name: true, role: true },
               })
             } catch (error) {
-              if (
-                error instanceof Prisma.PrismaClientKnownRequestError &&
-                error.code === "P2002"
-              ) {
+              if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
                 const normalized = await prisma.user.findUnique({
                   where: { email },
                   select: { id: true, email: true, name: true, role: true },
