@@ -391,12 +391,15 @@ export const adminRouter = router({
   }),
 })
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_BASE64_SIZE = Math.ceil(MAX_FILE_SIZE / 3) * 4
+
 export const uploadRouter = router({
   uploadItemImage: protectedProcedure
     .input(
       z.object({
         fileName: z.string(),
-        fileContentBase64: z.string(),
+        fileContentBase64: z.string().max(MAX_BASE64_SIZE, "File too large (max 5MB)"),
       }),
     )
     .mutation(async ({ input }) => {
@@ -404,6 +407,11 @@ export const uploadRouter = router({
         const fileExtension = path.extname(input.fileName)
         const uniqueFileName = `items/${uuidv4()}${fileExtension}`
         const buffer = Buffer.from(input.fileContentBase64, "base64")
+
+        if (buffer.length > MAX_FILE_SIZE) {
+          throw new Error("File too large (max 5MB)")
+        }
+
         const token = process.env.BLOB_READ_WRITE_TOKEN
         if (!token) throw new Error("Missing BLOB_READ_WRITE_TOKEN")
         const { url } = await put(uniqueFileName, buffer, {
