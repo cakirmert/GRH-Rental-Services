@@ -68,7 +68,8 @@ export default function CancelledByStaffTab() {
                     </TableCell>
                     <TableCell>{b.user?.name || b.user?.email}</TableCell>
                     <TableCell>
-                      {b.cancelledBy?.name || b.cancelledBy?.email ||
+                      {b.cancelledBy?.name ||
+                        b.cancelledBy?.email ||
                         t("adminDashboard.cancellations.unknownStaff")}
                     </TableCell>
                     <TableCell>{format(new Date(b.cancelledAt ?? b.updatedAt), "PP")}</TableCell>

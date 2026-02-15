@@ -126,12 +126,8 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         {/* Overlay scrolls and centers */}
-        <Dialog.Overlay
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4"
-        >
-          <Dialog.Content
-            className="w-full z-50 max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden"
-          >
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4">
+          <Dialog.Content className="w-full z-50 max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden">
             {/* Hidden title for a11y */}
             <Dialog.Title asChild>
               <VisuallyHidden>
@@ -234,7 +230,11 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
                   size="lg"
                   className="flex-1 min-h-[80px] rounded-xl px-4 py-2"
                 >
-                  {sendMut.isPending ? <Spinner className="size-4" /> : <Send className="h-4 w-4" />}
+                  {sendMut.isPending ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{t("Chat.sendInstructions")}</p>

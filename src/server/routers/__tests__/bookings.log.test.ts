@@ -22,9 +22,13 @@ async function createCaller() {
     assignedToId: null,
     notes: null,
     item: { titleEn: "Item" },
+    user: { id: "u1", email: "test@example.com", name: "Test User" },
+    assignedTo: null,
+    startDate: new Date(),
+    endDate: new Date(),
   }
   prisma.booking.findUnique.mockResolvedValue(booking)
-  prisma.booking.update.mockResolvedValue(booking)
+  prisma.booking.update.mockResolvedValue({ ...booking, status: BookingStatus.ACCEPTED })
   const ctx: Context = {
     prisma: prisma as unknown as Context["prisma"],
     session: {

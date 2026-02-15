@@ -50,8 +50,7 @@ export default function NamePrompt({
   const { data: session, status, update } = useSession()
   const { t } = useI18n()
   const [name, setName] = useState("")
-  const isRentalTeam =
-    session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
+  const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
 
   // Passkey state
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false)
@@ -135,10 +134,7 @@ export default function NamePrompt({
   const passkeySectionRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (
-      isRentalTeam &&
-      typeof userPreferences?.emailBookingNotifications !== "undefined"
-    ) {
+    if (isRentalTeam && typeof userPreferences?.emailBookingNotifications !== "undefined") {
       setEmailBookingEnabled(userPreferences.emailBookingNotifications)
     }
   }, [isRentalTeam, userPreferences?.emailBookingNotifications])
@@ -281,12 +277,8 @@ export default function NamePrompt({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         {/* Overlay scrolls and centers */}{" "}
-        <Dialog.Overlay
-          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4"
-        >
-          <Dialog.Content
-            className="w-full z-[100] max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden"
-          >
+        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4">
+          <Dialog.Content className="w-full z-[100] max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden">
             {/* Hidden title for a11y */}
             <Dialog.Title asChild>
               <VisuallyHidden>{t("profile.accountSettings")}</VisuallyHidden>
@@ -457,7 +449,7 @@ export default function NamePrompt({
                 ref={passkeySectionRef}
                 className={cn(
                   highlightPasskeys &&
-                    "ring-2 ring-primary/50 shadow-lg shadow-primary/20 transition-shadow"
+                    "ring-2 ring-primary/50 shadow-lg shadow-primary/20 transition-shadow",
                 )}
               >
                 <CardHeader>
@@ -642,9 +634,7 @@ export default function NamePrompt({
                           onClick={() => deleteAccount.mutate()}
                           disabled={deleteAccount.isPending}
                         >
-                          {deleteAccount.isPending && (
-                            <Spinner className="mr-2 size-4" />
-                          )}
+                          {deleteAccount.isPending && <Spinner className="mr-2 size-4" />}
                           {t("profile.confirmDeleteAction")}
                         </AlertDialogAction>
                       </AlertDialogFooter>

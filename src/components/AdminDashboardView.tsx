@@ -82,13 +82,13 @@ function ActionCard({
 export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void }) {
   const { t } = useI18n()
   const { data: session } = useSession()
-  
+
   // Default to 'home' for the new homepage experience
   const [currentViewOrTab, setCurrentViewOrTab] = useState<AdminView>("home")
-  
+
   // Check if user has admin role
   const isAdmin = session?.user?.role === "ADMIN"
-  
+
   // Show not authorized page if user is not an admin
   if (!isAdmin) {
     return <NotAuthorized onGoBack={onGoBack} requiredRole="ADMIN" />

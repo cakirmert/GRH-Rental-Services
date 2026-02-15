@@ -96,9 +96,13 @@ export async function sendBookingRequestEmail({
                 endLabel,
               )}</p>
             </div>
-            ${notes ? `<div style="padding: 16px 18px; border-radius: 14px; background: #fff7ed; border: 1px solid #fdba74;"><p style="margin: 0; font-weight: 600; color: #c2410c;">Notes</p><p style="margin: 6px 0 0; color: #9a3412; white-space: pre-line;">${escapeHtml(
-                notes,
-              )}</p></div>` : ""}
+            ${
+              notes
+                ? `<div style="padding: 16px 18px; border-radius: 14px; background: #fff7ed; border: 1px solid #fdba74;"><p style="margin: 0; font-weight: 600; color: #c2410c;">Notes</p><p style="margin: 6px 0 0; color: #9a3412; white-space: pre-line;">${escapeHtml(
+                    notes,
+                  )}</p></div>`
+                : ""
+            }
           </div>
           <p style="margin: 24px 0 0; color: #475569; line-height: 1.6;">
             Review the request in the rental dashboard and respond when ready.

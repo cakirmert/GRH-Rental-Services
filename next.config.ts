@@ -19,14 +19,14 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      // Allow our custom image optimization endpoint  
+      // Allow our custom image optimization endpoint
       {
         protocol: "http",
         hostname: "localhost",
         pathname: "/api/edgeImage",
       },
       {
-        protocol: "https", 
+        protocol: "https",
         hostname: "*.vercel.app",
         pathname: "/api/edgeImage",
       },

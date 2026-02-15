@@ -23,8 +23,7 @@ export const userRouter = router({
       select: { emailBookingNotifications: true },
     })
     return {
-      emailBookingNotifications:
-        user?.emailBookingNotifications ?? true,
+      emailBookingNotifications: user?.emailBookingNotifications ?? true,
     }
   }),
   updatePreferences: protectedProcedure
@@ -44,8 +43,7 @@ export const userRouter = router({
           select: { emailBookingNotifications: true },
         })
         return {
-          emailBookingNotifications:
-            current?.emailBookingNotifications ?? true,
+          emailBookingNotifications: current?.emailBookingNotifications ?? true,
         }
       }
 
@@ -56,8 +54,7 @@ export const userRouter = router({
       })
 
       return {
-        emailBookingNotifications:
-          updated.emailBookingNotifications ?? true,
+        emailBookingNotifications: updated.emailBookingNotifications ?? true,
       }
     }),
   deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
