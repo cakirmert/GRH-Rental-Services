@@ -69,7 +69,7 @@ export const bookingsRouter = router({
         quantity: z.number().int().min(1).default(1),
         start: z.string(), // ISO string
         end: z.string(), // ISO string
-        notes: z.string().optional(),
+        notes: z.string().max(1000).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -195,7 +195,7 @@ export const bookingsRouter = router({
         id: z.string(),
         start: z.string(), // ISO string
         end: z.string(), // ISO string
-        notes: z.string().optional(),
+        notes: z.string().max(1000).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -394,7 +394,7 @@ export const bookingsRouter = router({
     .input(
       z.object({
         bookingId: z.string(),
-        note: z.string(),
+        note: z.string().max(1000),
       }),
     )
     .mutation(async ({ input, ctx }) => {
