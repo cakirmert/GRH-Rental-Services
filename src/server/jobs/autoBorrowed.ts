@@ -16,16 +16,15 @@ export async function markUpcomingBookingsBorrowed() {
         lte: soon,
       },
     },
-    include: { item: { select: { titleEn: true } } },
   })
 
   if (upcoming.length === 0) return
 
-  for (const booking of upcoming) {
-    await prisma.booking.update({
-      where: { id: booking.id },
-      data: { status: BookingStatus.BORROWED },
-    })
-    // Automatic updates should stay silent for blocked slots and scheduled transitions.
-  }
+  await prisma.booking.updateMany({
+    where: {
+      id: { in: upcoming.map((booking) => booking.id) },
+    },
+    data: { status: BookingStatus.BORROWED },
+  })
+  // Automatic updates should stay silent for blocked slots and scheduled transitions.
 }
