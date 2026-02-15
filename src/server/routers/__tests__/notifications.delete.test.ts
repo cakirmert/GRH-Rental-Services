@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { vi } from "vitest"
-import { notificationsRouter } from "../notifications"
+import { notificationsRouter } from "../notificationRouter"
 import type { Context } from "@/server/context"
 import type { Request } from "express"
 
