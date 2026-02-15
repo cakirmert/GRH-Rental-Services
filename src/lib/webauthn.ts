@@ -25,6 +25,15 @@ const DEFAULT_TRANSPORT_HINTS: AuthenticatorTransportFuture[] = [
   "ble",
 ]
 
+const DEBUG = process.env.NODE_ENV === "development" || process.env.WEBAUTHN_DEBUG === "true"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function debugLog(message: string, ...args: any[]) {
+  if (DEBUG) {
+    console.log(`[WebAuthn] ${message}`, ...args)
+  }
+}
+
 /**
  * Convert assorted credential ID encodings into a normalized base64url string.
  * This also recovers IDs that were accidentally double-encoded when stored.
@@ -99,33 +108,43 @@ export async function verifyRegistration(
 export async function getAuthenticationOptions(
   allowCredentials: Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>,
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
-  console.log(
+  debugLog(
     "🔐 Getting authentication options for credentials:",
     allowCredentials.map((cred) => cred.id),
   )
 
   const processedCredentials = allowCredentials
     .map(({ id, transports }) => {
-      console.log(`🔍 Processing credential ID: "${id}" (length: ${id?.length})`)
+      debugLog(`🔍 Processing credential ID: "${id}" (length: ${id?.length})`)
 
       const normalizedId = normalizeCredentialId(id)
       if (!normalizedId) {
-        console.warn("⚠️ Failed to normalize credential ID:", id)
+        if (DEBUG) {
+          console.warn(`[WebAuthn] ⚠️ Failed to normalize credential ID: ${id}`)
+        }
         return null
       }
 
       const transportHints =
         transports && transports.length > 0 ? transports : DEFAULT_TRANSPORT_HINTS
 
-      console.log(`✅ Using credential ID: ${normalizedId.substring(0, 20)}...`, {
+      debugLog(`✅ Using credential ID: ${normalizedId.substring(0, 20)}...`, {
         transports: transportHints,
       })
 
       return { id: normalizedId, type: "public-key" as const, transports: transportHints }
     })
-    .filter((cred): cred is { id: string; type: "public-key"; transports: AuthenticatorTransportFuture[] } => cred !== null)
+    .filter(
+      (
+        cred,
+      ): cred is {
+        id: string
+        type: "public-key"
+        transports: AuthenticatorTransportFuture[]
+      } => cred !== null,
+    )
 
-  console.log(
+  debugLog(
     `📋 Successfully processed ${processedCredentials.length}/${allowCredentials.length} credentials`,
   )
 
@@ -146,7 +165,7 @@ export async function verifyAuthentication(
     counter: number
   },
 ) {
-  console.log("🔐 Verifying authentication with:", {
+  debugLog("🔐 Verifying authentication with:", {
     credentialID: authenticator.credentialID,
     credentialPublicKey: authenticator.credentialPublicKey?.substring(0, 20) + "...",
     counter: authenticator.counter,
@@ -158,7 +177,7 @@ export async function verifyAuthentication(
   }
 
   if (normalizedAuthenticatorID !== authenticator.credentialID) {
-    console.log(
+    debugLog(
       `🔄 Updating stored credential ID "${authenticator.credentialID}" -> "${normalizedAuthenticatorID}"`,
     )
     authenticator.credentialID = normalizedAuthenticatorID
@@ -166,7 +185,9 @@ export async function verifyAuthentication(
 
   // Normalize credential ID to base64url format (no padding)
   const normalizedCredentialID = normalizedAuthenticatorID
-  console.log(`🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`)
+  debugLog(
+    `🔄 Normalized credentialID: "${authenticator.credentialID}" -> "${normalizedCredentialID}"`,
+  )
 
   // Normalize the credential response itself to ensure all fields are base64url
   const incomingCredentialId =
@@ -182,13 +203,13 @@ export async function verifyAuthentication(
   }
 
   if (incomingCredentialId !== normalizedCredentialID) {
-    console.log("⚠️ Incoming credential ID differs from stored value", {
+    debugLog("⚠️ Incoming credential ID differs from stored value", {
       incomingCredentialId,
       normalizedCredentialID,
     })
   }
 
-  console.log("🔧 Normalized credential for verification:", {
+  debugLog("🔧 Normalized credential for verification:", {
     originalId: credential.id,
     normalizedId: normalizedCredential.id,
     rawId: normalizedCredential.rawId,
@@ -199,28 +220,30 @@ export async function verifyAuthentication(
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "")
-  console.log(
+  debugLog(
     `🔄 Normalized publicKey: "${authenticator.credentialPublicKey.substring(0, 20)}..." -> "${normalizedPublicKey.substring(0, 20)}..."`,
   )
 
   let publicKeyBuffer: Buffer
   try {
-    console.log("🔧 Trying to parse normalized publicKey as base64url")
+    debugLog("🔧 Trying to parse normalized publicKey as base64url")
     publicKeyBuffer = Buffer.from(normalizedPublicKey, "base64url")
-    console.log("✅ publicKey parsed as base64url successfully")
+    debugLog("✅ publicKey parsed as base64url successfully")
   } catch (e) {
-    console.log("⚠️ Failed to parse publicKey as base64url, trying base64:", e)
+    debugLog("⚠️ Failed to parse publicKey as base64url, trying base64:", e)
     try {
       publicKeyBuffer = Buffer.from(authenticator.credentialPublicKey, "base64")
-      console.log("✅ publicKey parsed as base64 successfully")
+      debugLog("✅ publicKey parsed as base64 successfully")
     } catch (e2) {
-      console.log("❌ Failed to parse publicKey as both base64url and base64:", e2)
+      if (DEBUG) {
+        console.error(`[WebAuthn] ❌ Failed to parse publicKey as both base64url and base64:`, e2)
+      }
       throw new Error(`Failed to parse credentialPublicKey: ${authenticator.credentialPublicKey}`)
     }
   }
   try {
-    console.log("🔧 Calling verifyAuthenticationResponse...")
-    console.log("🔍 Credential response structure:", {
+    debugLog("🔧 Calling verifyAuthenticationResponse...")
+    debugLog("🔍 Credential response structure:", {
       id: credential.id,
       rawId: credential.rawId,
       type: credential.type,
@@ -230,7 +253,7 @@ export async function verifyAuthentication(
       responseSignature: credential.response?.signature?.substring(0, 50) + "...",
     })
 
-    console.log("🔍 Normalized credential structure:", {
+    debugLog("🔍 Normalized credential structure:", {
       id: normalizedCredential.id,
       rawId: normalizedCredential.rawId,
       type: normalizedCredential.type,
@@ -253,14 +276,16 @@ export async function verifyAuthentication(
         counter: authenticator.counter,
       },
     })
-    console.log("✅ verifyAuthenticationResponse completed successfully")
+    debugLog("✅ verifyAuthenticationResponse completed successfully")
     return result
   } catch (e) {
-    console.log("❌ verifyAuthenticationResponse failed:", e)
-    console.log("🔍 Error details:", {
-      message: (e as Error).message,
-      stack: (e as Error).stack?.split("\n").slice(0, 5).join("\n"),
-    })
+    if (DEBUG) {
+      console.error(`[WebAuthn] ❌ verifyAuthenticationResponse failed:`, e)
+      console.error(`[WebAuthn] 🔍 Error details:`, {
+        message: (e as Error).message,
+        stack: (e as Error).stack?.split("\n").slice(0, 5).join("\n"),
+      })
+    }
     throw e
   }
 }
