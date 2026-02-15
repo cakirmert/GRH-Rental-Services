@@ -14,9 +14,16 @@ const prisma = {
 vi.mock("@/lib/prismadb", () => ({ __esModule: true, default: prisma }))
 
 async function createCaller(status: BookingStatus) {
-  const { bookingsRouter } = await import("../bookings")
+  const { bookingsRouter } = await import("../bookingRouter")
   prisma.booking.findUnique.mockResolvedValue({ userId: "user1", status })
-  prisma.booking.update.mockResolvedValue({ id: "1" })
+  prisma.booking.update.mockResolvedValue({
+    id: "1",
+    item: { titleEn: "Item" },
+    user: { id: "user1", email: "test@example.com", name: "Test User" },
+    startDate: new Date(),
+    endDate: new Date(),
+    notes: null,
+  })
   const ctx: Context = {
     prisma: prisma as unknown as Context["prisma"],
     session: {
