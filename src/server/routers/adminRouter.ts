@@ -344,7 +344,7 @@ export const adminRouter = router({
       orderBy: { createdAt: "desc" },
     })
 
-    const latestCancellationLogByBooking = new Map<string, typeof cancellationLogs[number]>()
+    const latestCancellationLogByBooking = new Map<string, (typeof cancellationLogs)[number]>()
     for (const log of cancellationLogs) {
       if (log.bookingId && !latestCancellationLogByBooking.has(log.bookingId)) {
         latestCancellationLogByBooking.set(log.bookingId, log)
@@ -396,7 +396,7 @@ export const uploadRouter = router({
     .input(
       z.object({
         fileName: z.string(),
-        fileContentBase64: z.string(),
+        fileContentBase64: z.string().max(7340032, "File too large"),
       }),
     )
     .mutation(async ({ input }) => {
