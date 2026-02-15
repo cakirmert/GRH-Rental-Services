@@ -5,24 +5,51 @@ import type { Context } from "@/server/context"
 
 const prisma = {
   booking: {
-    findUnique: vi
-      .fn()
-      .mockResolvedValue({ userId: "u1", status: BookingStatus.REQUESTED, startDate: new Date() }),
-    update: vi.fn().mockResolvedValue({ id: "b1" }),
+    findUnique: vi.fn().mockResolvedValue({
+      userId: "u1",
+      status: BookingStatus.REQUESTED,
+      startDate: new Date(),
+      item: { titleEn: "Test Item" },
+      user: { id: "u1", email: "test@example.com", name: "User" },
+      assignedTo: null,
+    }),
+    update: vi.fn().mockResolvedValue({
+      id: "b1",
+      startDate: new Date(),
+      endDate: new Date(),
+      notes: null,
+      userId: "u1",
+      item: { titleEn: "Test Item" },
+      user: { id: "u1", email: "test@example.com", name: "User" },
+      assignedTo: null,
+    }),
   },
   log: { create: vi.fn() },
+  notification: { create: vi.fn() },
 }
 
 vi.mock("@/lib/prismadb", () => ({ __esModule: true, default: prisma }))
 
 async function createCaller() {
-  const { bookingsRouter } = await import("../bookings")
+  const { bookingsRouter } = await import("../bookingRouter")
   prisma.booking.findUnique.mockResolvedValue({
     userId: "u1",
     status: BookingStatus.REQUESTED,
     startDate: new Date(),
+    item: { titleEn: "Test Item" },
+    user: { id: "u1", email: "test@example.com", name: "User" },
+    assignedTo: null,
   })
-  prisma.booking.update.mockResolvedValue({ id: "b1" })
+  prisma.booking.update.mockResolvedValue({
+    id: "b1",
+    startDate: new Date(),
+    endDate: new Date(),
+    notes: null,
+    userId: "u1",
+    item: { titleEn: "Test Item" },
+    user: { id: "u1", email: "test@example.com", name: "User" },
+    assignedTo: null,
+  })
   const ctx: Context = {
     prisma: prisma as unknown as Context["prisma"],
     session: {
