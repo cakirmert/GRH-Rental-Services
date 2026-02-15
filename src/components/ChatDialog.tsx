@@ -104,7 +104,15 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && msgsQry.hasNextPage) {
-          msgsQry.fetchNextPage().catch(() => {})
+          msgsQry.fetchNextPage().catch((error) => {
+            console.error("Failed to fetch next page:", error)
+            toast({
+              title: t("common.error"),
+              description:
+                error instanceof Error ? error.message : "Failed to load older messages",
+              variant: "destructive",
+            })
+          })
         }
       },
       { root: pane },
@@ -112,7 +120,7 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
 
     io.observe(sentinel)
     return () => io.disconnect()
-  }, [msgsQry])
+  }, [msgsQry, t])
 
   // ─────── Guard UI after hooks ───────
   if (!bookingId) return null

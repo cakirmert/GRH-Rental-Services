@@ -716,7 +716,17 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
       {viewMode === "list" && hasNextPage && (
         <div className="mt-6 text-center print:hidden">
           <Button
-            onClick={() => fetchNextPage()}
+            onClick={() =>
+              fetchNextPage().catch((error) => {
+                console.error("Failed to fetch next page:", error)
+                toast({
+                  title: t("common.error"),
+                  description:
+                    error instanceof Error ? error.message : "Failed to load more bookings",
+                  variant: "destructive",
+                })
+              })
+            }
             disabled={isFetchingNextPage || isLoading}
             variant="outline"
             size="sm"
