@@ -104,7 +104,9 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && msgsQry.hasNextPage) {
-          msgsQry.fetchNextPage().catch(() => {})
+          msgsQry.fetchNextPage().catch((e) => {
+            console.error("Failed to fetch next page", e)
+          })
         }
       },
       { root: pane },
