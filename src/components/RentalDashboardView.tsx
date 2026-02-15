@@ -26,7 +26,7 @@ import {
   AlertCircle as AlertCircleIcon,
 } from "lucide-react"
 import { trpc } from "@/utils/trpc"
-import { type BookingForRentalTeam } from "@/server/routers/bookings"
+import { type BookingForRentalTeam } from "@/types/booking"
 import { BookingStatus, ItemType } from "@prisma/client"
 import { format, parseISO, isSameDay } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

@@ -26,7 +26,7 @@ beforeEach(() => {
 })
 
 async function createCaller() {
-  const { bookingsRouter } = await import("../bookings")
+  const { bookingsRouter } = await import("../bookingRouter")
   const booking = {
     id: "b1",
     userId: "user1",

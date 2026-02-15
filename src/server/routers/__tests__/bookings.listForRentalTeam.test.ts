@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest"
 import { vi } from "vitest"
-import { bookingsRouter } from "../bookings"
+import { bookingsRouter } from "../bookingRouter"
 import type { Context } from "@/server/context"
+
+vi.mock("@/server/jobs/autoBorrowed", () => ({
+  markUpcomingBookingsBorrowed: vi.fn(),
+}))
 
 function createCaller() {
   const prisma = {
