@@ -1,4 +1,3 @@
-// src/server/routers/items.ts
 import { router, publicProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import type { Item } from "@prisma/client"
