@@ -31,31 +31,30 @@ export const adminRouter = router({
   // Dashboard statistics
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
     ensureAdmin(ctx)
-    // Get total items count (only active items)
-    const totalItems = await ctx.prisma.item.count({
-      where: { active: true },
-    })
-
-    // Get team member count (RENTAL + ADMIN roles)
-    const teamMemberCount = await ctx.prisma.user.count({
-      where: { role: { in: [Role.RENTAL, Role.ADMIN] } },
-    })
-
-    // Get pending bookings count (REQUESTED status)
-    const pendingBookings = await ctx.prisma.booking.count({
-      where: {
-        status: BookingStatus.REQUESTED,
-        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
-      },
-    })
-
-    const upcomingBookings = await ctx.prisma.booking.count({
-      where: {
-        startDate: { gte: new Date() },
-        status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
-        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
-      },
-    })
+    const [totalItems, teamMemberCount, pendingBookings, upcomingBookings] = await Promise.all([
+      // Get total items count (only active items)
+      ctx.prisma.item.count({
+        where: { active: true },
+      }),
+      // Get team member count (RENTAL + ADMIN roles)
+      ctx.prisma.user.count({
+        where: { role: { in: [Role.RENTAL, Role.ADMIN] } },
+      }),
+      // Get pending bookings count (REQUESTED status)
+      ctx.prisma.booking.count({
+        where: {
+          status: BookingStatus.REQUESTED,
+          NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
+        },
+      }),
+      ctx.prisma.booking.count({
+        where: {
+          startDate: { gte: new Date() },
+          status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
+          NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
+        },
+      }),
+    ])
 
     return {
       totalItems,
@@ -344,7 +343,7 @@ export const adminRouter = router({
       orderBy: { createdAt: "desc" },
     })
 
-    const latestCancellationLogByBooking = new Map<string, typeof cancellationLogs[number]>()
+    const latestCancellationLogByBooking = new Map<string, (typeof cancellationLogs)[number]>()
     for (const log of cancellationLogs) {
       if (log.bookingId && !latestCancellationLogByBooking.has(log.bookingId)) {
         latestCancellationLogByBooking.set(log.bookingId, log)
