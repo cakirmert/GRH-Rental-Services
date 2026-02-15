@@ -9,8 +9,18 @@ export async function deleteInactiveUsers() {
     select: { id: true },
   })
 
-  for (const { id } of users) {
-    await prisma.booking.deleteMany({ where: { userId: id } })
-    await prisma.user.delete({ where: { id } })
+  const userIds = users.map((u) => u.id)
+
+  if (userIds.length > 0) {
+    await prisma.booking.deleteMany({
+      where: {
+        userId: { in: userIds },
+      },
+    })
+    await prisma.user.deleteMany({
+      where: {
+        id: { in: userIds },
+      },
+    })
   }
 }
