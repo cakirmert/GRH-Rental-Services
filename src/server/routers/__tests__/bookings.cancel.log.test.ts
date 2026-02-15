@@ -14,9 +14,11 @@ const prisma = {
 }
 
 vi.mock("@/lib/prismadb", () => ({ __esModule: true, default: prisma }))
+vi.mock("@/server/jobs/autoBorrowed", () => ({ markUpcomingBookingsBorrowed: vi.fn() }))
+vi.mock("@/lib/notifications", () => ({ notificationEmitter: { emit: vi.fn() } }))
 
 async function createCaller() {
-  const { bookingsRouter } = await import("../bookings")
+  const { bookingsRouter } = await import("../bookingRouter")
   prisma.booking.findUnique.mockResolvedValue({
     userId: "u1",
     status: BookingStatus.REQUESTED,
