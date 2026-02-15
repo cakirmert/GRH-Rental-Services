@@ -309,12 +309,7 @@ export default function Header() {
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={openHelpDialog}
-              className="relative"
-            >
+            <Button variant="ghost" size="icon" onClick={openHelpDialog} className="relative">
               <HelpCircle className="h-5 w-5" />
               <span className="sr-only">{t("header.helpButton")}</span>
               {isProfileIncomplete && (
@@ -373,7 +368,9 @@ export default function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => openPrompt()}>
                     <UserCircle className="mr-2 h-4 w-4" />
-                    {t(isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink")}
+                    {t(
+                      isProfileIncomplete ? "header.completeProfileCta" : "header.editProfileLink",
+                    )}
                   </DropdownMenuItem>
                   {isRentalTeam && (
                     <>
@@ -417,12 +414,7 @@ export default function Header() {
               <Globe className="h-5 w-5" />
               <span className="sr-only">{t("languageSwitcher.label")}</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={openHelpDialog}
-              className="relative"
-            >
+            <Button variant="ghost" size="icon" onClick={openHelpDialog} className="relative">
               <HelpCircle className="h-5 w-5" />
               <span className="sr-only">{t("header.helpButton")}</span>
               {isProfileIncomplete && (
@@ -505,7 +497,9 @@ export default function Header() {
                   <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
                     {t("header.passkeyPromoBadge")}
                   </span>
-                  <p className="text-sm font-semibold text-primary">{t("header.passkeyPromoTitle")}</p>
+                  <p className="text-sm font-semibold text-primary">
+                    {t("header.passkeyPromoTitle")}
+                  </p>
                 </div>
                 <p className="text-xs text-muted-foreground">{t("header.passkeyPromoBody")}</p>
                 <Button

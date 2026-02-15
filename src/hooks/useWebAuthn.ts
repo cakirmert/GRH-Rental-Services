@@ -33,7 +33,8 @@ export function useWebAuthn() {
       typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
     ) {
       try {
-        platformAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+        platformAvailable =
+          await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
       } catch {
         platformAvailable = false
       }
@@ -71,9 +72,7 @@ export function useWebAuthn() {
 
     let cred: PublicKeyCredential
     try {
-      cred = await tryCreateCredential(
-        platformAvailable ? withPlatformPreference : fallbackOptions,
-      )
+      cred = await tryCreateCredential(platformAvailable ? withPlatformPreference : fallbackOptions)
     } catch (error) {
       if (
         platformAvailable &&

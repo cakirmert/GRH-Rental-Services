@@ -36,7 +36,7 @@ class ImageCacheManager {
   get(imageUrl: string, format?: string): CachedImage | undefined {
     const key = this.getCacheKey(imageUrl, format)
     const item = this.cache.get(key)
-    
+
     if (item) {
       // Check if expired
       if (Date.now() - item.timestamp > this.CACHE_TTL) {
@@ -65,7 +65,12 @@ class ImageCacheManager {
     return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
   }
 
-  set(imageUrl: string, buffer: ArrayBuffer | ArrayBufferView, contentType: string, format?: string): void {
+  set(
+    imageUrl: string,
+    buffer: ArrayBuffer | ArrayBufferView,
+    contentType: string,
+    format?: string,
+  ): void {
     const key = this.getCacheKey(imageUrl, format)
     const normalized = this.toUint8Array(buffer)
     const item: CachedImage = {
@@ -74,20 +79,20 @@ class ImageCacheManager {
       timestamp: Date.now(),
       originalUrl: imageUrl,
       format,
-      size: normalized.byteLength
+      size: normalized.byteLength,
     }
-    
+
     // Remove old item if exists
     const existing = this.cache.get(key)
     if (existing) {
       this.totalSize -= existing.size
     }
-    
+
     // Check if adding this item would exceed max size
     if (this.totalSize + item.size > this.MAX_CACHE_SIZE) {
       this.cleanup()
     }
-    
+
     this.cache.set(key, item)
     this.totalSize += item.size
   }
@@ -96,14 +101,14 @@ class ImageCacheManager {
     const key = this.getCacheKey(imageUrl, format)
     const item = this.cache.get(key)
     if (!item) return false
-    
+
     // Check if expired
     if (Date.now() - item.timestamp > this.CACHE_TTL) {
       this.cache.delete(key)
       this.totalSize -= item.size
       return false
     }
-    
+
     return true
   }
 
@@ -130,7 +135,7 @@ class ImageCacheManager {
       hits: this.stats.hits,
       misses: this.stats.misses,
       hitRate: totalRequests > 0 ? Math.round((this.stats.hits / totalRequests) * 100) : 0,
-      totalSize: this.totalSize
+      totalSize: this.totalSize,
     }
   }
 
@@ -143,10 +148,10 @@ class ImageCacheManager {
   }
 
   // Batch check for cache status - much more efficient
-  checkMultiple(imageUrls: string[], format?: string): { cached: string[], uncached: string[] } {
+  checkMultiple(imageUrls: string[], format?: string): { cached: string[]; uncached: string[] } {
     const cached: string[] = []
     const uncached: string[] = []
-    
+
     for (const url of imageUrls) {
       if (this.has(url, format)) {
         cached.push(url)
@@ -154,7 +159,7 @@ class ImageCacheManager {
         uncached.push(url)
       }
     }
-    
+
     return { cached, uncached }
   }
 
@@ -163,7 +168,7 @@ class ImageCacheManager {
     const beforeSize = this.cache.size
     const now = Date.now()
     let freedSize = 0
-    
+
     // Remove expired entries
     for (const [key, item] of this.cache.entries()) {
       if (now - item.timestamp > this.CACHE_TTL) {
@@ -171,24 +176,26 @@ class ImageCacheManager {
         freedSize += item.size
       }
     }
-    
+
     // If still over limit, remove oldest entries
     if (this.totalSize - freedSize > this.MAX_CACHE_SIZE) {
       const entries = Array.from(this.cache.entries())
       entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
-      
+
       for (const [key, item] of entries) {
         if (this.totalSize - freedSize <= this.MAX_CACHE_SIZE * 0.8) break
         this.cache.delete(key)
         freedSize += item.size
       }
     }
-    
+
     this.totalSize -= freedSize
     const afterSize = this.cache.size
-    
+
     if (beforeSize > afterSize) {
-      console.log(`🧹 Cleaned up ${beforeSize - afterSize} cache entries, freed ${Math.round(freedSize / 1024 / 1024)}MB`)
+      console.log(
+        `🧹 Cleaned up ${beforeSize - afterSize} cache entries, freed ${Math.round(freedSize / 1024 / 1024)}MB`,
+      )
     }
   }
 }

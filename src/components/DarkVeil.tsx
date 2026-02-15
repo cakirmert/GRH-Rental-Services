@@ -1,10 +1,10 @@
-import { useRef, useEffect } from 'react';
-import { Renderer, Program, Mesh, Triangle, Vec2 } from 'ogl';
+import { useRef, useEffect } from "react"
+import { Renderer, Program, Mesh, Triangle, Vec2 } from "ogl"
 
 const vertex = `
 attribute vec2 position;
 void main(){gl_Position=vec4(position,0.0,1.0);}
-`;
+`
 
 const fragment = `
 #ifdef GL_ES
@@ -76,22 +76,22 @@ void main(){
     col.rgb = mix(col.rgb, 1.0 - col.rgb, uBrightness);
     gl_FragColor=vec4(clamp(col.rgb,0.0,1.0),1.0);
 }
-`;
+`
 
 type Props = {
-  hueShift?: number;
-  noiseIntensity?: number;
-  scanlineIntensity?: number;
-  speed?: number;
-  scanlineFrequency?: number;
-  warpAmount?: number;
-  resolutionScale?: number;
-  patternScale?: number; // <1 makes blobs bigger, >1 increases detail
-  brightness?: number; // 0 = normal, 1 = inverted/bright for light themes
-  opaque?: boolean; // if true, use an opaque canvas to avoid white flashes
-  baseBgDark?: string; // CSS color for dark background under the shader
-  baseBgLight?: string; // CSS color for light background under the shader
-};
+  hueShift?: number
+  noiseIntensity?: number
+  scanlineIntensity?: number
+  speed?: number
+  scanlineFrequency?: number
+  warpAmount?: number
+  resolutionScale?: number
+  patternScale?: number // <1 makes blobs bigger, >1 increases detail
+  brightness?: number // 0 = normal, 1 = inverted/bright for light themes
+  opaque?: boolean // if true, use an opaque canvas to avoid white flashes
+  baseBgDark?: string // CSS color for dark background under the shader
+  baseBgLight?: string // CSS color for light background under the shader
+}
 
 export default function DarkVeil({
   hueShift = 0,
@@ -104,38 +104,38 @@ export default function DarkVeil({
   patternScale = 0.8,
   brightness = 0,
   opaque = true,
-  baseBgDark = '#18181b', // near oklch(0.145 0 0)
-  baseBgLight = '#ffffff'
+  baseBgDark = "#18181b", // near oklch(0.145 0 0)
+  baseBgLight = "#ffffff",
 }: Props) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const isLight = brightness >= 0.5;
-  const signalledRef = useRef(false);
+  const ref = useRef<HTMLCanvasElement>(null)
+  const isLight = brightness >= 0.5
+  const signalledRef = useRef(false)
 
   const parseHexToRGB = (hex: string): [number, number, number] => {
-    let h = hex.trim();
-    if (h.startsWith('#')) h = h.slice(1);
+    let h = hex.trim()
+    if (h.startsWith("#")) h = h.slice(1)
     if (h.length === 3) {
-      const r = parseInt(h[0] + h[0], 16);
-      const g = parseInt(h[1] + h[1], 16);
-      const b = parseInt(h[2] + h[2], 16);
-      return [r / 255, g / 255, b / 255];
+      const r = parseInt(h[0] + h[0], 16)
+      const g = parseInt(h[1] + h[1], 16)
+      const b = parseInt(h[2] + h[2], 16)
+      return [r / 255, g / 255, b / 255]
     }
     if (h.length === 6) {
-      const r = parseInt(h.slice(0, 2), 16);
-      const g = parseInt(h.slice(2, 4), 16);
-      const b = parseInt(h.slice(4, 6), 16);
-      return [r / 255, g / 255, b / 255];
+      const r = parseInt(h.slice(0, 2), 16)
+      const g = parseInt(h.slice(2, 4), 16)
+      const b = parseInt(h.slice(4, 6), 16)
+      return [r / 255, g / 255, b / 255]
     }
     // fallback to black
-    return [0, 0, 0];
-  };
+    return [0, 0, 0]
+  }
   useEffect(() => {
-    const canvas = ref.current as HTMLCanvasElement;
-  // Using viewport dimensions for full-page coverage
+    const canvas = ref.current as HTMLCanvasElement
+    // Using viewport dimensions for full-page coverage
 
     // Ensure the canvas has an immediate theme-appropriate background color
-    const cssBg = isLight ? baseBgLight : baseBgDark;
-    canvas.style.backgroundColor = cssBg;
+    const cssBg = isLight ? baseBgLight : baseBgDark
+    canvas.style.backgroundColor = cssBg
 
     const renderer = new Renderer({
       dpr: Math.min(window.devicePixelRatio, 2),
@@ -145,15 +145,15 @@ export default function DarkVeil({
       antialias: true,
       depth: false,
       stencil: false,
-      powerPreference: 'high-performance'
-    });
+      powerPreference: "high-performance",
+    })
 
-    const gl = renderer.gl;
+    const gl = renderer.gl
     // Opaque clear to the theme-appropriate color before shader draws
-    const [cr, cg, cb] = parseHexToRGB(cssBg);
-    gl.clearColor(cr, cg, cb, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    const geometry = new Triangle(gl);
+    const [cr, cg, cb] = parseHexToRGB(cssBg)
+    gl.clearColor(cr, cg, cb, 1)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    const geometry = new Triangle(gl)
 
     const program = new Program(gl, {
       vertex,
@@ -167,73 +167,87 @@ export default function DarkVeil({
         uScanFreq: { value: scanlineFrequency },
         uWarp: { value: warpAmount },
         uScale: { value: patternScale },
-        uBrightness: { value: brightness }
-      }
-    });
+        uBrightness: { value: brightness },
+      },
+    })
 
-    const mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program })
 
     const resize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      renderer.setSize(w * resolutionScale, h * resolutionScale);
-      program.uniforms.uResolution.value.set(w, h);
+      const w = window.innerWidth
+      const h = window.innerHeight
+      renderer.setSize(w * resolutionScale, h * resolutionScale)
+      program.uniforms.uResolution.value.set(w, h)
       // ensure CSS size also spans the viewport
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-    };
+      canvas.style.width = `${w}px`
+      canvas.style.height = `${h}px`
+    }
 
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener("resize", resize)
+    resize()
 
-    const start = performance.now();
-    let frame: number | null = null;
+    const start = performance.now()
+    let frame: number | null = null
 
     const renderOnce = () => {
-      program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed;
-      program.uniforms.uHueShift.value = hueShift;
-      program.uniforms.uNoise.value = noiseIntensity;
-      program.uniforms.uScan.value = scanlineIntensity;
-      program.uniforms.uScanFreq.value = scanlineFrequency;
-      program.uniforms.uWarp.value = warpAmount;
-      program.uniforms.uScale.value = patternScale;
-      program.uniforms.uBrightness.value = brightness;
+      program.uniforms.uTime.value = ((performance.now() - start) / 1000) * speed
+      program.uniforms.uHueShift.value = hueShift
+      program.uniforms.uNoise.value = noiseIntensity
+      program.uniforms.uScan.value = scanlineIntensity
+      program.uniforms.uScanFreq.value = scanlineFrequency
+      program.uniforms.uWarp.value = warpAmount
+      program.uniforms.uScale.value = patternScale
+      program.uniforms.uBrightness.value = brightness
       // Clear each frame to avoid blending with any default BG
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      renderer.render({ scene: mesh });
+      gl.clear(gl.COLOR_BUFFER_BIT)
+      renderer.render({ scene: mesh })
       if (!signalledRef.current) {
-        signalledRef.current = true;
+        signalledRef.current = true
         try {
-          window.dispatchEvent(new Event('grh-veil-ready'));
+          window.dispatchEvent(new Event("grh-veil-ready"))
         } catch {}
       }
-    };
+    }
 
     const loop = () => {
-      renderOnce();
-      frame = requestAnimationFrame(loop);
-    };
+      renderOnce()
+      frame = requestAnimationFrame(loop)
+    }
 
     if (speed > 0) {
-      loop();
+      loop()
     } else {
-      renderOnce();
+      renderOnce()
     }
 
     // Ensure static mode re-renders on resize without starting animation
     const resizeHandler = () => {
-      resize();
-      if (speed === 0) renderOnce();
-    };
-    window.removeEventListener('resize', resize); // replace previous listener with enhanced handler
-    window.addEventListener('resize', resizeHandler);
+      resize()
+      if (speed === 0) renderOnce()
+    }
+    window.removeEventListener("resize", resize) // replace previous listener with enhanced handler
+    window.addEventListener("resize", resizeHandler)
 
     return () => {
-      if (frame !== null) cancelAnimationFrame(frame);
-      window.removeEventListener('resize', resizeHandler);
-    };
-  }, [hueShift, noiseIntensity, scanlineIntensity, speed, scanlineFrequency, warpAmount, resolutionScale, patternScale, brightness, baseBgDark, baseBgLight, isLight, opaque]);
+      if (frame !== null) cancelAnimationFrame(frame)
+      window.removeEventListener("resize", resizeHandler)
+    }
+  }, [
+    hueShift,
+    noiseIntensity,
+    scanlineIntensity,
+    speed,
+    scanlineFrequency,
+    warpAmount,
+    resolutionScale,
+    patternScale,
+    brightness,
+    baseBgDark,
+    baseBgLight,
+    isLight,
+    opaque,
+  ])
   // Provide an initial CSS background based on theme for the very first paint
-  const initialBg = isLight ? baseBgLight : baseBgDark;
-  return <canvas ref={ref} className="w-full h-full block" style={{ backgroundColor: initialBg }} />;
+  const initialBg = isLight ? baseBgLight : baseBgDark
+  return <canvas ref={ref} className="w-full h-full block" style={{ backgroundColor: initialBg }} />
 }

@@ -24,10 +24,7 @@ interface NotifyBookingStatusChangeArgs {
   }
 }
 
-const messageMap: Record<
-  BookingStatus,
-  { base: string; withActor?: string }
-> = {
+const messageMap: Record<BookingStatus, { base: string; withActor?: string }> = {
   [BookingStatus.REQUESTED]: {
     base: "notifications.status.requested",
     withActor: "notifications.status.requestedBy",

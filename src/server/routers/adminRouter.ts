@@ -344,7 +344,7 @@ export const adminRouter = router({
       orderBy: { createdAt: "desc" },
     })
 
-    const latestCancellationLogByBooking = new Map<string, typeof cancellationLogs[number]>()
+    const latestCancellationLogByBooking = new Map<string, (typeof cancellationLogs)[number]>()
     for (const log of cancellationLogs) {
       if (log.bookingId && !latestCancellationLogByBooking.has(log.bookingId)) {
         latestCancellationLogByBooking.set(log.bookingId, log)

@@ -377,7 +377,9 @@ export default function ItemsTab() {
                               try {
                                 const images = item.imagesJson ? JSON.parse(item.imagesJson) : []
                                 const firstImage =
-                                  Array.isArray(images) && images.length > 0 ? getOptimizedImageUrl(images[0]) : null
+                                  Array.isArray(images) && images.length > 0
+                                    ? getOptimizedImageUrl(images[0])
+                                    : null
                                 return firstImage ? (
                                   <Image
                                     src={firstImage}
@@ -406,7 +408,9 @@ export default function ItemsTab() {
                             try {
                               const images = item.imagesJson ? JSON.parse(item.imagesJson) : []
                               const firstImage =
-                                Array.isArray(images) && images.length > 0 ? getOptimizedImageUrl(images[0]) : null
+                                Array.isArray(images) && images.length > 0
+                                  ? getOptimizedImageUrl(images[0])
+                                  : null
                               return firstImage ? (
                                 <TooltipContent>
                                   <Image

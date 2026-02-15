@@ -248,7 +248,8 @@ export default function HomeShell({ catalog }: HomeShellProps) {
     },
   )
 
-  const itemDetailsLoading = view === View.BOOKING && !selectedItem && (!listReady || isFetchingItem)
+  const itemDetailsLoading =
+    view === View.BOOKING && !selectedItem && (!listReady || isFetchingItem)
 
   useEffect(() => {
     if (mounted && currentRoute.view === "booking" && currentRoute.itemId && !selectedItem) {
@@ -441,7 +442,9 @@ export default function HomeShell({ catalog }: HomeShellProps) {
           ) : itemDetailsLoading ? (
             <BookingViewSkeleton />
           ) : (
-            <p className="py-16 text-center text-muted-foreground">{t("errors.loadingItemDetails")}</p>
+            <p className="py-16 text-center text-muted-foreground">
+              {t("errors.loadingItemDetails")}
+            </p>
           )}
         </>
       )

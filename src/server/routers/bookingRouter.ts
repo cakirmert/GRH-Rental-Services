@@ -18,7 +18,6 @@ const isRentalTeamMember = (ctx: Context) => {
   return role === "RENTAL" || role === "ADMIN"
 }
 
-
 type NotificationRecipient = {
   id: string
   email?: string | null
@@ -319,7 +318,11 @@ export const bookingsRouter = router({
         recipients: filterRecipients([
           { id: updated.userId, email: updated.user.email, name: updated.user.name },
           updated.assignedTo
-            ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
+            ? {
+                id: updated.assignedTo.id,
+                email: updated.assignedTo.email,
+                name: updated.assignedTo.name,
+              }
             : null,
         ]),
         performedBy: {
@@ -518,7 +521,11 @@ export const bookingsRouter = router({
         recipients: filterRecipients([
           { id: updated.userId, email: updated.user.email, name: updated.user.name },
           updated.assignedTo
-            ? { id: updated.assignedTo.id, email: updated.assignedTo.email, name: updated.assignedTo.name }
+            ? {
+                id: updated.assignedTo.id,
+                email: updated.assignedTo.email,
+                name: updated.assignedTo.name,
+              }
             : null,
         ]),
         performedBy: {

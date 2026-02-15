@@ -487,11 +487,7 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
                     </DialogClose>
                     <Button
                       type="submit"
-                      disabled={
-                        isSubmittingAuth ||
-                        !email ||
-                        (turnstileEnabled && !turnstileToken)
-                      }
+                      disabled={isSubmittingAuth || !email || (turnstileEnabled && !turnstileToken)}
                       className="w-full sm:w-auto h-11"
                     >
                       {isSubmittingAuth ? (
