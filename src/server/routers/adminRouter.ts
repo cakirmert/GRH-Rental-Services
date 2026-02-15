@@ -399,7 +399,8 @@ export const uploadRouter = router({
         fileContentBase64: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      ensureAdmin(ctx)
       try {
         const fileExtension = path.extname(input.fileName)
         const uniqueFileName = `items/${uuidv4()}${fileExtension}`
