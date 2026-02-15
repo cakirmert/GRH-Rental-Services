@@ -1,7 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -178,9 +184,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
               <SelectTrigger id="block-item">
                 <SelectValue
                   placeholder={
-                    itemsLoading
-                      ? t("common.loading")
-                      : t("adminCalendar.block.itemPlaceholder")
+                    itemsLoading ? t("common.loading") : t("adminCalendar.block.itemPlaceholder")
                   }
                 />
               </SelectTrigger>
@@ -235,7 +239,10 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="block-recurrence">{t("adminCalendar.block.recurrenceLabel")}</Label>
-              <Select value={recurrence} onValueChange={(value) => setRecurrence(value as BlockRecurrenceFrequency)}>
+              <Select
+                value={recurrence}
+                onValueChange={(value) => setRecurrence(value as BlockRecurrenceFrequency)}
+              >
                 <SelectTrigger id="block-recurrence">
                   <SelectValue />
                 </SelectTrigger>

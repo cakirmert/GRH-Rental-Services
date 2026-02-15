@@ -30,9 +30,7 @@ const VALID_TRANSPORTS: ReadonlySet<AuthenticatorTransportFuture> = new Set([
   "usb",
 ])
 
-function normalizeTransports(
-  transports?: unknown,
-): AuthenticatorTransportFuture[] | undefined {
+function normalizeTransports(transports?: unknown): AuthenticatorTransportFuture[] | undefined {
   if (!Array.isArray(transports)) return undefined
   const normalized = transports
     .map((value) => (typeof value === "string" ? value.toLowerCase() : null))

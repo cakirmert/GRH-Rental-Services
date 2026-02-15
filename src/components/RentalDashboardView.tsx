@@ -109,7 +109,7 @@ const getLatestNotePreview = (notes?: string | null) => {
   const entries = splitNoteEntries(notes)
   if (!entries.length) return null
   const latest = entries[entries.length - 1]
-  const normalized = latest.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim()
+  const normalized = latest.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
   return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized
 }
 
@@ -240,7 +240,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
 
   // Check if user has rental team access (RENTAL or ADMIN role)
   const isRentalTeamMember = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
-  
+
   // Show not authorized page if user is not part of rental team
   if (!isRentalTeamMember) {
     return <NotAuthorized onGoBack={onGoBack} requiredRole="RENTAL" />
@@ -624,11 +624,11 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                         {latestNotePreview && (
                           <div className="mt-3 rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-xs text-muted-foreground">
                             <div className="font-medium text-card-foreground">
-                              {t("rentalDashboard.latestNoteLabel", { defaultValue: "Latest note" })}
+                              {t("rentalDashboard.latestNoteLabel", {
+                                defaultValue: "Latest note",
+                              })}
                             </div>
-                            <p className="mt-1 leading-relaxed">
-                              {latestNotePreview}
-                            </p>
+                            <p className="mt-1 leading-relaxed">{latestNotePreview}</p>
                           </div>
                         )}
                       </div>
@@ -698,7 +698,6 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                         </div>
                         <div className="flex mt-2 gap-2 w-full">{renderActionButtons(booking)}</div>
                       </div>
-
                     </CardContent>
                   </Card>
                 )
@@ -727,11 +726,14 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
         </div>
       )}
 
-      <Dialog open={Boolean(noteDialogBooking)} onOpenChange={(open) => {
-        if (!open) {
-          closeNotesDialog()
-        }
-      }}>
+      <Dialog
+        open={Boolean(noteDialogBooking)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeNotesDialog()
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
@@ -779,7 +781,10 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rental-add-note" className="text-xs font-medium text-muted-foreground">
+              <Label
+                htmlFor="rental-add-note"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 {t("rentalDashboard.addNoteLabel", { defaultValue: "Add a note" })}
               </Label>
               <Textarea
@@ -836,7 +841,9 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                 <AlertCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div className="text-sm leading-relaxed">
                   <p className="font-semibold">
-                    {t("rentalDashboard.declineNoteReminderTitle", { defaultValue: "Add a decline note" })}
+                    {t("rentalDashboard.declineNoteReminderTitle", {
+                      defaultValue: "Add a decline note",
+                    })}
                   </p>
                   <p>
                     {t("rentalDashboard.declineNoteReminderBody", {
@@ -870,9 +877,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
             <DialogClose asChild>
               <Button
                 variant="outline"
-                disabled={
-                  updateStatusMutation.isPending || addActionNoteMutation.isPending
-                }
+                disabled={updateStatusMutation.isPending || addActionNoteMutation.isPending}
               >
                 {t("common.cancel")}
               </Button>

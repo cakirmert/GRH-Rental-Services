@@ -17,7 +17,7 @@ describe("routing", () => {
 
     it("should return '/?bookings&highlight=456' for my-bookings view with highlightId '456'", () => {
       expect(routeToPath({ view: "my-bookings", highlightId: "456" })).toBe(
-        "/?bookings&highlight=456"
+        "/?bookings&highlight=456",
       )
     })
 
@@ -59,7 +59,7 @@ describe("routing", () => {
 
     it("should encode special characters in highlightId", () => {
       expect(routeToPath({ view: "my-bookings", highlightId: "foo bar" })).toBe(
-        "/?bookings&highlight=foo%20bar"
+        "/?bookings&highlight=foo%20bar",
       )
     })
   })

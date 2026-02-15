@@ -34,10 +34,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // Allow any Vercel blob storage URL and configured image domain
-    const isVercelBlob = imageUrl.includes('.blob.vercel-storage.com')
-    const isConfiguredDomain = process.env.IMAGE_DOMAIN && 
-                               imageUrl.startsWith(`https://${process.env.IMAGE_DOMAIN}/`)
-    
+    const isVercelBlob = imageUrl.includes(".blob.vercel-storage.com")
+    const isConfiguredDomain =
+      process.env.IMAGE_DOMAIN && imageUrl.startsWith(`https://${process.env.IMAGE_DOMAIN}/`)
+
     if (!isVercelBlob && !isConfiguredDomain) {
       console.log(`❌ Rejected image URL: ${imageUrl}`)
       console.log(`Expected Vercel blob storage URL or configured domain`)
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Check cache first using unified cache system
     const cached = imageCache.get(imageUrl, format)
-    
+
     if (cached) {
       return new NextResponse(toArrayBuffer(cached.buffer), {
         status: 200,
@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
     imageCache.set(imageUrl, optimizedBuffer, contentType, format)
 
     // Periodic cleanup for memory management
-    if (Math.random() < 0.01) { // 1% chance to trigger cleanup
+    if (Math.random() < 0.01) {
+      // 1% chance to trigger cleanup
       imageCache.cleanup()
     }
 
@@ -131,27 +132,27 @@ export async function HEAD(request: NextRequest) {
     }
 
     const cached = imageCache.get(imageUrl, format)
-    
+
     if (cached) {
       // Image is cached, return cache hit headers
       return new NextResponse(null, {
         status: 200,
         headers: {
-          'Content-Type': cached.contentType,
-          'Cache-Control': 'public, max-age=31536000',
-          'X-Cache': 'HIT',
-          'Vary': 'Accept'
-        }
+          "Content-Type": cached.contentType,
+          "Cache-Control": "public, max-age=31536000",
+          "X-Cache": "HIT",
+          Vary: "Accept",
+        },
       })
     } else {
       // Image not cached, return cache miss headers
       return new NextResponse(null, {
         status: 200,
         headers: {
-          'Cache-Control': 'public, max-age=31536000',
-          'X-Cache': 'MISS',
-          'Vary': 'Accept'
-        }
+          "Cache-Control": "public, max-age=31536000",
+          "X-Cache": "MISS",
+          Vary: "Accept",
+        },
       })
     }
   } catch (err) {

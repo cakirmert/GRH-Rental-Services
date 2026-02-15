@@ -81,7 +81,7 @@ export default function FAQPage() {
           <p>{t("faqPage.cancelAnswerPart1")}</p>
           <p>{t("faqPage.cancelAnswerPart2")}</p>
           <p>
-            {t("faqPage.cancelAnswerPart3")} {" "}
+            {t("faqPage.cancelAnswerPart3")}{" "}
             <Button
               variant="link"
               className="px-0"
@@ -91,8 +91,7 @@ export default function FAQPage() {
               }}
             >
               {t("footer.contactFormLink")}
-            </Button>
-            {" "}
+            </Button>{" "}
             {t("faqPage.cancelAnswerPart4")}
           </p>
         </div>

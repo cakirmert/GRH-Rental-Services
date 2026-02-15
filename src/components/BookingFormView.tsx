@@ -361,13 +361,13 @@ function BookingFormView(props: BookingFormViewProps) {
   const images = useMemo(() => {
     return getOptimizedImageUrls(item.images || [])
   }, [imageUrlsJson]) // eslint-disable-line react-hooks/exhaustive-deps
-  
+
   // Reset current image when item changes and load stored image for new item
   useEffect(() => {
     const storedImage = getStoredImageIndex(item.id)
     setCurrentImage(storedImage)
   }, [item.id])
-  
+
   // Handle image loading state when current image source changes
   // Simplified approach: let Next.js Image component handle loading states
   useEffect(() => {
@@ -403,7 +403,7 @@ function BookingFormView(props: BookingFormViewProps) {
       }
     },
     [images.length],
-  )  // Handle thumbnail loading state - simplified approach
+  ) // Handle thumbnail loading state - simplified approach
   const handleThumbnailLoadStart = useCallback((index: number) => {
     setThumbnailLoadingStates((prev) => new Set([...prev, index]))
   }, [])
@@ -544,11 +544,10 @@ function BookingFormView(props: BookingFormViewProps) {
       const effEndDate = dateRange.to || dateRange.from
       const endDT = combineDateTime(effEndDate, endTime)
       const rangeDifference = differenceInCalendarDays(effEndDate, dateRange.from)
-      if (
-        Number.isFinite(maxSelectableRangeDays) &&
-        rangeDifference > maxSelectableRangeDays
-      ) {
-        setFormError(rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }))
+      if (Number.isFinite(maxSelectableRangeDays) && rangeDifference > maxSelectableRangeDays) {
+        setFormError(
+          rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }),
+        )
         return false
       }
       const now = new Date()
@@ -628,8 +627,7 @@ function BookingFormView(props: BookingFormViewProps) {
 
   const selectedRangeSpanDays =
     dateRange?.from && dateRange?.to ? differenceInCalendarDays(dateRange.to, dateRange.from) : 0
-  const isSingleDayRange =
-    !!dateRange?.from && (!dateRange?.to || selectedRangeSpanDays === 0)
+  const isSingleDayRange = !!dateRange?.from && (!dateRange?.to || selectedRangeSpanDays === 0)
   const isTwoDayRange = !!dateRange?.from && !!dateRange?.to && selectedRangeSpanDays === 1
   const shouldShowDetailedAvailability = isSingleDayRange || isTwoDayRange
   const translatedDescription = useMemo(() => {
@@ -651,11 +649,10 @@ function BookingFormView(props: BookingFormViewProps) {
       const effEndDate = dateRange.to || dateRange.from
       const endDT = combineDateTime(effEndDate, endTime)
       const rangeDifference = differenceInCalendarDays(effEndDate, dateRange.from)
-      if (
-        Number.isFinite(maxSelectableRangeDays) &&
-        rangeDifference > maxSelectableRangeDays
-      ) {
-        setFormError(rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }))
+      if (Number.isFinite(maxSelectableRangeDays) && rangeDifference > maxSelectableRangeDays) {
+        setFormError(
+          rangeErrorMessage || t("errors.rangeTooLong", { days: maxSelectableRangeDays + 1 }),
+        )
         return null
       }
 

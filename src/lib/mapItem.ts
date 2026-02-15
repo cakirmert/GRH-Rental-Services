@@ -61,7 +61,12 @@ export function mapDbItemToClient(item: MappableItem, locale: string): Item {
   let type: Item["type"] = "sports"
   if (item.type) {
     const normalized = String(item.type).toLowerCase()
-    if (normalized === "room" || normalized === "sports" || normalized === "game" || normalized === "other") {
+    if (
+      normalized === "room" ||
+      normalized === "sports" ||
+      normalized === "game" ||
+      normalized === "other"
+    ) {
       type = normalized as Item["type"]
     }
   }
@@ -77,7 +82,9 @@ export function mapDbItemToClient(item: MappableItem, locale: string): Item {
     name: String(name),
     description: String(description),
     capacity:
-      typeof item.capacity === "number" && Number.isFinite(item.capacity) ? item.capacity : undefined,
+      typeof item.capacity === "number" && Number.isFinite(item.capacity)
+        ? item.capacity
+        : undefined,
     players: typeof item.players === "string" ? item.players : undefined,
     images,
     totalQuantity:
