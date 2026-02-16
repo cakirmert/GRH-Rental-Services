@@ -344,10 +344,8 @@ function BookingFormView(props: BookingFormViewProps) {
     }
   }, [form, item.id, i18nLocale])
 
-  // Persist current image to global state and sessionStorage whenever it changes
-  useEffect(() => {
-    setStoredImageIndex(item.id, currentImage)
-  }, [currentImage, item.id])
+  // No longer needed: persisting current image via useEffect
+  // We'll use a wrapper for setCurrentImage instead
   // Cleanup on unmount - but don't clear global state as it should persist
   useEffect(() => {
     return () => {
@@ -368,19 +366,8 @@ function BookingFormView(props: BookingFormViewProps) {
     setCurrentImage(storedImage)
   }, [item.id])
 
-  // Handle image loading state when current image source changes
-  // Simplified approach: let Next.js Image component handle loading states
-  useEffect(() => {
-    if (images.length > 0 && images[currentImage]) {
-      const newImageSrc = images[currentImage]
-      if (newImageSrc !== loadingImageSrc) {
-        setLoadingImageSrc(newImageSrc)
-        // Set initial loading state, but let the Image component's onLoad/onError handle the rest
-        setImageLoading(true)
-        setImageError(false)
-      }
-    }
-  }, [currentImage, images, loadingImageSrc])
+  // Next.js Image component handles loading states via onLoad/onError
+  // No need for separate loading logic in useEffect
 
   // Ensure currentImage is within bounds when images change
   useEffect(() => {
@@ -390,19 +377,29 @@ function BookingFormView(props: BookingFormViewProps) {
   }, [currentImage, images.length])
   // Memoize navigation functions to prevent unnecessary re-renders
   const goToPreviousImage = useCallback(() => {
-    setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
-  }, [images.length])
+    setCurrentImage((prev) => {
+      const next = (prev - 1 + images.length) % images.length
+      setStoredImageIndex(item.id, next)
+      return next
+    })
+  }, [images.length, item.id])
 
   const goToNextImage = useCallback(() => {
-    setCurrentImage((prev) => (prev + 1) % images.length)
-  }, [images.length])
+    setCurrentImage((prev) => {
+      const next = (prev + 1) % images.length
+      setStoredImageIndex(item.id, next)
+      return next
+    })
+  }, [images.length, item.id])
+
   const goToImage = useCallback(
     (index: number) => {
       if (index >= 0 && index < images.length) {
         setCurrentImage(index)
+        setStoredImageIndex(item.id, index)
       }
     },
-    [images.length],
+    [images.length, item.id],
   ) // Handle thumbnail loading state - simplified approach
   const handleThumbnailLoadStart = useCallback((index: number) => {
     setThumbnailLoadingStates((prev) => new Set([...prev, index]))
@@ -845,6 +842,7 @@ function BookingFormView(props: BookingFormViewProps) {
                         <button
                           type="button"
                           onClick={goToPreviousImage}
+                          aria-label={t("common.previousImage")}
                           className="absolute left-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-r from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:from-black/30"
                         >
                           <div className="bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200">
@@ -854,6 +852,7 @@ function BookingFormView(props: BookingFormViewProps) {
                         <button
                           type="button"
                           onClick={goToNextImage}
+                          aria-label={t("common.nextImage")}
                           className="absolute right-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-l from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:from-black/30"
                         >
                           <div className="bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200">
@@ -871,11 +870,11 @@ function BookingFormView(props: BookingFormViewProps) {
                           key={`${item.id}-${img}-${idx}`}
                           type="button"
                           onClick={() => goToImage(idx)}
-                          className={`relative h-16 w-16 my-2 flex-shrink-0 rounded-md overflow-hidden cursor-pointer transition-all duration-200 ${
-                            idx === currentImage
-                              ? "ring-2 ring-primary shadow-md"
-                              : "hover:ring-1 hover:ring-border"
-                          }`}
+                          aria-label={t("common.viewImageN", { n: idx + 1 })}
+                          className={`relative h-16 w-16 my-2 flex-shrink-0 rounded-md overflow-hidden cursor-pointer transition-all duration-200 ${idx === currentImage
+                            ? "ring-2 ring-primary shadow-md"
+                            : "hover:ring-1 hover:ring-border"
+                            }`}
                         >
                           {thumbnailLoadingStates.has(idx) && idx !== currentImage && (
                             <div className="absolute inset-0 flex items-center justify-center bg-card rounded-md">
@@ -1186,10 +1185,10 @@ function BookingFormView(props: BookingFormViewProps) {
                     startTime &&
                     endTime &&
                     format(combineDateTime(dateRange.from, startTime), "yyyy-MM-dd") ===
-                      format(
-                        combineDateTime(dateRange.to || dateRange.from, endTime),
-                        "yyyy-MM-dd",
-                      ) &&
+                    format(
+                      combineDateTime(dateRange.to || dateRange.from, endTime),
+                      "yyyy-MM-dd",
+                    ) &&
                     !isBefore(
                       combineDateTime(dateRange.from, startTime),
                       combineDateTime(dateRange.to || dateRange.from, endTime),

@@ -39,8 +39,6 @@ export async function GET(request: NextRequest) {
       process.env.IMAGE_DOMAIN && imageUrl.startsWith(`https://${process.env.IMAGE_DOMAIN}/`)
 
     if (!isVercelBlob && !isConfiguredDomain) {
-      console.log(`❌ Rejected image URL: ${imageUrl}`)
-      console.log(`Expected Vercel blob storage URL or configured domain`)
       return NextResponse.json({ error: "Invalid image source" }, { status: 403 })
     }
 

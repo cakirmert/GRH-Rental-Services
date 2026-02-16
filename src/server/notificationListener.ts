@@ -47,7 +47,6 @@ async function sendNotification(
         err instanceof Error &&
         (err.message.includes("410") || err.message.includes("invalid"))
       ) {
-        console.log(`[Push] Removing invalid subscription: ${sub.endpoint.substring(0, 50)}...`)
         await prisma.pushSubscription.delete({ where: { id: sub.id } })
       }
     }

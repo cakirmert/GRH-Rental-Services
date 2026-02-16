@@ -8,6 +8,10 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
 }
 
 /* Style for autofilled input fields */
@@ -109,6 +113,8 @@ textarea:-webkit-autofill {
 
   /* Vibrant Background for Glassmorphism */
   --background-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+
+  color-scheme: light;
 }
 
 @layer utilities {
@@ -208,6 +214,8 @@ textarea:-webkit-autofill {
 
   /* Dark Mode Gradient */
   --background-gradient: linear-gradient(to right bottom, #0f172a, #1e293b, #334155);
+
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -270,6 +278,7 @@ textarea:-webkit-autofill {
     @apply bg-background text-foreground;
     background: var(--background-gradient, var(--background));
     min-height: 100vh;
+    touch-action: manipulation;
   }
 }
 

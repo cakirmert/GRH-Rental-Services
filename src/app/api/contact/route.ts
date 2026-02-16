@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const text = `Name: ${name}\nEmail: ${email}\nRoom: ${room}\nIssue: ${issue}\n\n${message}`
 
   if (isDev) {
-    console.log("\n››› DEV contact message ‹‹‹\n" + text)
+    // skip sending mail in dev
   } else {
     await transporter!.sendMail({
       to: CONTACT_EMAIL,

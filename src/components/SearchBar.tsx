@@ -45,6 +45,7 @@ export const SearchBar = memo(function SearchBar({
         <Input
           type="text"
           placeholder={t("search.placeholder")}
+          aria-label={t("search.placeholder")}
           value={searchTerm}
           onChange={handleSearchChange}
           className="pl-10 pr-10 h-12"
@@ -55,6 +56,7 @@ export const SearchBar = memo(function SearchBar({
             variant="ghost"
             size="sm"
             onClick={clearSearch}
+            aria-label={t("common.clearSearch")}
             className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted-foreground/10"
           >
             <X className="h-4 w-4" />

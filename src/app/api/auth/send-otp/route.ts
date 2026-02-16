@@ -71,14 +71,7 @@ export async function POST(req: Request) {
         }
 
         if (!verificationResult.success) {
-          console.warn("Turnstile verification unsuccessful", {
-            email: key,
-            errors: verificationResult["error-codes"],
-          })
-          return NextResponse.json(
-            { error: "Please verify you are human before requesting a code." },
-            { status: 400 },
-          )
+          return NextResponse.json({ error: "Please verify you are human before requesting a code." }, { status: 400 })
         }
       } catch (error) {
         console.error("Error verifying Turnstile token:", error)
@@ -145,7 +138,7 @@ export async function POST(req: Request) {
     `
 
     if (isDev) {
-      console.log(`\nDEV OTP for ${key}: ${code}\n`)
+      // skip sending mail in dev
     } else {
       await transporter!.sendMail({
         to: key,

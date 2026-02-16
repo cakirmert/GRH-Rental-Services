@@ -80,29 +80,28 @@ export async function sendBookingRequestEmail({
         <div style="padding: 28px 32px; border-bottom: 1px solid #f1f5f9;">
           <p style="margin: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: #64748b; font-weight: 600;">New booking request</p>
           <h1 style="margin: 8px 0 0; font-size: 24px; color: #0f172a;">${escapeHtml(
-            booking.itemTitle,
-          )}</h1>
+    booking.itemTitle,
+  )}</h1>
         </div>
         <div style="padding: 28px 32px 16px;">
           <p style="margin: 0 0 16px; color: #1f2937; line-height: 1.6;">
             <strong>${escapedRequester}</strong> would like to reserve <strong>${escapeHtml(
-              booking.itemTitle,
-            )}</strong>.
+    booking.itemTitle,
+  )}</strong>.
           </p>
           <div style="display: grid; gap: 16px;">
             <div style="padding: 16px 18px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0;">
               <p style="margin: 0; font-weight: 600; color: #0f172a;">Requested time</p>
               <p style="margin: 6px 0 0; color: #475569;">${escapeHtml(startLabel)} &ndash; ${escapeHtml(
-                endLabel,
-              )}</p>
+    endLabel,
+  )}</p>
             </div>
-            ${
-              notes
-                ? `<div style="padding: 16px 18px; border-radius: 14px; background: #fff7ed; border: 1px solid #fdba74;"><p style="margin: 0; font-weight: 600; color: #c2410c;">Notes</p><p style="margin: 6px 0 0; color: #9a3412; white-space: pre-line;">${escapeHtml(
-                    notes,
-                  )}</p></div>`
-                : ""
-            }
+            ${notes
+      ? `<div style="padding: 16px 18px; border-radius: 14px; background: #fff7ed; border: 1px solid #fdba74;"><p style="margin: 0; font-weight: 600; color: #c2410c;">Notes</p><p style="margin: 6px 0 0; color: #9a3412; white-space: pre-line;">${escapeHtml(
+        notes,
+      )}</p></div>`
+      : ""
+    }
           </div>
           <p style="margin: 24px 0 0; color: #475569; line-height: 1.6;">
             Review the request in the rental dashboard and respond when ready.
@@ -116,7 +115,6 @@ export async function sendBookingRequestEmail({
   `
 
   if (!transporter || isDev) {
-    console.log("[mail] booking request", { to: to.email, subject, text })
     return
   }
 

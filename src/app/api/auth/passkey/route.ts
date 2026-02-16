@@ -18,25 +18,17 @@ export async function POST(req: Request) {
       redirect: false,
     })
 
-    //console.log('🔐 NextAuth signin result:', res);
-    //console.log('🔐 NextAuth signin result type:', typeof res);
-
-    // Check if the result is a string (URL) which indicates success
     if (typeof res === "string") {
-      //console.log('✅ NextAuth signin successful, redirect URL:', res);
       return NextResponse.json({ ok: true, redirectUrl: res })
     }
 
     // If it's an object, check for error
     if (res && typeof res === "object" && "error" in res && res.error) {
-      //console.error('❌ NextAuth signin error:', res.error);
       return NextResponse.json({ message: res.error }, { status: 401 })
     }
 
-    //console.log('✅ NextAuth signin completed successfully');
     return NextResponse.json({ ok: true })
   } catch {
-    //console.error('❌ NextAuth signin threw error:', error);
     return NextResponse.json({ message: "Authentication failed" }, { status: 401 })
   }
 }

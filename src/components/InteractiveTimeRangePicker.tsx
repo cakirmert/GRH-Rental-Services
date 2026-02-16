@@ -189,7 +189,6 @@ export default function InteractiveTimeRangePicker({
       }
     }
 
-    // console.log(`[ITRP InitEffect] Setting default startTime: ${m2s(st)}, endTime: ${m2s(en)}`);
     sField.onChange(m2s(st))
     eField.onChange(m2s(en))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -403,7 +402,7 @@ export default function InteractiveTimeRangePicker({
               const startFmt = pickerIsSingleDayAndIntervalIsOnSameDay ? "p" : "PP p"
               const endFmt =
                 pickerIsSingleDayAndIntervalIsOnSameDay ||
-                differenceInDays(endDate, startDate) === 0
+                  differenceInDays(endDate, startDate) === 0
                   ? "p"
                   : "PP p"
               return `${format(startDate, startFmt)} – ${format(endDate, endFmt)}`

@@ -191,12 +191,6 @@ class ImageCacheManager {
 
     this.totalSize -= freedSize
     const afterSize = this.cache.size
-
-    if (beforeSize > afterSize) {
-      console.log(
-        `🧹 Cleaned up ${beforeSize - afterSize} cache entries, freed ${Math.round(freedSize / 1024 / 1024)}MB`,
-      )
-    }
   }
 }
 
