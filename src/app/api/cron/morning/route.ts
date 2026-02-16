@@ -5,6 +5,7 @@ import { authorizeCronRequest, runCronTasks } from "../utils"
 import { markUpcomingBookingsBorrowed } from "@/server/jobs/autoBorrowed"
 import { cancelExpiredBookings } from "@/server/jobs/cancelExpiredBookings"
 import { deleteOldBookings } from "@/server/jobs/cleanOldBookings"
+import { autoCompleteBorrowedBookings } from "@/server/jobs/autoCompleteBookings"
 
 export async function GET(req: NextRequest) {
   const authResponse = authorizeCronRequest(req)
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
   const result = await runCronTasks([
     { name: "markUpcomingBookingsBorrowed", execute: markUpcomingBookingsBorrowed },
     { name: "cancelExpiredBookings", execute: cancelExpiredBookings },
+    { name: "autoCompleteBorrowedBookings", execute: autoCompleteBorrowedBookings },
     { name: "deleteOldBookings", execute: deleteOldBookings },
   ])
 

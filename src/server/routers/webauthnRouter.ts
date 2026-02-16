@@ -145,166 +145,142 @@ export const webauthnRouter = router({
           where: { OR: [{ email: input.usernameOrEmail }, { name: input.usernameOrEmail }] },
         })
         if (!user || !user.passkeys.length) throw new TRPCError({ code: "NOT_FOUND" })
-        allowCredentials = (
-          user.passkeys as Array<{
-            credentialID: string
-            transports?: AuthenticatorTransportFuture[] | string[]
-          }>
-        ).map((p) => ({
+
+        const userPasskeys = user.passkeys as unknown as UserPasskey[]
+
+        allowCredentials = userPasskeys.map((p) => ({
           id: p.credentialID,
           transports: normalizeTransports(p.transports),
         }))
         userIds = [user.id]
-        if (input.usernameOrEmail) {
-          const users = await ctx.prisma.user.findMany({
-            select: {
-              id: true,
-              email: true,
-              passkeys: true,
-            },
-          })
-
-          const users = await ctx.prisma.user.findMany({
-
-            // Collect all credential IDs and map them to user IDs
-            users.forEach((user) => {
-              if (user.passkeys && Array.isArray(user.passkeys)) {
-                const userPasskeys = user.passkeys as unknown as UserPasskey[]
-                const userPasskeys = user.passkeys as unknown as UserPasskey[]
-                allowCredentials.push(
-                  ...userPasskeys.map((p: UserPasskey) => ({
-                    id: p.credentialID,
-                    transports: normalizeTransports(p.transports),
-                  })),
-                )
-                userIds.push(user.id)
-              } else {
-              }
-            })
+      } else {
+        // Usernameless flow: find all users with passkeys
+        const users = await ctx.prisma.user.findMany({
+          select: {
+            id: true,
+            email: true,
+            passkeys: true,
+          },
+        })
 
         // Collect all credential IDs and map them to user IDs
         users.forEach((user) => {
+          if (user.passkeys && Array.isArray(user.passkeys)) {
+            const userPasskeys = user.passkeys as unknown as UserPasskey[]
+            allowCredentials.push(
+              ...userPasskeys.map((p) => ({
+                id: p.credentialID,
+                transports: normalizeTransports(p.transports),
+              })),
+            )
+            userIds.push(user.id)
+          }
+        })
+      }
 
-              if (allowCredentials.length === 0) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "No passkeys found" })
-              }
-            }
+      if (allowCredentials.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "No passkeys found" })
+      }
 
       const opts = await getAuthenticationOptions(allowCredentials)
 
       // Store challenge for all possible user IDs in usernameless flow
       userIds.forEach((userId) => {
-              authenticationChallenges.set(userId, opts.challenge)
-            })
+        authenticationChallenges.set(userId, opts.challenge)
+      })
 
       return opts
-          }),
-            login: publicProcedure
-              .input(z.object({ userId: z.string(), credential: z.any() }))
-                .mutation(async ({ input, ctx }) => {
-                  let user
+    }),
 
-                  const incomingCredentialCandidate = input.credential.rawId || input.credential.id
+  login: publicProcedure
+    .input(z.object({ userId: z.string(), credential: z.any() }))
+    .mutation(async ({ input, ctx }) => {
+      let user: Prisma.UserGetPayload<{}> | null = null
 
-                  const incomingCredentialCandidate = input.credential.rawId || input.credential.id
-                  const normalizedIncomingCredentialId = normalizeCredentialId(incomingCredentialCandidate)
+      const incomingCredentialCandidate = input.credential.rawId || input.credential.id
+      const normalizedIncomingCredentialId = normalizeCredentialId(incomingCredentialCandidate)
 
-                  if (!normalizedIncomingCredentialId) {
-                    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid credential identifier" })
-                  }
+      if (!normalizedIncomingCredentialId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid credential identifier" })
+      }
 
-                  if (input.userId === "auto-detect") {
+      if (input.userId === "auto-detect") {
+        // Usernameless flow: find user by credential ID
+        const users = await ctx.prisma.user.findMany({
+          select: { id: true, email: true, passkeys: true },
+        })
 
-                    const users = await ctx.prisma.user.findMany({
-                      select: { id: true, email: true, passkeys: true },
-                    })
-
-                    const users = await ctx.prisma.user.findMany({
-
-                      for(const u of users) {
-                        if (!u.passkeys || !Array.isArray(u.passkeys)) continue
-
-                        const userPasskeys = u.passkeys as Array<{
-                          credentialID: string
-                          credentialPublicKey: string
-                          counter: number
-                          transports?: string[]
-                        }>
-
-                        const userPasskeys = u.passkeys as Array<{
-                          credentialID: string
-                          credentialPublicKey: string
-                          counter: number
-                          transports?: string[]
-                        }>
-
-                        const foundPasskey = userPasskeys.find((p) => {
-                          const normalizedStoredId = normalizeCredentialId(p.credentialID)
-                          return normalizedStoredId === normalizedIncomingCredentialId
-                        })
-
-                        if (foundPasskey) {
-                          user = await ctx.prisma.user.findUnique({ where: { id: u.id } })
-                          break
-                        }
-                      }
-
-                    }
-      } else {
-                  } else {
-          user = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
-        }
-
-        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found for passkey" })
-        const challenge = authenticationChallenges.get(user.id)
-        if (!challenge) {
-          if (!challenge) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "No challenge found" })
-          }
-          const passkey = (
-            user.passkeys as Array<{
-              credentialID: string
-              credentialPublicKey: string
-              counter: number
-            }>
-          ).find((p) => {
+        for (const u of users) {
+          if (!u.passkeys || !Array.isArray(u.passkeys)) continue
+          const userPasskeys = u.passkeys as unknown as UserPasskey[]
+          const foundPasskey = userPasskeys.find((p) => {
             const normalizedStoredId = normalizeCredentialId(p.credentialID)
-            if (!normalizedStoredId) return false
-            if (normalizedStoredId !== normalizedIncomingCredentialId) return false
-            if (normalizedStoredId !== p.credentialID) {
-              p.credentialID = normalizedStoredId
-            }
-            return true
+            return normalizedStoredId === normalizedIncomingCredentialId
           })
-          if (!passkey) {
-            if (!passkey) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Passkey not found" })
-            }
 
-            if (!passkey.credentialPublicKey) {
-              if (!passkey.credentialPublicKey) {
-                throw new TRPCError({
-                  code: "BAD_REQUEST",
-                  message:
-                    "Passkey data is incomplete (missing credentialPublicKey). Please re-register your passkey.",
-                })
-              }
+          if (foundPasskey) {
+            user = await ctx.prisma.user.findUnique({ where: { id: u.id } })
+            break
+          }
+        }
+      } else {
+        user = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
+      }
 
-              const verification = await verifyAuthentication(
-                input.credential as AuthenticationResponseJSON,
-                challenge,
-                passkey,
-              )
-              if (!verification.verified || !verification.authenticationInfo)
-                throw new TRPCError({ code: "BAD_REQUEST" })
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found for passkey" })
 
-              passkey.counter = verification.authenticationInfo.newCounter
-              await ctx.prisma.user.update({
-                where: { id: user.id },
-                data: { passkeys: user.passkeys as Prisma.InputJsonValue[] },
-              })
-              authenticationChallenges.delete(user.id)
-              const token = generatePasskeyToken(user.id)
-              return { verified: true, token }
-            }),
+      const challenge = authenticationChallenges.get(user.id)
+      if (!challenge) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No challenge found" })
+      }
+
+      const userPasskeys = user.passkeys as unknown as UserPasskey[]
+
+      const passkey = userPasskeys.find((p) => {
+        const normalizedStoredId = normalizeCredentialId(p.credentialID)
+        if (!normalizedStoredId) return false
+        // Check both normalized and direct ID
+        if (normalizedStoredId === normalizedIncomingCredentialId) return true
+
+        // Fix stored ID if it matches but wasn't normalized
+        if (p.credentialID === incomingCredentialCandidate) {
+          p.credentialID = normalizedStoredId
+          return true
+        }
+        return false
+      })
+
+      if (!passkey) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Passkey not found" })
+      }
+
+      if (!passkey.credentialPublicKey) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Passkey data is incomplete (missing credentialPublicKey). Please re-register your passkey.",
+        })
+      }
+
+      const verification = await verifyAuthentication(
+        input.credential as AuthenticationResponseJSON,
+        challenge,
+        passkey,
+      )
+
+      if (!verification.verified || !verification.authenticationInfo) {
+        throw new TRPCError({ code: "BAD_REQUEST" })
+      }
+
+      passkey.counter = verification.authenticationInfo.newCounter
+
+      await ctx.prisma.user.update({
+        where: { id: user.id },
+        data: { passkeys: userPasskeys as unknown as Prisma.InputJsonValue[] },
+      })
+
+      authenticationChallenges.delete(user.id)
+      const token = generatePasskeyToken(user.id)
+      return { verified: true, token }
+    }),
 })

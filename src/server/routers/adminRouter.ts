@@ -89,7 +89,7 @@ export const adminRouter = router({
           where: { id: input.itemId },
           data: { responsibleMembers: { set: input.memberIds.map((id) => ({ id })) } },
         })
-        await revalidateTag(EQUIPMENT_CACHE_TAG)
+        await revalidateTag(EQUIPMENT_CACHE_TAG, "default")
         return result
       }),
   }),
@@ -125,7 +125,7 @@ export const adminRouter = router({
             imagesJson: images && images.length > 0 ? JSON.stringify(images) : undefined,
           },
         })
-        await revalidateTag(EQUIPMENT_CACHE_TAG)
+        await revalidateTag(EQUIPMENT_CACHE_TAG, "default")
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -161,7 +161,7 @@ export const adminRouter = router({
             imagesJson: images ? JSON.stringify(images) : undefined,
           },
         })
-        await revalidateTag(EQUIPMENT_CACHE_TAG)
+        await revalidateTag(EQUIPMENT_CACHE_TAG, "default")
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -177,7 +177,7 @@ export const adminRouter = router({
           where: { id: input.itemId },
           data: { active: input.isEnabled },
         })
-        await revalidateTag(EQUIPMENT_CACHE_TAG)
+        await revalidateTag(EQUIPMENT_CACHE_TAG, "default")
         await logAction({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
@@ -305,7 +305,7 @@ export const adminRouter = router({
         where: { id: input.itemId },
         data: { imagesJson: JSON.stringify(input.images) },
       })
-      await revalidateTag(EQUIPMENT_CACHE_TAG)
+      await revalidateTag(EQUIPMENT_CACHE_TAG, "default")
       await logAction({
         type: LogType.ADMIN,
         userId: ctx.session.user.id,
@@ -360,9 +360,9 @@ export const adminRouter = router({
 
     const staffMembers = staffIds.length
       ? await ctx.prisma.user.findMany({
-          where: { id: { in: staffIds } },
-          select: { id: true, name: true, email: true, role: true },
-        })
+        where: { id: { in: staffIds } },
+        select: { id: true, name: true, email: true, role: true },
+      })
       : []
 
     const staffById = new Map(staffMembers.map((staff) => [staff.id, staff]))

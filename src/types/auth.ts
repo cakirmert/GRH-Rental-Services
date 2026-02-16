@@ -22,6 +22,8 @@ export interface AuthModalContextType {
 // WebAuthn/Passkey related types
 export interface UserPasskey {
   credentialID: string
+  credentialPublicKey: string
+  counter: number
   name?: string
   createdAt?: string
   lastUsed?: string

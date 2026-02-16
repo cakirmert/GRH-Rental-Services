@@ -50,3 +50,4 @@ prisma/migrations/20250430184116_init/migration.sql
 
 .agent
 .agents
+.env*.local
