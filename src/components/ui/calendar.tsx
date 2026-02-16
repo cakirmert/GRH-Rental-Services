@@ -121,7 +121,7 @@ export function Calendar({
 
   /* ---------- render ----------------------------------- */
   return (
-    <div ref={host} className={cn("inline-block", className)}>
+    <div ref={host} className={cn("p-3 rounded-md border bg-background/50 glass inline-block", className)}>
       <DayPicker
         key={months} /* force full remount when layout changes   */
         {...props}

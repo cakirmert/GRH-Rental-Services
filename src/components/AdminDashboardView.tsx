@@ -55,7 +55,7 @@ function ActionCard({
       onClick={onClick}
       disabled={disabled}
       className={clsx(
-        "bg-card border rounded-xl p-5 text-left hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all duration-200 ease-in-out group",
+        "bg-card/50 glass border rounded-xl p-5 text-left hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all duration-200 ease-in-out group",
         "flex flex-col items-start h-full", // Ensure cards in a row have same height potential
         disabled && "opacity-50 cursor-not-allowed hover:shadow-none",
       )}

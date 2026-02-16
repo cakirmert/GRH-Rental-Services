@@ -91,7 +91,7 @@ export function ItemCard({ item, onSelectItem }: ItemCardProps) {
 
   const translatedDescription = item.description ? t(item.description) : ""
   return (
-    <Card className="rounded-xl border bg-card hover:shadow-md hover:shadow-black/10 dark:hover:shadow-white/10 transition-all duration-300 flex flex-col h-full group overflow-hidden">
+    <Card className="rounded-xl border bg-card/40 hover:bg-card/60 hover:shadow-md hover:shadow-black/10 dark:hover:shadow-white/10 transition-all duration-300 flex flex-col h-full group overflow-hidden">
       {" "}
       <CardHeader className="p-0">
         <div
@@ -135,9 +135,8 @@ export function ItemCard({ item, onSelectItem }: ItemCardProps) {
                   <button
                     key={index}
                     onClick={() => !isSliding && setCurrent(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      index === current ? "bg-white shadow-md" : "bg-white/50 hover:bg-white/75"
-                    }`}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${index === current ? "bg-white shadow-md" : "bg-white/50 hover:bg-white/75"
+                      }`}
                     disabled={isSliding}
                   />
                 ))}

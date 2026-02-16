@@ -209,9 +209,8 @@ export default function Header() {
 
   return (
     <header
-      className={`bg-background bg-opacity-50 opacity-90 text-foreground border-b shadow-sm sticky top-0 z-50 transition-transform duration-300 ${
-        hidden ? "-translate-y-full" : "translate-y-0"
-      }`}
+      className={`glass sticky top-0 z-50 transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"
+        }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex justify-between items-center">
