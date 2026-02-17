@@ -10,7 +10,18 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 const connectionString = `${process.env.DATABASE_URL}`
 
-const pool = new Pool({ connectionString })
+const pool = new Pool({
+  connectionString: (() => {
+    try {
+      const url = new URL(connectionString)
+      url.searchParams.set("sslmode", "require")
+      url.searchParams.set("uselibpqcompat", "true")
+      return url.toString()
+    } catch {
+      return connectionString
+    }
+  })()
+})
 const adapter = new PrismaPg(pool)
 
 const client = globalThis.prisma || new PrismaClient({ adapter })
