@@ -71,8 +71,8 @@ textarea:-webkit-autofill {
   --status-requested-foreground: hsl(38 85% 18%);
   --status-accepted: hsl(160 85% 94%);
   --status-accepted-foreground: hsl(160 75% 16%);
-  --status-borrowed: hsl(217 85% 94%);
-  --status-borrowed-foreground: hsl(217 75% 18%);
+  --status-borrowed: hsl(0 0% 94%);
+  --status-borrowed-foreground: hsl(0 0% 20%);
   --status-completed: hsl(150 80% 93%);
   --status-completed-foreground: hsl(150 70% 15%);
   --status-declined: hsl(355 85% 94%);
@@ -82,7 +82,7 @@ textarea:-webkit-autofill {
   --success: hsl(160 85% 94%);
   --success-foreground: hsl(160 75% 16%);
   /* Sidebar Light */
-  --sidebar-background: hsl(240 4.8% 97.9%);
+  --sidebar-background: hsl(0 0% 98%);
   /* Very Light Gray */
   --sidebar-foreground: oklch(0.145 0 0);
   /* Near Black */
@@ -107,19 +107,20 @@ textarea:-webkit-autofill {
   /* Glassmorphism Variables */
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
   --glass-backdrop: blur(12px);
   --glass-text: oklch(0.145 0 0);
 
   /* Vibrant Background for Glassmorphism */
-  --background-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  --background-gradient: linear-gradient(135deg, #fdfbfb 0%, #f5f5f5 100%);
+  --background-gradient: linear-gradient(135deg, #fdfbfb 0%, #f5f5f5 100%);
 
   color-scheme: light;
 }
 
 @layer utilities {
   .glass {
-    background: var(--glass-bg);
+    /* Background handled by utility classes (e.g. bg-card/40) to prevent conflicts */
     backdrop-filter: var(--glass-backdrop);
     -webkit-backdrop-filter: var(--glass-backdrop);
     border: 1px solid var(--glass-border);
@@ -127,76 +128,123 @@ textarea:-webkit-autofill {
   }
 }
 
+@layer components {
+
+  /* Floating Label utility */
+  .floating-form-item {
+    position: relative;
+    /* Remove the default space-y-2 from FormItem */
+    margin-top: 0 !important;
+    gap: 0 !important;
+  }
+
+  /* Target the Label component inside */
+  .floating-form-item label {
+    position: absolute;
+    left: 0.75rem;
+    /* px-3 matches Input padding */
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--background);
+    padding: 0 0.25rem;
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+    /* Let clicks pass through to input */
+    color: var(--muted-foreground);
+    z-index: 20;
+    line-height: 1;
+  }
+
+  /* Floating state: input focused or has value */
+  .floating-form-item:focus-within label,
+  .floating-form-item:has(input:not(:placeholder-shown)) label,
+  .floating-form-item:has(textarea:not(:placeholder-shown)) label,
+  .floating-form-item:has(button[data-state="open"]) label,
+  .floating-form-item:has(button:not([data-placeholder])) label {
+    top: 0;
+    transform: translateY(-50%) scale(0.85);
+    color: var(--primary);
+    font-weight: 500;
+    z-index: 40;
+  }
+
+  /* Hide default placeholder when using floating label */
+  .floating-form-item input::placeholder,
+  .floating-form-item textarea::placeholder {
+    color: transparent;
+  }
+
+  /* Ensure inputs have transparent background so label z-index works? 
+     No, label is z-20, input is default. Label is ON TOP. 
+     Bg matches container to hide border. */
+}
+
 
 .dark {
-  --background: oklch(0.145 0 0);
-  /* Dark Gray */
-  --foreground: oklch(0.985 0 0);
-  /* Near White */
-  --card: oklch(0.205 0 0);
-  /* Dark Gray */
-  --card-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --popover: oklch(0.205 0 0);
-  /* Dark Gray */
-  --popover-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --primary: oklch(0.922 0 0);
-  /* Light Gray */
-  --primary-foreground: oklch(0.205 0 0);
-  /* Near Black */
-  --secondary: oklch(0.269 0 0);
-  /* Darker Gray */
-  --secondary-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --muted: oklch(0.269 0 0);
-  /* Darker Gray */
-  --muted-foreground: oklch(0.708 0 0);
-  /* Lighter Gray */
-  --accent: oklch(0.269 0 0);
-  /* Darker Gray */
-  --accent-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --destructive: oklch(0.704 0.191 22.216);
-  /* Dark Red */
+  /* Stone Palette for Dark Mode - Harmonized Warm Grays (Valid HSL Strings for V4) */
+  /* Background: Stone 950 */
+  --background: hsl(24 10% 4%);
+  --foreground: hsl(30 14% 98%);
+
+  /* Card: Stone 900 */
+  --card: hsl(24 6% 10%);
+  --card-foreground: hsl(30 14% 98%);
+
+  /* Popover: Stone 900 */
+  --popover: hsl(24 6% 10%);
+  --popover-foreground: hsl(30 14% 98%);
+
+  /* Primary: Stone 200 */
+  --primary: hsl(27 9% 90%);
+  --primary-foreground: hsl(24 6% 10%);
+
+  /* Secondary: Stone 800 */
+  --secondary: hsl(24 5% 15%);
+  --secondary-foreground: hsl(30 14% 98%);
+
+  /* Muted: Stone 800 */
+  --muted: hsl(24 5% 15%);
+  --muted-foreground: hsl(30 6% 64%);
+
+  /* Accent: Stone 800 */
+  --accent: hsl(24 5% 15%);
+  --accent-foreground: hsl(30 14% 98%);
+
+  /* Destructive */
+  --destructive: hsl(0 63% 31%);
   --destructive-foreground: hsl(0 0% 98%);
-  /* Near White */
-  --constructive: oklch(0.65 0.16 145);
-  /* Dark Green */
+
+  /* Constructive */
+  --constructive: hsl(145 65% 25%);
   --constructive-foreground: hsl(0 0% 98%);
-  /* Near White */
-  --border: oklch(1 0 0 / 10%);
-  /* Darker Gray */
-  --input: oklch(1 0 0 / 15%);
-  /* Darker Gray */
-  --ring: oklch(0.556 0 0);
-  /* Near White */
-  /* Sidebar Dark */
-  --sidebar-background: hsl(240 10% 3.9%);
-  /* Dark Gray */
-  --sidebar-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  /* Near White */
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  /* Near Black */
-  --sidebar-accent: oklch(0.269 0 0);
-  /* Darker Gray */
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  /* Near White */
-  --sidebar-border: oklch(1 0 0 / 10%);
-  /* Darker Gray */
-  --sidebar-ring: oklch(0.556 0 0);
-  /* Near White */
-  --button-shadow-light: rgba(255, 255, 255, 0.2);
-  --button-shadow-dark: rgba(0, 0, 0, 0.45);
+
+  /* Border/Input: Stone 800 */
+  --border: hsl(24 5% 15%);
+  --input: hsl(24 5% 15%);
+
+  /* Ring: Stone 400 */
+  --ring: hsl(30 6% 64%);
+
+  /* Sidebar Dark: Stone 950 */
+  --sidebar-background: hsl(24 10% 4%);
+  --sidebar-foreground: hsl(30 14% 98%);
+  --sidebar-primary: hsl(30 14% 98%);
+  --sidebar-primary-foreground: hsl(24 10% 4%);
+  --sidebar-accent: hsl(24 5% 15%);
+  --sidebar-accent-foreground: hsl(30 14% 98%);
+  --sidebar-border: hsl(24 5% 15%);
+  --sidebar-ring: hsl(30 6% 64%);
+
+  /* Shadows */
+  --button-shadow-light: rgba(255, 255, 255, 0.1);
+  --button-shadow-dark: rgba(0, 0, 0, 0.6);
   /* Dark mode status colors - Modern vibrant palette for dark theme */
   --status-requested: hsl(38 60% 15%);
   --status-requested-foreground: hsl(38 95% 88%);
   --status-accepted: hsl(160 60% 12%);
   --status-accepted-foreground: hsl(160 85% 88%);
-  --status-borrowed: hsl(217 60% 14%);
-  --status-borrowed-foreground: hsl(217 85% 88%);
+  --status-borrowed: hsl(0 0% 15%);
+  --status-borrowed-foreground: hsl(0 0% 90%);
   --status-completed: hsl(150 55% 12%);
   --status-completed-foreground: hsl(150 80% 88%);
   --status-declined: hsl(355 60% 15%);
@@ -206,14 +254,15 @@ textarea:-webkit-autofill {
   --success: hsl(160 60% 12%);
   --success-foreground: hsl(160 85% 88%);
   --sidebar: oklch(0.205 0 0);
-  /* Glassmorphism Variables */
-  --glass-bg: rgba(15, 23, 42, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  --glass-text: oklch(0.985 0 0);
+  /* True neutral space - using Stone for warmth to avoid blue look */
+  /* True neutral space - using Stone for warmth to avoid blue look */
+  /* No CSS gradients here to minimize complexity - standard backgrounds */
+  /* Gradient with valid colors */
+  --background-gradient: linear-gradient(to right bottom, hsl(24 10% 4%), hsl(24 6% 10%), hsl(24 5% 15%));
 
-  /* Dark Mode Gradient */
-  --background-gradient: linear-gradient(to right bottom, #0f172a, #1e293b, #334155);
+  /* Glassmorphism: Stone 900 */
+  --glass-bg: rgba(28, 25, 23, 0.85);
+  --glass-border: rgba(231, 229, 228, 0.05);
 
   color-scheme: dark;
 }
@@ -263,6 +312,8 @@ textarea:-webkit-autofill {
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
+  /* Helper Radii */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

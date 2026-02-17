@@ -33,7 +33,7 @@ export default function AppLayoutClient({ session, children }: AppLayoutClientPr
       <div className="relative flex flex-col min-h-screen tabindex--1">
         <FlickeringGrid
           className="absolute inset-0 -z-10 hidden h-full w-full pointer-events-none md:block"
-          color="rgb(148, 163, 184)"
+          color="rgb(120, 113, 108)"
           squareSize={4}
           gridGap={10}
           maxOpacity={0.25}

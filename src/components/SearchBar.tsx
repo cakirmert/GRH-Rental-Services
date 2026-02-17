@@ -41,16 +41,17 @@ export const SearchBar = memo(function SearchBar({
   }, [setSearchTerm])
   return (
     <div className="mb-8 flex flex-col md:flex-row gap-4">
-      <div className="relative flex-grow">
+      <div className="relative flex-grow floating-form-item">
         <Input
           type="text"
-          placeholder={t("search.placeholder")}
+          placeholder=" "
           aria-label={t("search.placeholder")}
           value={searchTerm}
           onChange={handleSearchChange}
-          className="pl-10 pr-10 h-12"
+          className="pl-10 pr-10 h-12 relative z-10"
         />
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+        <label className="ml-1 z-20 pointer-events-none">{t("search.placeholder")}</label>
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-30 pointer-events-none" />
         {searchTerm && (
           <Button
             variant="ghost"

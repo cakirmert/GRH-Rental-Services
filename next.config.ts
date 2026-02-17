@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    localPatterns: [
+      {
+        pathname: "/api/edgeImage",
+      },
+      {
+        pathname: "/**",
+      },
+    ],
     remotePatterns: [
       // Allow our custom image optimization endpoint
       {

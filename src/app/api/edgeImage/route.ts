@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import sharp from "sharp"
 import { imageCache } from "@/lib/imageCache"
 
-export const config = { runtime: "edge" }
+export const runtime = "nodejs"
 
 const toUint8Array = (data: ArrayBuffer | ArrayBufferView): Uint8Array => {
   if (data instanceof Uint8Array) {

@@ -1087,8 +1087,8 @@ function BookingFormView(props: BookingFormViewProps) {
                     control={control}
                     name="quantity"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="ml-1">
+                      <FormItem className="floating-form-item">
+                        <FormLabel>
                           {t("bookingForm.quantityLabel", { defaultValue: "Quantity" })}
                         </FormLabel>
                         <FormControl>
@@ -1096,6 +1096,7 @@ function BookingFormView(props: BookingFormViewProps) {
                             type="number"
                             min={1}
                             max={item.totalQuantity ?? 1}
+                            placeholder=" "
                             value={field.value}
                             onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 1)}
                           />
@@ -1109,19 +1110,17 @@ function BookingFormView(props: BookingFormViewProps) {
                   control={control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="ml-1">{t("bookingForm.notesLabel")}</FormLabel>
+                    <FormItem className="floating-form-item">
+                      <FormLabel>{t("bookingForm.notesLabel")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t("bookingForm.notesPlaceholder", {
-                            itemType: t(item.type || "item"),
-                          })}
-                          className="resize-none"
+                          placeholder=" "
+                          className="resize-none pt-4" /* Add top padding to not overlap label */
                           rows={3}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription className="text-xs text-muted-foreground">
+                      <FormDescription className="text-xs text-muted-foreground mt-1">
                         {t("bookingForm.notesGuidance")}
                       </FormDescription>
                       <FormMessage />
