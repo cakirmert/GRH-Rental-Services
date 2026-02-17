@@ -52,7 +52,10 @@ async function generateHmacSha256(data: string, secret: string): Promise<string>
 // Export for use in API routes
 export { generateHmacSha256 }
 
+import { authConfig } from "./auth.config"
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   // Support both AUTH_SECRET and NEXTAUTH_SECRET for compatibility
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
@@ -212,18 +215,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ account }) {
-      if (account?.provider === "passkey") return true
-      return true
-    },
-    async jwt({ token, user }) {
-      // only runs at sign-in & on JWT refresh
-      if (user) {
-        token.sub = user.id
-        token.role = user.role
-      }
-      return token
-    },
+    ...authConfig.callbacks,
     async session({ session, token }) {
       if (token.sub) {
         session.user.id = token.sub
@@ -272,13 +264,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
     },
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 60 * 60 * 24,
-  },
-  pages: {
-    verifyRequest: "/auth/verify-request",
   },
   cookies: {
     sessionToken: {
