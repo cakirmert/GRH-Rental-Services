@@ -1,0 +1,155 @@
+
+> grhbooking@0.1.0 dev
+> next dev --turbopack
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Experiments (use with caution):
+  ✓ scrollRestoration
+  · serverActions
+
+✓ Starting...
+✓ Ready in 1665ms
+○ Compiling / ...
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/ssr/97170_@auth_core_1049658d._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/ssr/97170_@auth_core_1049658d._.js:5330:234)
+Failed to fetch equipment: Error [PrismaClientKnownRequestError]:
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prismadb$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].item.findMany()` invocation in
+/app/.next/dev/server/chunks/ssr/[root-of-the-server]__ed24a37b._.js:120:159
+
+  117     return [];
+  118 }
+  119 async function fetchAllEquipment() {
+→ 120     const rows = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prismadb$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].item.findMany(
+Can't reach database server at base
+    at <unknown> (src/app/_data/equipment.ts:33:34)
+    at async fetchAllEquipment (src/app/_data/equipment.ts:33:16)
+    at async CatalogSection (src/app/_components/catalog-section.tsx:6:19)
+  31 |
+  32 | async function fetchAllEquipment(): Promise<CatalogEquipmentRecord[]> {
+> 33 |   const rows = await prisma.item.findMany({
+     |                                  ^
+  34 |     where: { active: true },
+  35 |     select: {
+  36 |       id: true, {
+  code: 'P1001',
+  meta: [Object],
+  clientVersion: '7.4.0'
+}
+ GET / 200 in 10.1s (compile: 8.7s, render: 1489ms)
+○ Compiling /api/auth/[...nextauth] ...
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 3.9s (compile: 3.8s, render: 39ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 92ms (compile: 76ms, render: 16ms)
+⨯ Error: No key set vapidDetails.publicKey
+    at <unknown> (src/server/notificationListener.ts:6:9)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4107:30)
+    at <unknown> (src/server/context.ts:5:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4221:30)
+    at <unknown> (src/app/api/trpc/[trpc]/route.ts:4:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4256:30)
+    at Object.<anonymous> (.next/dev/server/app/api/trpc/[trpc]/route.js:18:3)
+  4 |
+  5 | // Configure web push once
+> 6 | webpush.setVapidDetails(
+    |         ^
+  7 |   `mailto:${process.env.CONTACT_EMAIL}`,
+  8 |   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  9 |   process.env.VAPID_PRIVATE_KEY!, {
+  page: '/api/trpc/user.getPasskeys,notifications.getAll'
+}
+ GET /api/trpc/user.getPasskeys,notifications.getAll?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D 500 in 7.0s (compile: 6.8s, render: 244ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/ssr/97170_@auth_core_1049658d._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/ssr/97170_@auth_core_1049658d._.js:5330:234)
+Failed to fetch equipment: Error [PrismaClientKnownRequestError]:
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prismadb$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].item.findMany()` invocation in
+/app/.next/dev/server/chunks/ssr/[root-of-the-server]__ed24a37b._.js:120:159
+
+  117     return [];
+  118 }
+  119 async function fetchAllEquipment() {
+→ 120     const rows = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prismadb$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].item.findMany(
+Can't reach database server at base
+    at <unknown> (src/app/_data/equipment.ts:33:34)
+    at async fetchAllEquipment (src/app/_data/equipment.ts:33:16)
+    at async CatalogSection (src/app/_components/catalog-section.tsx:6:19)
+  31 |
+  32 | async function fetchAllEquipment(): Promise<CatalogEquipmentRecord[]> {
+> 33 |   const rows = await prisma.item.findMany({
+     |                                  ^
+  34 |     where: { active: true },
+  35 |     select: {
+  36 |       id: true, {
+  code: 'P1001',
+  meta: [Object],
+  clientVersion: '7.4.0'
+}
+ GET / 200 in 148ms (compile: 11ms, render: 137ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 62ms (compile: 54ms, render: 8ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 9ms (compile: 4ms, render: 6ms)
+⨯ Error: No key set vapidDetails.publicKey
+    at <unknown> (src/server/notificationListener.ts:6:9)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4107:30)
+    at <unknown> (src/server/context.ts:5:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4221:30)
+    at <unknown> (src/app/api/trpc/[trpc]/route.ts:4:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4256:30)
+    at Object.<anonymous> (.next/dev/server/app/api/trpc/[trpc]/route.js:18:3)
+  4 |
+  5 | // Configure web push once
+> 6 | webpush.setVapidDetails(
+    |         ^
+  7 |   `mailto:${process.env.CONTACT_EMAIL}`,
+  8 |   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  9 |   process.env.VAPID_PRIVATE_KEY!, {
+  page: '/api/trpc/user.getPasskeys,notifications.getAll'
+}
+ GET /api/trpc/user.getPasskeys,notifications.getAll?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D 500 in 98ms (compile: 76ms, render: 22ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 12ms (compile: 5ms, render: 7ms)
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:513:16)
+    at Auth (/app/.next/dev/server/chunks/97170_@auth_core_2bc7abfd._.js:5330:236)
+    at async AppRouteRouteModule.do (/app/node_modules/next/dist/compiled/next-server/app-route-turbo.runtime.dev.js:5:37866)
+ GET /api/auth/session 500 in 16ms (compile: 4ms, render: 12ms)
+⨯ Error: No key set vapidDetails.publicKey
+    at <unknown> (src/server/notificationListener.ts:6:9)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4107:30)
+    at <unknown> (src/server/context.ts:5:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4221:30)
+    at <unknown> (src/app/api/trpc/[trpc]/route.ts:4:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__e745e55c._.js:4256:30)
+    at Object.<anonymous> (.next/dev/server/app/api/trpc/[trpc]/route.js:18:3)
+  4 |
+  5 | // Configure web push once
+> 6 | webpush.setVapidDetails(
+    |         ^
+  7 |   `mailto:${process.env.CONTACT_EMAIL}`,
+  8 |   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  9 |   process.env.VAPID_PRIVATE_KEY!, {
+  page: '/api/trpc/user.getPasskeys'
+}
+ GET /api/trpc/user.getPasskeys?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D 500 in 54ms (compile: 40ms, render: 14ms)
+[?25h
