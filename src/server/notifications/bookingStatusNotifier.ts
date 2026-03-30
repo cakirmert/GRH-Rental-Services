@@ -90,24 +90,29 @@ export async function notifyBookingStatusChange({
     return
   }
 
-  for (const recipient of dedupedRecipients.values()) {
-    const notification = await prisma.notification.create({
-      data: {
-        userId: recipient.id,
-        bookingId,
-        type: NotificationType.BOOKING_RESPONSE,
-        message: JSON.stringify({
-          key,
-          vars: {
-            item: itemTitle,
-            ...(actorName ? { actor: actorName } : {}),
-          },
-        }),
+  const notificationData = Array.from(dedupedRecipients.values()).map((recipient) => ({
+    userId: recipient.id,
+    bookingId,
+    type: NotificationType.BOOKING_RESPONSE,
+    message: JSON.stringify({
+      key,
+      vars: {
+        item: itemTitle,
+        ...(actorName ? { actor: actorName } : {}),
       },
-    })
+    }),
+  }))
+
+  const createdNotifications = await prisma.notification.createManyAndReturn({
+    data: notificationData,
+  })
+
+  for (const notification of createdNotifications) {
     notificationEmitter.emit("new", notification)
 
+    const recipient = dedupedRecipients.get(notification.userId)
     if (
+      recipient &&
       (status === BookingStatus.ACCEPTED || status === BookingStatus.CANCELLED) &&
       recipient.email
     ) {
