@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react"
 
 import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
-import MembersTab from "./admin/MembersTab"
+import TeamPortal from "./team/TeamPortal"
 import CancelledByStaffTab from "./admin/CancelledByStaffTab"
 import { CalendarProvider } from "./calendar/calendar-provider"
 import { Calendar } from "./calendar/calendar"
@@ -373,7 +373,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               value="members"
               className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
             >
-              <MembersTab />
+              <TeamPortal />
             </TabsContent>
           )}
           {currentViewOrTab === "calendar" && (

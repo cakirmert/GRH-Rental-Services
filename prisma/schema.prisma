@@ -38,6 +38,13 @@ enum BookingStatus {
 enum NotificationType {
   BOOKING_REQUEST
   BOOKING_RESPONSE
+  ROLE_PROPOSAL
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum LogType {
@@ -69,9 +76,50 @@ model User {
   chatMessages  BookingChatMessage[]   // messages this user sent
   chatReads     BookingChatRead[]      // read receipts
 
+  // proposals and votes
+  proposalsMade      RoleProposal[] @relation("ProposalCreator")
+  proposalsTargeting RoleProposal[] @relation("ProposalTarget")
+  roleVotes          RoleVote[]
+  teamChatMessages   TeamChatMessage[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   lastLoginAt DateTime @default(now())
+}
+
+model RoleProposal {
+  id           String         @id @default(cuid())
+  creatorId    String
+  creator      User           @relation("ProposalCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User           @relation("ProposalTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  proposedRole Role
+  status       ProposalStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime
+  votes        RoleVote[]
+}
+
+model RoleVote {
+  id         String       @id @default(cuid())
+  proposalId String
+  proposal   RoleProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  voterId    String
+  voter      User         @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  vote       Boolean      // true for Yes, false for No
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([proposalId, voterId])
+}
+
+model TeamChatMessage {
+  id        String   @id @default(cuid())
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
 }
 
 model Session {

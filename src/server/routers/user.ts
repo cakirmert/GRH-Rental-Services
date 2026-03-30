@@ -75,8 +75,61 @@ export const userRouter = router({
       })
     }
 
+    // Capture the role before deleting
+    const userRole = ctx.session.user.role
+
     await ctx.prisma.booking.deleteMany({ where: { userId } })
     await ctx.prisma.user.delete({ where: { id: userId } })
+
+    // Auto-admin logic: if the user was staff, check if we need to promote the last remaining staff member
+    if (userRole === "ADMIN" || userRole === "RENTAL") {
+      const remainingStaff = await ctx.prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "RENTAL"] } }
+      })
+      if (remainingStaff.length === 1 && remainingStaff[0].role !== "ADMIN") {
+        await ctx.prisma.user.update({
+          where: { id: remainingStaff[0].id },
+          data: { role: "ADMIN" }
+        })
+      }
+    }
+
+    return { success: true }
+  }),
+  selfDemote: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id
+    const userRole = ctx.session.user.role
+
+    if (userRole !== "ADMIN" && userRole !== "RENTAL") {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "User is already not a staff member." })
+    }
+
+    if (userRole === "ADMIN") {
+      // Check if this is the last admin
+      const adminCount = await ctx.prisma.user.count({ where: { role: "ADMIN" } })
+      if (adminCount <= 1) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You are the last active Admin. You cannot step down unless you delete your account." })
+      }
+    }
+
+    await ctx.prisma.user.update({
+      where: { id: userId },
+      data: { role: "USER" }
+    })
+
+    // Re-check auto-admin logic if the demoted user was RENTAL and leaves only 1 RENTAL left.
+    // Wait, the logic is: if total staff drops to exactly 1, promote them to ADMIN.
+    const remainingStaff = await ctx.prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "RENTAL"] } }
+    })
+
+    if (remainingStaff.length === 1 && remainingStaff[0].role !== "ADMIN") {
+      await ctx.prisma.user.update({
+        where: { id: remainingStaff[0].id },
+        data: { role: "ADMIN" }
+      })
+    }
+
     return { success: true }
   }),
   getPasskeys: protectedProcedure.query(async ({ ctx }) => {
