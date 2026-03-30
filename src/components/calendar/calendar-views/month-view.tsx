@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useCalendar } from "../calendar-provider"
 import { trpc } from "@/utils/trpc"
 import {
@@ -35,12 +36,27 @@ export function MonthView() {
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   /**
+   * Group bookings by date for efficient lookup
+   */
+  const groupedBookings = useMemo(() => {
+    const groups: Record<string, CalendarBooking[]> = {}
+    bookings.forEach((booking) => {
+      const dateKey = format(new Date(booking.startDate), "yyyy-MM-dd")
+      if (!groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      groups[dateKey].push(booking)
+    })
+    return groups
+  }, [bookings])
+
+  /**
    * Get all bookings for a specific day
    * @param day - The date to get bookings for
    * @returns Array of bookings for the specified day
    */
   const getBookingsForDay = (day: Date) => {
-    return bookings.filter((booking) => isSameDay(new Date(booking.startDate), day))
+    return groupedBookings[format(day, "yyyy-MM-dd")] || []
   }
 
   return (
