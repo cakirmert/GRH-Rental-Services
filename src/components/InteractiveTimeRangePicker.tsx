@@ -43,11 +43,24 @@ interface Props {
 }
 
 /* ───────── constants ───────── */
-const MIN_MINUTES = 8 * 60 // 8:00 AM
-const MAX_MINUTES = 22 * 60 // 10:00 PM
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR
+const PERCENTAGE_BASE = 100
+const TOOLTIP_DELAY = 200
+const TOOLTIP_SIDE_OFFSET = 8
+const MIN_VISUAL_STEP_DIVISOR = 3
+
+const DAY_START_HOUR = 8 // 8:00 AM
+const DAY_END_HOUR = 22 // 10:00 PM
+const DEFAULT_START_HOUR = 14 // 2:00 PM
+const DEFAULT_DURATION_MINUTES = 120 // 2 hours
+
+const MIN_MINUTES = DAY_START_HOUR * MINUTES_PER_HOUR
+const MAX_MINUTES = DAY_END_HOUR * MINUTES_PER_HOUR
 const STEP_MINUTES = 15
-const DEF_START_MINUTES = 14 * 60 // 2:00 PM
-const DEF_LEN_MINUTES = 120 // 2 hours
+const DEF_START_MINUTES = DEFAULT_START_HOUR * MINUTES_PER_HOUR
+const DEF_LEN_MINUTES = DEFAULT_DURATION_MINUTES
 const GUTTER_PERCENT = 5
 const BLOCK_PENDING_INTERVALS = false
 /* ───────────────────────────── */
@@ -98,14 +111,16 @@ export default function InteractiveTimeRangePicker({
 
   const m2s = React.useCallback(
     (m: number) =>
-      `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`,
+      `${String(Math.floor(m / MINUTES_PER_HOUR)).padStart(2, "0")}:${String(
+        m % MINUTES_PER_HOUR,
+      ).padStart(2, "0")}`,
     [],
   )
   const s2m = React.useCallback((s: string) => {
     if (!s || !s.includes(":")) return MIN_MINUTES
     const [a, b] = s.split(":").map(Number)
     if (isNaN(a) || isNaN(b)) return MIN_MINUTES
-    return a * 60 + b
+    return a * MINUTES_PER_HOUR + b
   }, [])
 
   const checkOverlaps = React.useCallback(
@@ -210,7 +225,10 @@ export default function InteractiveTimeRangePicker({
 
   const reservedForSelection = React.useMemo(() => {
     const selectionStart = addMinutes(fromDate, startM)
-    const selectionEnd = addMinutes(isRangeSelection ? addMinutes(fromDate, 1440) : fromDate, endM)
+    const selectionEnd = addMinutes(
+      isRangeSelection ? addMinutes(fromDate, MINUTES_PER_DAY) : fromDate,
+      endM,
+    )
     return intervals.reduce((sum, iv) => {
       if (
         (iv.status === "ACCEPTED" || iv.status === "BORROWED") &&
@@ -244,7 +262,7 @@ export default function InteractiveTimeRangePicker({
     const handlePointerMove = (e: PointerEvent) => {
       if (!drag) return
       const v = clampMinutes(e.pageX, drag.row)
-      const dayOffsetMinutes = drag.row === 1 ? 1440 : 0
+      const dayOffsetMinutes = drag.row === 1 ? MINUTES_PER_DAY : 0
 
       if (doesBlock(v, v, dayOffsetMinutes)) return
 
@@ -287,11 +305,11 @@ export default function InteractiveTimeRangePicker({
   ])
 
   const pct = React.useCallback((m: number) => {
-    const percentage = ((m - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES)) * 100
-    return Math.max(0, Math.min(100, percentage))
+    const percentage = ((m - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES)) * PERCENTAGE_BASE
+    return Math.max(0, Math.min(PERCENTAGE_BASE, percentage))
   }, [])
 
-  const trackVisibleWidthScale = (100 - GUTTER_PERCENT) / 100
+  const trackVisibleWidthScale = (PERCENTAGE_BASE - GUTTER_PERCENT) / PERCENTAGE_BASE
 
   const Thumb = React.useCallback(
     ({
@@ -324,7 +342,7 @@ export default function InteractiveTimeRangePicker({
 
   const Row = React.useCallback(
     (row: 0 | 1) => {
-      const dayOffsetMinutes = row === 1 ? 1440 : 0
+      const dayOffsetMinutes = row === 1 ? MINUTES_PER_DAY : 0
       const showStartThumb = row === 0
       const showEndThumb = row === (isRangeSelection ? 1 : 0)
 
@@ -388,7 +406,10 @@ export default function InteractiveTimeRangePicker({
             const interval_pct_r = pct(r_clamped)
 
             const minStepPct = pct(MIN_MINUTES + STEP_MINUTES) - pct(MIN_MINUTES)
-            const w_pct = Math.max(minStepPct / 3, interval_pct_r - interval_pct_l)
+            const w_pct = Math.max(
+              minStepPct / MIN_VISUAL_STEP_DIVISOR,
+              interval_pct_r - interval_pct_l,
+            )
 
             if (w_pct <= 0) return null
 
@@ -421,7 +442,7 @@ export default function InteractiveTimeRangePicker({
                 </TooltipTrigger>
                 <TooltipContent
                   side="top"
-                  sideOffset={8}
+                  sideOffset={TOOLTIP_SIDE_OFFSET}
                   className="max-w-xs p-2 text-sm leading-tight"
                 >
                   {isConf
@@ -483,7 +504,7 @@ export default function InteractiveTimeRangePicker({
   }
 
   return (
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delayDuration={TOOLTIP_DELAY}>
       {Row(0)}
       {isRangeSelection && Row(1)}
       <div className="flex justify-end gap-6 mt-6 text-xs select-none">
