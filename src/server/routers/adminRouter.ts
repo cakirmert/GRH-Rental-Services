@@ -394,25 +394,47 @@ export const uploadRouter = router({
   uploadItemImage: protectedProcedure
     .input(
       z.object({
-        fileName: z.string(),
-        fileContentBase64: z.string(),
+        fileName: z.string().min(1).max(255),
+        fileContentBase64: z.string().max(10 * 1024 * 1024), // ~7.5MB binary
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      ensureAdmin(ctx)
       try {
-        const fileExtension = path.extname(input.fileName)
+        const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+        const fileExtension = path.extname(input.fileName).toLowerCase()
+
+        if (!ALLOWED_EXTENSIONS.includes(fileExtension)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid file type. Only JPG, PNG, WEBP, and GIF are allowed.",
+          })
+        }
+
         const uniqueFileName = `items/${uuidv4()}${fileExtension}`
         const buffer = Buffer.from(input.fileContentBase64, "base64")
         const token = process.env.BLOB_READ_WRITE_TOKEN
         if (!token) throw new Error("Missing BLOB_READ_WRITE_TOKEN")
+
+        // Map extension to content type
+        const mimeType =
+          fileExtension === ".jpg" || fileExtension === ".jpeg"
+            ? "image/jpeg"
+            : `image/${fileExtension.slice(1)}`
+
         const { url } = await put(uniqueFileName, buffer, {
           access: "public",
           token,
+          contentType: mimeType,
         })
         return { imageUrl: url }
       } catch (error) {
+        if (error instanceof TRPCError) throw error
         console.error("Image upload failed:", error)
-        throw new Error("Image upload failed. Please try again.")
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Image upload failed. Please try again.",
+        })
       }
     }),
 })
