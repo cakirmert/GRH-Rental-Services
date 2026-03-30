@@ -73,7 +73,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: CONTACT_EMAIL,
       maxAge: 300,
       async generateVerificationToken() {
-        const code = Math.floor(100000 + Math.random() * 900000).toString()
+        const array = new Uint32Array(1)
+        crypto.getRandomValues(array)
+        const code = (100000 + (array[0] % 900000)).toString()
         const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
         if (!secret) {
           throw new Error("AUTH_SECRET environment variable is not set")

@@ -99,7 +99,9 @@ export async function POST(req: Request) {
     }
 
     // Generate OTP code and token
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    const array = new Uint32Array(1)
+    crypto.getRandomValues(array)
+    const code = (100000 + (array[0] % 900000)).toString()
 
     if (!process.env.AUTH_SECRET) {
       console.error("AUTH_SECRET environment variable is not set")
