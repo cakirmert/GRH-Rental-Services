@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import { useSession } from "next-auth/react"
 import { Container } from "@/components/ui/container"
+import { CloudflareTurnstile } from "@/components/CloudflareTurnstile"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ContactPage() {
   const { t } = useI18n()
   const { data: session } = useSession()
+  const { toast } = useToast()
 
   const [form, setForm] = useState({
     email: "",
@@ -23,6 +26,13 @@ export default function ContactPage() {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  const turnstileEnabled = Boolean(turnstileSiteKey)
+
   useEffect(() => {
     if (session?.user?.email) {
       setForm((prev) => ({ ...prev, email: session.user.email || "" }))
@@ -47,16 +57,52 @@ export default function ContactPage() {
     if (!form.email.trim()) newErrors.email = t("required.email")
     if (!form.message.trim()) newErrors.message = t("required.message")
 
+    if (turnstileEnabled && !turnstileToken) {
+      toast({
+        title: "Error",
+        description: t("errors.turnstileRequired") || "Please verify you are human.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
-    await fetch("/api/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    })
+    setIsSubmitting(true)
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          turnstileToken,
+        }),
+      })
 
-    setSubmitted(true)
+      if (response.ok) {
+        setSubmitted(true)
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to send message.",
+          variant: "destructive",
+        })
+        if (turnstileEnabled) {
+          setTurnstileToken(null)
+          setTurnstileResetKey((k) => k + 1)
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -171,11 +217,26 @@ export default function ContactPage() {
               />
               {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
             </div>
+
+            {/* Turnstile */}
+            {turnstileSiteKey && (
+              <div className="flex justify-center pt-2">
+                <CloudflareTurnstile
+                  key={turnstileResetKey}
+                  siteKey={turnstileSiteKey}
+                  onToken={setTurnstileToken}
+                />
+              </div>
+            )}
           </CardContent>
 
           <CardFooter>
-            <Button type="submit" className="w-full">
-              {t("contact.submit")}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}
+            >
+              {isSubmitting ? "..." : t("contact.submit")}
             </Button>
           </CardFooter>
         </form>
