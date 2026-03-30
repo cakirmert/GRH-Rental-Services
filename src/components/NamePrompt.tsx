@@ -77,6 +77,23 @@ export default function NamePrompt({
       })
     },
   })
+
+  const selfDemoteMutation = trpc.user.selfDemote.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: t("common.success"),
+        description: "You have successfully stepped down.",
+      })
+      window.location.reload()
+    },
+    onError: (error) => {
+      toast({
+        title: t("common.error"),
+        description: error.message || "Failed to step down.",
+        variant: "destructive",
+      })
+    },
+  })
   // Fetch user's passkeys from the backend
   const { data: userPasskeys = [], refetch: refetchPasskeys } = trpc.user.getPasskeys.useQuery()
 
@@ -607,7 +624,39 @@ export default function NamePrompt({
                   </CardTitle>
                   <CardDescription>{t("profile.dangerZoneDesc")}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Self-Demote Option for Staff */}
+                  {(session?.user?.role === "ADMIN" || session?.user?.role === "RENTAL") && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full text-destructive border-destructive hover:bg-destructive/10">
+                          Step Down (Remove Staff Privileges)
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure you want to step down?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove your team privileges and change your role to a regular User. You will lose access to the team portal and management dashboard.
+                            If you are the last Admin, this action will fail unless you delete your account entirely.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              selfDemoteMutation.mutate()
+                            }}
+                            disabled={selfDemoteMutation.isPending}
+                          >
+                            {selfDemoteMutation.isPending && <Spinner className="mr-2 size-4" />}
+                            Confirm Step Down
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm">
