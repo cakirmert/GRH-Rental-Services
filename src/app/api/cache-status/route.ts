@@ -8,6 +8,15 @@ import { imageCache } from "@/lib/imageCache"
  */
 export async function GET(request: NextRequest) {
   try {
+    // Basic authentication check
+    const authHeader = request.headers.get("authorization")
+    const expectedToken =
+      process.env.CACHE_WARM_TOKEN || process.env.CRON_SECRET || process.env.AUTH_SECRET
+
+    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const url = new URL(request.url)
     const checkUrls = url.searchParams.getAll("url")
 

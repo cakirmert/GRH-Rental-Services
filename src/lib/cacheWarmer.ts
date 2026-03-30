@@ -51,12 +51,17 @@ export async function warmImageCache() {
     const uncachedImages: string[] = []
     const cachedImages: string[] = []
 
+    // Prepare auth header for cache status check
+    const authToken =
+      process.env.CACHE_WARM_TOKEN || process.env.CRON_SECRET || process.env.AUTH_SECRET
+    const headers: HeadersInit = authToken ? { Authorization: `Bearer ${authToken}` } : {}
+
     try {
       // Use the new cache status API which is much faster
       const checkUrl = new URL("/api/cache-status", baseUrl)
       allImageUrls.forEach((url) => checkUrl.searchParams.append("url", url))
 
-      const cacheCheckResponse = await fetch(checkUrl.toString())
+      const cacheCheckResponse = await fetch(checkUrl.toString(), { headers })
       if (cacheCheckResponse.ok) {
         const cacheData = await cacheCheckResponse.json()
 
@@ -115,7 +120,7 @@ export async function warmImageCache() {
 
     // Final cache stats
     try {
-      await fetch(`${baseUrl}/api/cache-status`)
+      await fetch(`${baseUrl}/api/cache-status`, { headers })
     } catch {
       // Ignore stats errors
     }
