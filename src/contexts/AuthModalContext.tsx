@@ -241,39 +241,8 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
       try {
         const credential = await startAuthentication({ optionsJSON: options })
 
-        console.log("🔍 Raw credential from SimpleWebAuthn browser:", {
-          id: credential.id,
-          rawId: credential.rawId,
-          type: credential.type,
-          responseClientDataJSON: credential.response?.clientDataJSON?.substring(0, 50) + "...",
-          responseAuthenticatorData:
-            credential.response?.authenticatorData?.substring(0, 50) + "...",
-          responseSignature: credential.response?.signature?.substring(0, 50) + "...",
-          responseUserHandle: credential.response?.userHandle?.substring(0, 50) + "...",
-        })
-
         // SimpleWebAuthn browser already returns the correct format
         authenticationResponse = credential
-
-        console.log("🔐 Converted credential data:", {
-          id: authenticationResponse.id,
-          rawId: authenticationResponse.rawId,
-          responseClientDataJSON:
-            authenticationResponse.response.clientDataJSON?.substring(0, 50) + "...",
-          responseAuthenticatorData:
-            authenticationResponse.response.authenticatorData?.substring(0, 50) + "...",
-          responseSignature: authenticationResponse.response.signature?.substring(0, 50) + "...",
-          responseUserHandle: authenticationResponse.response.userHandle?.substring(0, 50) + "...",
-        })
-        console.log("🔐 Final credential data:", {
-          id: authenticationResponse.id,
-          rawId: authenticationResponse.rawId ? "present" : "undefined",
-          idLength: authenticationResponse.id?.length,
-          rawIdLength: authenticationResponse.rawId?.length,
-          clientDataJSONLength: authenticationResponse.response?.clientDataJSON?.length,
-          authenticatorDataLength: authenticationResponse.response?.authenticatorData?.length,
-          signatureLength: authenticationResponse.response?.signature?.length,
-        })
       } catch (browserError: unknown) {
         setAuthError(
           (browserError as Error)?.name === "NotAllowedError"
