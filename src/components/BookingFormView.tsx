@@ -40,7 +40,7 @@ import { useI18n } from "@/locales/i18n"
 import { toast } from "@/components/ui/use-toast"
 import { BookingRulesDialog } from "@/components/BookingRulesDialog"
 import type { Session } from "next-auth"
-import { type DateRange, type Modifiers } from "react-day-picker" // Use Modifiers instead of DayModifiers
+import { type DateRange } from "react-day-picker"
 import { trpc } from "@/utils/trpc"
 import InteractiveTimeRangePicker from "@/components/InteractiveTimeRangePicker"
 import { Spinner } from "@/components/ui/spinner"
@@ -456,11 +456,11 @@ function BookingFormView(props: BookingFormViewProps) {
   const minSelectableDateOverall = startOfDay(new Date())
 
   // Dynamic date disabling logic for the calendar
-  const disableDate = (day: Date, modifiers: Modifiers, selectedFromDate?: Date): boolean => {
+  const disableDate = (day: Date, selectedFromDate?: Date): boolean => {
     if (isBefore(day, minSelectableDateOverall)) {
       return true // Disable past dates
     }
-    if (selectedFromDate && !modifiers.selected) {
+    if (selectedFromDate) {
       // If a 'from' date is selected and we are evaluating other dates
       if (
         Number.isFinite(maxSelectableRangeDays) &&
@@ -1030,7 +1030,7 @@ function BookingFormView(props: BookingFormViewProps) {
                             }}
                             locale={currentLocale}
                             // Pass the field.value.from to the disableDate function context
-                            disabled={(day: Date) => disableDate(day, {}, field.value?.from)}
+                            disabled={(day: Date) => disableDate(day, field.value?.from)}
                             autoFocus
                           />
                         </div>
