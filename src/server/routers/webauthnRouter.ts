@@ -239,12 +239,13 @@ export const webauthnRouter = router({
       const passkey = userPasskeys.find((p) => {
         const normalizedStoredId = normalizeCredentialId(p.credentialID)
         if (!normalizedStoredId) return false
-        // Check both normalized and direct ID
-        if (normalizedStoredId === normalizedIncomingCredentialId) return true
 
-        // Fix stored ID if it matches but wasn't normalized
-        if (p.credentialID === incomingCredentialCandidate) {
-          p.credentialID = normalizedStoredId
+        // Check if the normalized versions match
+        if (normalizedStoredId === normalizedIncomingCredentialId) {
+          // Fix stored ID if it wasn't already normalized
+          if (p.credentialID !== normalizedStoredId) {
+            p.credentialID = normalizedStoredId
+          }
           return true
         }
         return false
