@@ -332,6 +332,7 @@
     "endTimeLabel": "Endzeit",
     "quantityLabel": "Menge",
     "notesLabel": "Notizen (Optional)",
+    "notesGuidance": "Für Anfragen oder Fragen nutze den Chat nach der Buchung für eine schnellere Kommunikation mit dem Verleih-Team.",
     "continueToBookingButton": "Weiter zur Buchung",
     "completeFormToSeeSummary": "Fülle das Formular aus, um die Buchungsübersicht zu sehen.",
     "invalidPeriod": "Ungültige Datums-/Zeitauswahl.",
