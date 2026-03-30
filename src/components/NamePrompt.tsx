@@ -29,14 +29,8 @@ import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
+import { isPasskeySupported } from "@/lib/webauthnUtils"
 import type { NamePromptSection } from "@/types/view"
-
-// Simple passkey support check
-function isPasskeySupported(): boolean {
-  return (
-    typeof window !== "undefined" && "credentials" in navigator && "create" in navigator.credentials
-  )
-}
 
 export default function NamePrompt({
   open,
