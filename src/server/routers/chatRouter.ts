@@ -171,22 +171,22 @@ async function createMessageNotifications(
 
   const senderName = sender.name || "Someone"
 
-  for (const id of recips) {
-    const n = await ctx.prisma.notification.create({
-      data: {
-        userId: id,
-        bookingId: thread.booking.id,
-        type: "BOOKING_RESPONSE",
-        message: JSON.stringify({
-          key: "notifications.newChatMessage",
-          vars: {
-            item: thread.booking.item.titleEn,
-            sender: senderName,
-            message: body.length > 100 ? body.substring(0, 100) + "..." : body,
-          },
-        }),
-      },
-    })
+  const notifications = await ctx.prisma.notification.createManyAndReturn({
+    data: recips.map((id) => ({
+      userId: id,
+      bookingId: thread.booking.id,
+      type: "BOOKING_RESPONSE",
+      message: JSON.stringify({
+        key: "notifications.newChatMessage",
+        vars: {
+          item: thread.booking.item.titleEn,
+          sender: senderName,
+          message: body.length > 100 ? body.substring(0, 100) + "..." : body,
+        },
+      }),
+    })),
+  })
+  for (const n of notifications) {
     notificationEmitter.emit("new", n)
   }
 }
