@@ -25,16 +25,7 @@ import { trpc } from "@/utils/trpc"
 import { startAuthentication } from "@simplewebauthn/browser"
 import { type AuthenticationResponseJSON } from "@simplewebauthn/types"
 import { TRPCClientError } from "@trpc/client"
-
-/**
- * Check if passkey authentication is supported in the current browser
- * @returns Boolean indicating passkey support
- */
-function isPasskeySupported(): boolean {
-  return (
-    typeof window !== "undefined" && "credentials" in navigator && "create" in navigator.credentials
-  )
-}
+import { isPasskeySupported } from "@/lib/webauthnUtils"
 
 import type { AuthModalView, AuthModalContextType } from "@/types/auth"
 
