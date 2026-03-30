@@ -565,11 +565,6 @@ function BookingFormView(props: BookingFormViewProps) {
           return false
         }
       }
-      // Zod refine now handles max duration at form level
-      // if (differenceInHours(endDT, startDT) > 48) {
-      //   setFormError(t("errorMaxBookingDuration", { hours: 48 }));
-      //   return false;
-      // }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       setFormError(msg || t("errors.invalidDateTime"))
