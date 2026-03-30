@@ -132,16 +132,16 @@ export async function verifyAuthentication(
     counter: number
   },
 ) {
-  const normalizedAuthenticatorID = normalizeCredentialId(authenticator.credentialID)
-  if (!normalizedAuthenticatorID) {
+  const normalizedStoredID = normalizeCredentialId(authenticator.credentialID)
+  if (!normalizedStoredID) {
     throw new Error(`Unable to normalize stored credential ID: ${authenticator.credentialID}`)
   }
 
-  if (normalizedAuthenticatorID !== authenticator.credentialID) {
-    authenticator.credentialID = normalizedAuthenticatorID
+  // Self-heal stored ID if it wasn't normalized
+  if (authenticator.credentialID !== normalizedStoredID) {
+    authenticator.credentialID = normalizedStoredID
   }
 
-  const normalizedCredentialID = normalizedAuthenticatorID
   const incomingCredentialId =
     normalizeCredentialId(credential.rawId) || normalizeCredentialId(credential.id)
 
@@ -151,8 +151,8 @@ export async function verifyAuthentication(
 
   const normalizedCredential = {
     ...credential,
-    id: normalizedCredentialID,
-    rawId: normalizedCredentialID,
+    id: normalizedStoredID,
+    rawId: normalizedStoredID,
   }
 
   const normalizedPublicKey = authenticator.credentialPublicKey
@@ -178,7 +178,7 @@ export async function verifyAuthentication(
     expectedRPID: rpID,
     requireUserVerification: true,
     credential: {
-      id: normalizedCredentialID,
+      id: normalizedStoredID,
       publicKey: new Uint8Array(publicKeyBuffer),
       counter: authenticator.counter,
     },
