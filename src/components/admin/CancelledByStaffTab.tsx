@@ -1,6 +1,5 @@
 "use client"
 
-import React from "react"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
