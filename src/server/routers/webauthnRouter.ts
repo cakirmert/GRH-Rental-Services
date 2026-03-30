@@ -206,9 +206,7 @@ export const webauthnRouter = router({
 
       if (input.userId === "auto-detect") {
         // Usernameless flow: find user by credential ID
-        const users = await ctx.prisma.user.findMany({
-          select: { id: true, email: true, passkeys: true },
-        })
+        const users = await ctx.prisma.user.findMany()
 
         for (const u of users) {
           if (!u.passkeys || !Array.isArray(u.passkeys)) continue
@@ -219,7 +217,7 @@ export const webauthnRouter = router({
           })
 
           if (foundPasskey) {
-            user = await ctx.prisma.user.findUnique({ where: { id: u.id } })
+            user = u
             break
           }
         }
