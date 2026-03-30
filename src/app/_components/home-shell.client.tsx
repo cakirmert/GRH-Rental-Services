@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSession, signIn } from "next-auth/react"
 import { enGB, de } from "date-fns/locale"
@@ -175,7 +175,7 @@ function usePrefetchViewBundles() {
 }
 
 interface HomeShellProps {
-  catalog: ReactNode
+  catalog: React.ReactNode
 }
 
 export default function HomeShell({ catalog }: HomeShellProps) {
@@ -421,7 +421,7 @@ export default function HomeShell({ catalog }: HomeShellProps) {
     </>
   )
 
-  let currentViewComponent: ReactNode
+  let currentViewComponent: React.ReactNode
   switch (view) {
     case View.LIST:
       currentViewComponent = listView
