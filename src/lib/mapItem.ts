@@ -17,20 +17,22 @@ export type MappableItem = {
 }
 
 function normalizeImages(item: MappableItem): string[] | undefined {
+  let source: unknown[] | undefined
+
   if (Array.isArray(item.images) && item.images.length > 0) {
-    return item.images.filter(Boolean).map((value) => String(value))
-  }
-  if (typeof item.imagesJson === "string" && item.imagesJson.trim().length > 0) {
+    source = item.images
+  } else if (typeof item.imagesJson === "string" && item.imagesJson.trim().length > 0) {
     try {
       const parsed = JSON.parse(item.imagesJson)
       if (Array.isArray(parsed)) {
-        return parsed.filter(Boolean).map((value) => String(value))
+        source = parsed
       }
     } catch {
-      return undefined
+      // Ignore parse errors
     }
   }
-  return undefined
+
+  return source?.filter(Boolean).map(String)
 }
 
 function normalizeRules(source: unknown): string | string[] | undefined {
