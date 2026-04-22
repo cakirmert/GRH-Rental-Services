@@ -28,6 +28,7 @@ import {
   UserCircle,
   HelpCircle,
   Fingerprint,
+  Vote,
 } from "lucide-react"
 import NotificationBell from "@/components/NotificationBell"
 import {
@@ -260,6 +261,14 @@ export default function Header() {
                     <CalendarCheck className="mr-1.5 h-4 w-4" />
                     {t("header.rentalDashboardLink")}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigateToView(View.TEAM)}
+                  >
+                    <Vote className="mr-1.5 h-4 w-4" />
+                    Team Portal
+                  </Button>
                 </>
               )}
               {isAdmin && (
@@ -376,6 +385,10 @@ export default function Header() {
                       <DropdownMenuItem onClick={() => navigateToView(View.RENTAL_DASHBOARD)}>
                         <CalendarCheck className="mr-2 h-4 w-4" />
                         {t("header.rentalDashboardLink")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigateToView(View.TEAM)}>
+                        <Vote className="mr-2 h-4 w-4" />
+                        Team Portal
                       </DropdownMenuItem>
                     </>
                   )}
@@ -525,14 +538,24 @@ export default function Header() {
               </Button>
             )}
             {isRentalTeam && (
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => navigateToView(View.RENTAL_DASHBOARD)}
-              >
-                <CalendarCheck className="mr-2 h-4 w-4" />
-                {t("header.rentalDashboardLink")}
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => navigateToView(View.RENTAL_DASHBOARD)}
+                >
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  {t("header.rentalDashboardLink")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => navigateToView(View.TEAM)}
+                >
+                  <Vote className="mr-2 h-4 w-4" />
+                  Team Portal
+                </Button>
+              </>
             )}
             {isAdmin && (
               <Button

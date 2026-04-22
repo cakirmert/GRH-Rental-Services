@@ -48,9 +48,13 @@ export default function TeamPortal() {
 
   // Mutations
   const proposeRoleChange = trpc.team.proposeRoleChange.useMutation({
-    onSuccess: () => {
-      toast({ title: t("common.success"), description: "Proposal created successfully." })
+    onSuccess: (data: any) => {
+      const description = data?.applied
+        ? "Role updated."
+        : "Proposal created. Waiting for votes."
+      toast({ title: t("common.success"), description })
       utils.team.getActiveProposals.invalidate()
+      utils.team.listStaff.invalidate()
       setIsProposeDialogOpen(false)
     },
     onError: (error: any) => {

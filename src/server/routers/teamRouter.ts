@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { protectedProcedure, router } from "@/lib/trpcServer"
-import { Role, ProposalStatus } from "@prisma/client"
+import { Role, ProposalStatus, BookingStatus } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
+import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 
 const ensureStaff = (ctx: any) => {
   const role = ctx.session?.user?.role
@@ -26,11 +27,16 @@ export const teamRouter = router({
       },
     })
 
-    // Fetch handled bookings count (logs where message starts with status: or assigned to them)
-    // For simplicity, let's count bookings assigned to them.
+    // Count bookings actually handled by each staff member: exclude admin-block
+    // bookings (they inflate the creator's count) and REQUESTED ones (pending —
+    // not yet actioned).
     const bookingsCounts = await ctx.prisma.booking.groupBy({
       by: ['assignedToId'],
-      where: { assignedToId: { in: staff.map(s => s.id) } },
+      where: {
+        assignedToId: { in: staff.map(s => s.id) },
+        status: { not: BookingStatus.REQUESTED },
+        NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } },
+      },
       _count: { assignedToId: true },
     })
 
@@ -43,6 +49,9 @@ export const teamRouter = router({
   }),
 
   // ---- 2. Proposals & Voting ----
+  // Role changes that do NOT involve ADMIN (promote to or demote from) can be
+  // applied directly by an admin caller. Anything involving ADMIN goes through
+  // a proposal + voting flow.
   proposeRoleChange: protectedProcedure
     .input(z.object({
       targetUserId: z.string(),
@@ -51,8 +60,8 @@ export const teamRouter = router({
     .mutation(async ({ ctx, input }) => {
       ensureStaff(ctx)
       const { targetUserId, proposedRole } = input
+      const callerRole = ctx.session?.user?.role
 
-      // Verify target user exists
       const targetUser = await ctx.prisma.user.findUnique({ where: { id: targetUserId } })
       if (!targetUser) {
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found" })
@@ -62,7 +71,26 @@ export const teamRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "User already has this role" })
       }
 
-      // Check for existing pending proposal for this user
+      const involvesAdmin = proposedRole === Role.ADMIN || targetUser.role === Role.ADMIN
+
+      // Admin caller + non-admin role change → apply directly, skip voting.
+      if (!involvesAdmin && callerRole === Role.ADMIN) {
+        await ctx.prisma.user.update({
+          where: { id: targetUserId },
+          data: { role: proposedRole },
+        })
+        return { applied: true as const, newRole: proposedRole }
+      }
+
+      // Non-admin caller attempting non-admin change → not allowed (admins handle
+      // rental add/remove directly via the admin panel).
+      if (!involvesAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can change non-admin roles directly.",
+        })
+      }
+
       const existing = await ctx.prisma.roleProposal.findFirst({
         where: { targetUserId, status: ProposalStatus.PENDING },
       })
@@ -71,7 +99,6 @@ export const teamRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "An active proposal already exists for this user." })
       }
 
-      // Create proposal (expires in 24 hours)
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
       const proposal = await ctx.prisma.roleProposal.create({
         data: {
@@ -82,7 +109,6 @@ export const teamRouter = router({
         },
       })
 
-      // Automatically cast a 'Yes' vote from the creator
       await ctx.prisma.roleVote.create({
         data: {
           proposalId: proposal.id,
@@ -91,7 +117,7 @@ export const teamRouter = router({
         }
       })
 
-      return proposal
+      return { applied: false as const, proposal }
     }),
 
   voteOnProposal: protectedProcedure

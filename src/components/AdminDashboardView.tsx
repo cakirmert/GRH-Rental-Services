@@ -4,7 +4,7 @@
 import React, { useState } from "react"
 import { useI18n } from "@/locales/i18n"
 import { trpc } from "@/utils/trpc"
-import { CalendarDays, XCircle, Hourglass } from "lucide-react"
+import { CalendarDays, XCircle, Hourglass, Vote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react"
 
 import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
+import MembersTab from "./admin/MembersTab"
 import TeamPortal from "./team/TeamPortal"
 import CancelledByStaffTab from "./admin/CancelledByStaffTab"
 import { CalendarProvider } from "./calendar/calendar-provider"
@@ -24,7 +25,7 @@ import NotAuthorized from "./NotAuthorized"
 /**
  * Available admin dashboard views/tabs
  */
-export type AdminView = "home" | "assignees" | "items" | "members" | "calendar" | "cancellations"
+export type AdminView = "home" | "assignees" | "items" | "members" | "team" | "calendar" | "cancellations"
 
 // Helper component for visually appealing action cards on the homepage
 function ActionCard({
@@ -267,6 +268,13 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               onClick={() => handleNavigateToSection("members")}
             />
             <ActionCard
+              id="admin-quick-team"
+              title="Team Portal"
+              description="Vote on admin role changes and chat with the team."
+              icon={<Vote className="h-7 w-7 text-primary mb-2.5" />}
+              onClick={() => handleNavigateToSection("team")}
+            />
+            <ActionCard
               id="admin-quick-assignees"
               title={t("adminDashboard.tabs.defaults")}
               description={t("adminDashboard.home.assigneesDescription")}
@@ -338,6 +346,12 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               <UsersIcon className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.members")}
             </TabsTrigger>
             <TabsTrigger
+              value="team"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
+              <Vote className="mr-1.5 h-4 w-4" /> Team Portal
+            </TabsTrigger>
+            <TabsTrigger
               value="calendar"
               className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
             >
@@ -371,6 +385,14 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
           {currentViewOrTab === "members" && (
             <TabsContent
               value="members"
+              className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
+            >
+              <MembersTab />
+            </TabsContent>
+          )}
+          {currentViewOrTab === "team" && (
+            <TabsContent
+              value="team"
               className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
             >
               <TeamPortal />

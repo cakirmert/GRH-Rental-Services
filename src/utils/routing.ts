@@ -22,6 +22,8 @@ export function routeToPath(route: AppRoute): string {
       return "/?rental"
     case "admin-dashboard":
       return "/?admin"
+    case "team":
+      return "/?team"
     case "about":
       return "/?about"
     case "contact":
@@ -62,6 +64,10 @@ export function pathToRoute(pathname: string, searchParams: URLSearchParams): Ap
 
   if (searchParams.has("admin")) {
     return { view: "admin-dashboard" }
+  }
+
+  if (searchParams.has("team")) {
+    return { view: "team" }
   }
 
   if (searchParams.has("about")) {

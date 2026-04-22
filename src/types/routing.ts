@@ -10,6 +10,7 @@ export type AppRoute =
   | { view: "my-bookings"; highlightId?: string }
   | { view: "rental-dashboard" }
   | { view: "admin-dashboard" }
+  | { view: "team" }
   | { view: "about" }
   | { view: "contact" }
   | { view: "developers" }
