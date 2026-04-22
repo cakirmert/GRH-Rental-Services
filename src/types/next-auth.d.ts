@@ -13,6 +13,8 @@ declare module "next-auth" {
       id: string
       /** Your Prisma user's role (e.g. "ADMIN", "RENTAL", etc.) */
       role?: string
+      /** Whether this user is the super admin (can promote/demote admins) */
+      isSuperAdmin?: boolean
     } & DefaultSession["user"]
   }
 
@@ -25,6 +27,8 @@ declare module "next-auth" {
     id: string
     /** Your Prisma user's role */
     role?: string
+    /** Whether this user is the super admin */
+    isSuperAdmin?: boolean
     email: string
     name?: string | null
     image?: string | null

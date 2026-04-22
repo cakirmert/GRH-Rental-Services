@@ -88,11 +88,6 @@ const AdminDashboardView = dynamic(() => import("@/components/AdminDashboardView
   loading: SectionFallback,
 })
 
-const TeamPortalPage = dynamic(() => import("@/components/team/TeamPortalPage"), {
-  ssr: false,
-  loading: SectionFallback,
-})
-
 const ChatDialog = dynamic(() => import("@/components/ChatDialog"), {
   ssr: false,
   loading: () => null,
@@ -464,9 +459,6 @@ export default function HomeShell({ catalog }: HomeShellProps) {
       break
     case View.ADMIN_DASHBOARD:
       currentViewComponent = <AdminDashboardView onGoBack={goBack} />
-      break
-    case View.TEAM:
-      currentViewComponent = <TeamPortalPage onGoBack={goBack} />
       break
     case View.ABOUT:
       currentViewComponent = <AboutPage />

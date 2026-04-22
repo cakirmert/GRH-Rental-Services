@@ -29,8 +29,6 @@ export const ViewProvider = ({ children }: { children: ReactNode }) => {
         return View.RENTAL_DASHBOARD
       case "admin-dashboard":
         return View.ADMIN_DASHBOARD
-      case "team":
-        return View.TEAM
       case "about":
         return View.ABOUT
       case "contact":
@@ -79,9 +77,6 @@ export const ViewProvider = ({ children }: { children: ReactNode }) => {
         break
       case View.ADMIN_DASHBOARD:
         route = { view: "admin-dashboard" }
-        break
-      case View.TEAM:
-        route = { view: "team" }
         break
       case View.ABOUT:
         route = { view: "about" }

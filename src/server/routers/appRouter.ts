@@ -7,7 +7,6 @@ import { userRouter } from "./userRouter"
 import { notificationsRouter } from "./notificationRouter"
 import { webauthnRouter } from "./webauthnRouter"
 import { authRouter } from "./authRouter"
-import { teamRouter } from "./teamRouter"
 
 export const appRouter = router({
   items: itemsRouter,
@@ -19,7 +18,6 @@ export const appRouter = router({
   notifications: notificationsRouter,
   webauthn: webauthnRouter,
   auth: authRouter,
-  team: teamRouter,
 })
 
 export type AppRouter = typeof appRouter

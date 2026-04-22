@@ -27,6 +27,15 @@ function ensureAdmin(ctx: Context) {
   }
 }
 
+function ensureSuperAdmin(ctx: Context) {
+  if (ctx.session?.user.role !== "ADMIN" || !ctx.session?.user.isSuperAdmin) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only the super admin can change admin roles.",
+    })
+  }
+}
+
 export const adminRouter = router({
   // Dashboard statistics
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
@@ -192,7 +201,7 @@ export const adminRouter = router({
       ensureAdmin(ctx)
       return ctx.prisma.user.findMany({
         where: { role: { in: [Role.ADMIN, Role.RENTAL] } },
-        select: { id: true, email: true, name: true, role: true },
+        select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
         orderBy: { createdAt: "desc" },
       })
     }),
@@ -292,6 +301,54 @@ export const adminRouter = router({
           type: LogType.ADMIN,
           userId: ctx.session.user.id,
           message: `demoted:${updated.id}`,
+        })
+        return updated
+      }),
+    promoteToAdmin: protectedProcedure
+      .input(z.object({ userId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        ensureSuperAdmin(ctx)
+        const target = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
+        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" })
+        if (target.role === Role.ADMIN) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "User is already an admin" })
+        }
+        const updated = await ctx.prisma.user.update({
+          where: { id: input.userId },
+          data: { role: Role.ADMIN },
+          select: { id: true, email: true, name: true, role: true },
+        })
+        await logAction({
+          type: LogType.ADMIN,
+          userId: ctx.session.user.id,
+          message: `promotedToAdmin:${updated.id}`,
+        })
+        return updated
+      }),
+    demoteFromAdmin: protectedProcedure
+      .input(z.object({ userId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        ensureSuperAdmin(ctx)
+        const target = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
+        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" })
+        if (target.role !== Role.ADMIN) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "User is not an admin" })
+        }
+        if (target.isSuperAdmin) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "The super admin cannot be demoted.",
+          })
+        }
+        const updated = await ctx.prisma.user.update({
+          where: { id: input.userId },
+          data: { role: Role.RENTAL },
+          select: { id: true, email: true, name: true, role: true },
+        })
+        await logAction({
+          type: LogType.ADMIN,
+          userId: ctx.session.user.id,
+          message: `demotedFromAdmin:${updated.id}`,
         })
         return updated
       }),

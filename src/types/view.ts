@@ -13,7 +13,6 @@ export enum View {
   MY_BOOKINGS = "myBookings",
   RENTAL_DASHBOARD = "rentalDashboard",
   ADMIN_DASHBOARD = "adminDashboard",
-  TEAM = "team",
   ABOUT = "about",
   CONTACT = "contact",
   DEVELOPERS = "developers",

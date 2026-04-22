@@ -151,7 +151,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Find and return the user since passkey verification was already done
         const user = await prisma.user.findUnique({
           where: { id },
-          select: { id: true, email: true, name: true, role: true },
+          select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
         })
 
         console.log("🔍 User lookup result:", user ? "Found user" : "User not found", user?.email)
@@ -177,7 +177,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Find or create user
         let user = await prisma.user.findFirst({
           where: { email: { equals: email, mode: "insensitive" } },
-          select: { id: true, email: true, name: true, role: true },
+          select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
         })
 
         if (user) {
@@ -186,13 +186,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               user = await prisma.user.update({
                 where: { id: user.id },
                 data: { email },
-                select: { id: true, email: true, name: true, role: true },
+                select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
               })
             } catch (error) {
               if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
                 const normalized = await prisma.user.findUnique({
                   where: { email },
-                  select: { id: true, email: true, name: true, role: true },
+                  select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
                 })
                 if (normalized) {
                   user = normalized
@@ -208,7 +208,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // Create new user if they don't exist
           user = await prisma.user.create({
             data: { email },
-            select: { id: true, email: true, name: true, role: true },
+            select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
           })
         }
 
@@ -222,17 +222,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.sub) {
         session.user.id = token.sub
         session.user.role = token.role as string
+        session.user.isSuperAdmin = Boolean(token.isSuperAdmin)
 
         // Fetch fresh user data from database to ensure name is up-to-date
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: { name: true, email: true, role: true },
+          select: { name: true, email: true, role: true, isSuperAdmin: true },
         })
 
         if (dbUser) {
           session.user.name = dbUser.name
           session.user.email = dbUser.email
           session.user.role = dbUser.role
+          session.user.isSuperAdmin = dbUser.isSuperAdmin
         }
       }
       return session

@@ -5,6 +5,7 @@ import React, { useState } from "react"
 import { Role } from "@prisma/client"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
+import { useSession } from "next-auth/react"
 
 import type { inferRouterOutputs } from "@trpc/server"
 import type { AppRouter } from "@/server/routers/appRouter"
@@ -43,7 +44,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Loader2, UserPlus, Trash2, Users as UsersIcon, AlertTriangle } from "lucide-react"
+import {
+  Loader2,
+  UserPlus,
+  Trash2,
+  Users as UsersIcon,
+  AlertTriangle,
+  ShieldPlus,
+  ShieldMinus,
+  Crown,
+} from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 type RouterOutput = inferRouterOutputs<AppRouter>
@@ -52,6 +62,9 @@ type MemberManagementUserInList = RouterOutput["admin"]["memberManagement"]["lis
 
 export default function MembersTab() {
   const { t } = useI18n()
+  const { data: session } = useSession()
+  const isSuperAdmin = Boolean(session?.user?.isSuperAdmin)
+  const currentUserId = session?.user?.id
 
   const [addMemberEmail, setAddMemberEmail] = useState("")
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
@@ -96,6 +109,32 @@ export default function MembersTab() {
       toast({
         title: t("common.success"),
         description: t("adminDashboard.members.memberRemoved", { email: data.email }),
+      })
+      refetchMembers()
+    },
+    onError: (error: { message: string }) => {
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" })
+    },
+  })
+
+  const promoteToAdminMutation = trpc.admin.memberManagement.promoteToAdmin.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: t("common.success"),
+        description: `Promoted ${data.email} to admin.`,
+      })
+      refetchMembers()
+    },
+    onError: (error: { message: string }) => {
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" })
+    },
+  })
+
+  const demoteFromAdminMutation = trpc.admin.memberManagement.demoteFromAdmin.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: t("common.success"),
+        description: `Demoted ${data.email} to rental team.`,
       })
       refetchMembers()
     },
@@ -217,8 +256,89 @@ export default function MembersTab() {
                       <Badge variant={member.role === Role.ADMIN ? "default" : "secondary"}>
                         {member.role}
                       </Badge>
+                      {member.isSuperAdmin && (
+                        <Badge variant="outline" className="ml-1.5 gap-1">
+                          <Crown className="h-3 w-3" />
+                          Super
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right space-x-1 pr-4 pl-2 py-2.5">
+                      {isSuperAdmin && member.role === Role.RENTAL && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:bg-primary/10"
+                              title="Promote to admin"
+                            >
+                              <ShieldPlus className="h-4 w-4" />
+                              <span className="sr-only">Promote to admin</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Promote to admin?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {member.email} will gain full admin permissions.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => promoteToAdminMutation.mutate({ userId: member.id })}
+                                disabled={promoteToAdminMutation.isPending}
+                              >
+                                {promoteToAdminMutation.isPending && (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                Promote
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                      {isSuperAdmin &&
+                        member.role === Role.ADMIN &&
+                        !member.isSuperAdmin &&
+                        member.id !== currentUserId && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                                title="Demote to rental team"
+                              >
+                                <ShieldMinus className="h-4 w-4" />
+                                <span className="sr-only">Demote from admin</span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Demote from admin?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {member.email} will move back to the rental team.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    demoteFromAdminMutation.mutate({ userId: member.id })
+                                  }
+                                  disabled={demoteFromAdminMutation.isPending}
+                                >
+                                  {demoteFromAdminMutation.isPending && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  )}
+                                  Demote
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       {member.role !== Role.ADMIN && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>

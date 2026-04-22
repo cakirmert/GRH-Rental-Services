@@ -62,6 +62,7 @@ model User {
   emailVerified  DateTime?
   name          String?
   role          Role     @default(USER)
+  isSuperAdmin  Boolean  @default(false)
   passkeys      Json[]   @default([])
   emailBookingNotifications Boolean @default(true)
 
