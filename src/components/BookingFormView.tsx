@@ -87,7 +87,7 @@ const baseBookingFormSchema = z.object({
 })
 type BookingFormValues = z.infer<typeof baseBookingFormSchema>
 
-const createBookingFormSchema = (maxRangeDays: number, errorMessage: string) =>
+const createBookingFormSchema = (maxRangeDays: number, errorMessage: string, isRoom: boolean) =>
   baseBookingFormSchema.superRefine((data, ctx) => {
     if (
       Number.isFinite(maxRangeDays) &&
@@ -99,6 +99,13 @@ const createBookingFormSchema = (maxRangeDays: number, errorMessage: string) =>
         code: z.ZodIssueCode.custom,
         message: errorMessage,
         path: ["to"],
+      })
+    }
+    if (isRoom && !data.notes?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please describe the purpose of your booking.",
+        path: ["notes"],
       })
     }
   })
@@ -261,12 +268,13 @@ function BookingFormView(props: BookingFormViewProps) {
   }, [maxSelectableRangeDays, t])
 
   const bookingSchema = useMemo(() => {
+    const isRoom = item.type === "ROOM"
     if (!Number.isFinite(maxSelectableRangeDays)) {
-      return baseBookingFormSchema
+      return isRoom ? createBookingFormSchema(Infinity, "", isRoom) : baseBookingFormSchema
     }
     const message = rangeErrorMessage || t("errors.checkForm")
-    return createBookingFormSchema(maxSelectableRangeDays, message)
-  }, [maxSelectableRangeDays, rangeErrorMessage, t])
+    return createBookingFormSchema(maxSelectableRangeDays, message, isRoom)
+  }, [maxSelectableRangeDays, rangeErrorMessage, t, item.type])
 
   const formResolver = useMemo(() => zodResolver(bookingSchema), [bookingSchema])
 
@@ -1106,7 +1114,7 @@ function BookingFormView(props: BookingFormViewProps) {
                   name="notes"
                   render={({ field }) => (
                     <FormItem className="floating-form-item">
-                      <FormLabel>{t("bookingForm.notesLabel")}</FormLabel>
+                      <FormLabel>{item.type === "ROOM" ? t("bookingForm.notesLabelRequired") : t("bookingForm.notesLabel")}</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder=" "
@@ -1116,7 +1124,7 @@ function BookingFormView(props: BookingFormViewProps) {
                         />
                       </FormControl>
                       <FormDescription className="text-xs text-muted-foreground mt-1">
-                        {t("bookingForm.notesGuidance")}
+                        {item.type === "ROOM" ? t("bookingForm.notesGuidanceRequired") : t("bookingForm.notesGuidance")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

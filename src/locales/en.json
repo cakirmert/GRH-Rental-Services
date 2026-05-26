@@ -333,6 +333,8 @@
     "quantityLabel": "Quantity",
     "notesLabel": "Notes (Optional)",
     "notesGuidance": "For requests or questions, use the chat after booking for faster communication with the rental team.",
+    "notesLabelRequired": "Notes (Required)",                                     
+    "notesGuidanceRequired": "Please describe the purpose of your room booking.",
     "continueToBookingButton": "Continue to Booking",
     "completeFormToSeeSummary": "Complete the form to see the booking summary.",
     "invalidPeriod": "Invalid date/time selection.",
