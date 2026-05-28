@@ -98,6 +98,7 @@ export const bookingsRouter = router({
       const item = await ctx.prisma.item.findUnique({
         where: { id: input.itemId },
         select: {
+          type: true,
           totalQuantity: true,
           titleEn: true,
           titleDe: true,
@@ -112,6 +113,10 @@ export const bookingsRouter = router({
         },
       })
       if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
+
+      if (item.type === "ROOM" && !input.notes?.trim()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required for room bookings." })
+      }
 
       const used = await ctx.prisma.booking.aggregate({
         where: {

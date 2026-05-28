@@ -2,6 +2,7 @@ import { router, protectedProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { notificationEmitter } from "@/lib/notifications"
+import { sendChatMessageEmail } from "@/server/email/sendChatMessageEmail"
 
 export const chatRouter = router({
   list: protectedProcedure
@@ -158,7 +159,14 @@ async function createMessageNotifications(
     where: { id: threadId },
     select: {
       booking: {
-        select: { id: true, userId: true, assignedToId: true, item: { select: { titleEn: true } } },
+        select: {
+          id: true,
+          userId: true,
+          assignedToId: true,
+          item: { select: { titleEn: true } },
+          user: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true } },
+        },
       },
     },
   })
@@ -170,6 +178,7 @@ async function createMessageNotifications(
   if (!recips.length) return
 
   const senderName = sender.name || "Someone"
+  const itemTitle = thread.booking.item.titleEn ?? "Booking"
 
   const notifications = await ctx.prisma.notification.createManyAndReturn({
     data: recips.map((id) => ({
@@ -179,7 +188,7 @@ async function createMessageNotifications(
       message: JSON.stringify({
         key: "notifications.newChatMessage",
         vars: {
-          item: thread.booking.item.titleEn,
+          item: itemTitle,
           sender: senderName,
           message: body.length > 100 ? body.substring(0, 100) + "..." : body,
         },
@@ -188,5 +197,20 @@ async function createMessageNotifications(
   })
   for (const n of notifications) {
     notificationEmitter.emit("new", n)
+  }
+
+  // Send email notifications to recipients
+  const recipientUsers = [thread.booking.user, thread.booking.assignedTo].filter(
+    (u) => u && u.id !== senderId,
+  ) as { id: string; email: string; name: string | null }[]
+
+  for (const recipient of recipientUsers) {
+    sendChatMessageEmail({
+      to: { email: recipient.email, name: recipient.name },
+      senderName,
+      itemTitle,
+      messagePreview: body,
+      bookingId: thread.booking.id,
+    }).catch(() => {})
   }
 }
