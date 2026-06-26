@@ -1,13 +1,13 @@
 import NextAuth from "next-auth"
 import { authConfig } from "./auth.config"
 
-export const { auth } = NextAuth(authConfig)
+const { auth } = NextAuth(authConfig)
 
 /**
- * NextAuth middleware for handling authentication
+ * NextAuth proxy for handling authentication
  * Runs on all requests and makes session available via req.auth
  */
-export default auth(() => {
+export const proxy = auth(() => {
   // Session handling is managed by NextAuth
   // Custom logic can be added here if needed
   // tRPC's protectedProcedure handles the authorization

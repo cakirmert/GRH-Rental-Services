@@ -23,7 +23,7 @@ const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), {
 })
 
 interface AppLayoutClientProps {
-  session: Session | null
+  session?: Session | null
   children: ReactNode
 }
 

@@ -19,10 +19,9 @@ describe("imageUtils", () => {
       expect(getOptimizedImageUrl(url)).toBe(url)
     })
 
-    it("should transform Vercel blob storage URLs", () => {
+    it("should return Vercel blob storage URLs as-is for native next/image optimization", () => {
       const url = "https://my-blob.public.blob.vercel-storage.com/test.jpg"
-      const expected = `/api/edgeImage?url=${encodeURIComponent(url)}`
-      expect(getOptimizedImageUrl(url)).toBe(expected)
+      expect(getOptimizedImageUrl(url)).toBe(url)
     })
 
     it("should transform external URLs matching IMAGE_DOMAIN", () => {

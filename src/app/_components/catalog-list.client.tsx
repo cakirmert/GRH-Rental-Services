@@ -51,8 +51,13 @@ export default function CatalogListClient({ items }: { items: CatalogEquipmentRe
 
   return (
     <div className={`grid ${getGridClasses(filtered.length)} gap-4 md:gap-6`}>
-      {filtered.map((item) => (
-        <ItemCard key={item.id} item={item} onSelectItem={onSelectItem} />
+      {filtered.map((item, index) => (
+        <ItemCard
+          key={item.id}
+          item={item}
+          onSelectItem={onSelectItem}
+          preloadImage={index < 3}
+        />
       ))}
     </div>
   )

@@ -802,7 +802,7 @@ function BookingFormView(props: BookingFormViewProps) {
                       alt={`${item.name} ${currentImage + 1}`}
                       fill
                       className={`object-${imageFit} select-none pointer-events-none`}
-                      priority={true}
+                      preload
                       sizes="(max-width: 768px) 100vw, 50vw"
                       draggable={false}
                       onLoad={(e) => {
