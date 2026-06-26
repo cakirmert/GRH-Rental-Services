@@ -32,6 +32,7 @@ export interface Item {
 interface ItemCardProps {
   item: Item
   onSelectItem: (item: Item) => void
+  preloadImage?: boolean
 }
 
 function getObjectFitMode(imagePath: string): "cover" | "contain" {
@@ -39,7 +40,7 @@ function getObjectFitMode(imagePath: string): "cover" | "contain" {
   return extension === "jpg" ? "cover" : "contain"
 }
 
-export function ItemCard({ item, onSelectItem }: ItemCardProps) {
+export function ItemCard({ item, onSelectItem, preloadImage = false }: ItemCardProps) {
   const { t } = useI18n()
 
   const [current, setCurrent] = useState(0)
@@ -106,7 +107,7 @@ export function ItemCard({ item, onSelectItem }: ItemCardProps) {
             fill
             className={`object-${fitMode} transition-opacity duration-200 group-hover:opacity-95 select-none pointer-events-none`}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            priority={false}
+            preload={preloadImage}
             draggable={false}
           />{" "}
           {images.length > 1 && (

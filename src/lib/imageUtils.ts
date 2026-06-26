@@ -13,12 +13,11 @@ export function getOptimizedImageUrl(originalUrl: string): string {
     return originalUrl
   }
 
-  // Check for any Vercel blob storage URL (more comprehensive)
+  // Vercel Blob already sits behind a CDN and is allowed in next.config.ts,
+  // so let next/image optimize it directly instead of adding another API hop.
   const isBlobStorage = originalUrl.includes(".blob.vercel-storage.com")
-
-  // If it's a blob storage image, optimize it through our cache
   if (isBlobStorage) {
-    return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
+    return originalUrl
   }
 
   // If it's an external image from our configured domain, optimize it

@@ -1,4 +1,5 @@
 // src/app/api/cache-status/route.ts
+import { unstable_rethrow } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 import { imageCache } from "@/lib/imageCache"
 
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
       cacheStats: imageCache.getStats(),
     })
   } catch (error) {
+    unstable_rethrow(error)
     console.error("Cache status check failed:", error)
     return NextResponse.json(
       {

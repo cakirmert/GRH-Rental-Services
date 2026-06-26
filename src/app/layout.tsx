@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { auth } from "../../auth"
-import type { Session } from "next-auth"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import type { ReactNode } from "react"
@@ -27,8 +25,7 @@ export const viewport: Viewport = {
  * @param children - Child components to render in the main content area
  * @returns Root HTML structure with providers and layout components
  */
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const session: Session | null = await auth()
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -43,7 +40,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         `}</style>
       </head>
       <body className={`${inter.className} antialiased`}>
-        <AppLayoutClient session={session}>{children}</AppLayoutClient>
+        <AppLayoutClient>{children}</AppLayoutClient>
         <SpeedInsights />
         <Analytics />
       </body>

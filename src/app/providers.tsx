@@ -25,7 +25,7 @@ export default function Providers({
   session,
 }: {
   children: React.ReactNode
-  session: Session | null
+  session?: Session | null
 }) {
   const [queryClient] = useState(
     () =>
