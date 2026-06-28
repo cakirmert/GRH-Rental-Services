@@ -67,7 +67,10 @@ export async function POST(req: Request) {
 
     if (!verificationToken) {
       handleSignInFailure(key, fail, now)
-      console.log("No valid verification token found for:", { identifier: key, token: "[REDACTED]" })
+      console.log("No valid verification token found for:", {
+        identifier: key,
+        token: "[REDACTED]",
+      })
       return NextResponse.json({ message: "Invalid or expired code." }, { status: 401 })
     } // Token is valid, delete it so it can't be reused
     await prisma.verificationToken.delete({
@@ -84,7 +87,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       email: key,
-      verifiedToken: fullToken, // Send the verified token back to frontend
       message: "OTP verified successfully",
     })
   } catch (error) {

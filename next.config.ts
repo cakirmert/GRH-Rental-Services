@@ -4,13 +4,6 @@ const nextConfig: NextConfig = {
   agentRules: false,
   cacheComponents: true,
   partialPrefetching: true,
-  env: {
-    AUTH_URL: process.env.AUTH_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
-    BLOB_URL_BASE: process.env.BLOB_URL_BASE,
-  },
   experimental: {
     serverActions: {},
     scrollRestoration: true,
@@ -59,10 +52,6 @@ const nextConfig: NextConfig = {
           // Disable edge caching for API routes to ensure fresh data
           { key: "Cache-Control", value: "no-store" },
         ],
-      },
-      {
-        source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
         source: "/(.*)\\.(css|js|woff2?|ico|png|jpg|jpeg|gif|webp|avif)$",

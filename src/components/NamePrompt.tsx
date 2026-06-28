@@ -181,17 +181,18 @@ export default function NamePrompt({
         }, 100)
       }
     }
+    const handleBlur = () => {
+      // Prevent closing on blur (tab switch)
+    }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
     window.addEventListener("focus", handleFocus)
-    window.addEventListener("blur", () => {
-      // Prevent closing on blur (tab switch)
-    })
+    window.addEventListener("blur", handleBlur)
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("focus", handleFocus)
-      window.removeEventListener("blur", () => {})
+      window.removeEventListener("blur", handleBlur)
     }
   }, [open])
 
@@ -629,7 +630,11 @@ export default function NamePrompt({
                   {(session?.user?.role === "ADMIN" || session?.user?.role === "RENTAL") && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full text-destructive border-destructive hover:bg-destructive/10">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-destructive border-destructive hover:bg-destructive/10"
+                        >
                           Step Down (Remove Staff Privileges)
                         </Button>
                       </AlertDialogTrigger>
@@ -637,8 +642,10 @@ export default function NamePrompt({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Are you sure you want to step down?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will remove your team privileges and change your role to a regular User. You will lose access to the team portal and management dashboard.
-                            If you are the last Admin, this action will fail unless you delete your account entirely.
+                            This will remove your team privileges and change your role to a regular
+                            User. You will lose access to the team portal and management dashboard.
+                            If you are the last Admin, this action will fail unless you delete your
+                            account entirely.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

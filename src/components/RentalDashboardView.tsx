@@ -134,6 +134,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   const [noteDialogBooking, setNoteDialogBooking] = useState<BookingForRentalTeam | null>(null)
   const [noteEditorValue, setNoteEditorValue] = useState("")
   const [actionNote, setActionNote] = useState("")
+  const [currentTimeMs, setCurrentTimeMs] = useState(0)
 
   const queryInput = useMemo(
     () => ({
@@ -230,6 +231,13 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
 
   const addActionNoteMutation = trpc.bookings.addRentalNote.useMutation()
   const { reset: resetActionNoteMutation } = addActionNoteMutation
+
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTimeMs(Date.now())
+    updateCurrentTime()
+    const intervalId = window.setInterval(updateCurrentTime, 60 * 1000)
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     if (!showActionModal) {
@@ -363,7 +371,8 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     const CAN_MARK_BORROWED_BEFORE_HOURS = 4
     const canMarkBorrowed =
       booking.status === BookingStatus.ACCEPTED &&
-      startDate.getTime() <= Date.now() + CAN_MARK_BORROWED_BEFORE_HOURS * 60 * 60 * 1000
+      currentTimeMs > 0 &&
+      startDate.getTime() <= currentTimeMs + CAN_MARK_BORROWED_BEFORE_HOURS * 60 * 60 * 1000
 
     switch (booking.status) {
       case BookingStatus.REQUESTED:

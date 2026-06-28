@@ -15,18 +15,23 @@ export function getOptimizedImageUrl(originalUrl: string): string {
 
   // Vercel Blob already sits behind a CDN and is allowed in next.config.ts,
   // so let next/image optimize it directly instead of adding another API hop.
-  const isBlobStorage = originalUrl.includes(".blob.vercel-storage.com")
-  if (isBlobStorage) {
+  try {
+    const parsed = new URL(originalUrl)
+    const isBlobStorage =
+      parsed.protocol === "https:" &&
+      (parsed.hostname === "blob.vercel-storage.com" ||
+        parsed.hostname.endsWith(".blob.vercel-storage.com"))
+    if (isBlobStorage) {
+      return originalUrl
+    }
+  } catch {
     return originalUrl
   }
 
   // If it's an external image from our configured domain, optimize it
   if (typeof process !== "undefined" && process.env.IMAGE_DOMAIN) {
     const imageDomain = process.env.IMAGE_DOMAIN
-    if (
-      originalUrl.startsWith(`https://${imageDomain}/`) ||
-      originalUrl.startsWith(`http://${imageDomain}/`)
-    ) {
+    if (originalUrl.startsWith(`https://${imageDomain}/`)) {
       return `/api/edgeImage?url=${encodeURIComponent(originalUrl)}`
     }
   }

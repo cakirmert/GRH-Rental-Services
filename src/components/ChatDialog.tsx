@@ -72,13 +72,13 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
     return messages
       .filter((m) => m.sender.id !== meId && m.reads.length === 0)
       .map((m) => m.id)
-      .filter((id) => !marked.current.has(id))
   }, [messages, meId])
 
   useEffect(() => {
-    if (unreadIds.length) {
-      unreadIds.forEach((id) => marked.current.add(id))
-      markMut.mutate({ messageIds: unreadIds })
+    const pendingIds = unreadIds.filter((id) => !marked.current.has(id))
+    if (pendingIds.length) {
+      pendingIds.forEach((id) => marked.current.add(id))
+      markMut.mutate({ messageIds: pendingIds })
     }
   }, [unreadIds, markMut])
 

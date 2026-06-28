@@ -132,6 +132,22 @@ export const chatRouter = router({
 /// helpers (drop into same file or utils)
 import type { Context } from "@/server/context"
 
+type NotificationCreateData = Parameters<Context["prisma"]["notification"]["create"]>[0]["data"]
+
+async function createNotifications(ctx: Context, data: NotificationCreateData[]) {
+  const notificationDelegate = ctx.prisma.notification as Context["prisma"]["notification"] & {
+    createManyAndReturn?: (args: {
+      data: NotificationCreateData[]
+    }) => Promise<Array<Awaited<ReturnType<Context["prisma"]["notification"]["create"]>>>>
+  }
+
+  if (typeof notificationDelegate.createManyAndReturn === "function") {
+    return notificationDelegate.createManyAndReturn({ data })
+  }
+
+  return Promise.all(data.map((entry) => notificationDelegate.create({ data: entry })))
+}
+
 async function assertCanAccessBooking(ctx: Context, bookingId: string) {
   const b = await ctx.prisma.booking.findUnique({
     where: { id: bookingId },
@@ -171,8 +187,9 @@ async function createMessageNotifications(
 
   const senderName = sender.name || "Someone"
 
-  const notifications = await ctx.prisma.notification.createManyAndReturn({
-    data: recips.map((id) => ({
+  const notifications = await createNotifications(
+    ctx,
+    recips.map((id) => ({
       userId: id,
       bookingId: thread.booking.id,
       type: "BOOKING_RESPONSE",
@@ -185,7 +202,7 @@ async function createMessageNotifications(
         },
       }),
     })),
-  })
+  )
   for (const n of notifications) {
     notificationEmitter.emit("new", n)
   }

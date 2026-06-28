@@ -35,7 +35,6 @@ interface BookingInterval {
 }
 
 interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<any>
   itemId: string
   dateRange: { from: Date; to?: Date }

@@ -1,6 +1,19 @@
 // src/lib/cacheWarmer.ts
 import prisma from "@/lib/prismadb"
 
+function isVercelBlobUrl(url: string) {
+  try {
+    const parsed = new URL(url)
+    return (
+      parsed.protocol === "https:" &&
+      (parsed.hostname === "blob.vercel-storage.com" ||
+        parsed.hostname.endsWith(".blob.vercel-storage.com"))
+    )
+  } catch {
+    return false
+  }
+}
+
 export async function warmImageCache() {
   try {
     // Get all items with images
@@ -20,7 +33,7 @@ export async function warmImageCache() {
         try {
           const images = JSON.parse(item.imagesJson) as string[]
           images.forEach((url) => {
-            if (url.includes("blob.vercel-storage.com")) {
+            if (isVercelBlobUrl(url)) {
               allImageUrls.add(url)
             }
           })

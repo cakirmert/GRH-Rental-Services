@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Image from "next/image"
@@ -289,7 +289,6 @@ function BookingFormView(props: BookingFormViewProps) {
     // mode: "onChange", // Consider if you want validation on every change for dateRange
   })
   const {
-    watch,
     handleSubmit,
     control,
     trigger,
@@ -419,11 +418,10 @@ function BookingFormView(props: BookingFormViewProps) {
     setThumbnailLoadingStates(new Set())
   }, [imageUrlsJson]) // Use the stable reference
 
-  const dateRange = watch("dateRange") // RHF source of truth
-  const startTime = watch("startTime")
-  const endTime = watch("endTime")
-  const quantity = watch("quantity")
-  const formNotes = watch("notes")
+  const [dateRange, startTime, endTime, quantity, formNotes] = useWatch({
+    control,
+    name: ["dateRange", "startTime", "endTime", "quantity", "notes"],
+  })
 
   // Persist form data to global state when it changes
   useEffect(() => {

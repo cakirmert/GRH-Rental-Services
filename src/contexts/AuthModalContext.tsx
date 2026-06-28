@@ -152,43 +152,14 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
     setIsSubmittingAuth(true)
     setAuthError(null)
     try {
-      // First, verify the OTP with our backend
-      const res = await fetch(`/api/auth/otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: otp, email }),
-      })
-
-      if (!res.ok) {
-        let errorMsg = t("errors.loginUnexpected")
-        try {
-          const errorData = await res.json()
-          if (errorData && errorData.message) {
-            errorMsg = errorData.message
-          } else if (res.status === 401) {
-            errorMsg = t("errors.invalidOtp")
-          }
-        } catch {
-          /* Response not JSON or no message */
-        }
-        setAuthError(errorMsg)
-        return
-      }
-
-      const otpResult = await res.json()
-      if (!otpResult.success) {
-        setAuthError(otpResult.message || t("errors.invalidOtp"))
-        return
-      } // OTP verification successful, now sign in with NextAuth.js using our custom OTP provider
       const signInResult = await signIn("otp", {
-        email: otpResult.email,
-        token: otpResult.verifiedToken,
-        verified: "true", // Flag that OTP was already verified
+        email,
+        token: otp,
         redirect: false,
       })
       if (signInResult?.error) {
         console.error("NextAuth signIn error:", signInResult.error)
-        setAuthError(t("errors.loginUnexpected"))
+        setAuthError(t("errors.invalidOtp"))
         return
       }
       // Success! Update session and close modal

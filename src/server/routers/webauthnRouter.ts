@@ -8,6 +8,7 @@ import {
   getAuthenticationOptions,
   verifyAuthentication,
   normalizeCredentialId,
+  getCredentialIdCandidates,
 } from "@/lib/webauthn"
 import type { Prisma } from "@prisma/client"
 import type {
@@ -58,8 +59,8 @@ export const webauthnRouter = router({
     .mutation(async ({ input, ctx }) => {
       checkRateLimit(
         ctx.req?.headers?.get("x-forwarded-for") ||
-        (ctx.req as unknown as { ip?: string }).ip ||
-        "ip",
+          (ctx.req as unknown as { ip?: string }).ip ||
+          "ip",
         5,
         60_000,
       )
@@ -119,7 +120,7 @@ export const webauthnRouter = router({
         },
       })
       registrationChallenges.delete(ctx.session.user.id)
-      return { verified: true }
+      return { ok: true }
     }),
 
   loginOptions: publicProcedure
@@ -127,8 +128,8 @@ export const webauthnRouter = router({
     .mutation(async ({ input, ctx }) => {
       checkRateLimit(
         ctx.req?.headers?.get("x-forwarded-for") ||
-        (ctx.req as unknown as { ip?: string }).ip ||
-        "ip",
+          (ctx.req as unknown as { ip?: string }).ip ||
+          "ip",
         5,
         60_000,
       )
@@ -212,8 +213,9 @@ export const webauthnRouter = router({
           if (!u.passkeys || !Array.isArray(u.passkeys)) continue
           const userPasskeys = u.passkeys as unknown as UserPasskey[]
           const foundPasskey = userPasskeys.find((p) => {
-            const normalizedStoredId = normalizeCredentialId(p.credentialID)
-            return normalizedStoredId === normalizedIncomingCredentialId
+            return getCredentialIdCandidates(p.credentialID).includes(
+              normalizedIncomingCredentialId,
+            )
           })
 
           if (foundPasskey) {
@@ -235,13 +237,11 @@ export const webauthnRouter = router({
       const userPasskeys = user.passkeys as unknown as UserPasskey[]
 
       const passkey = userPasskeys.find((p) => {
-        const normalizedStoredId = normalizeCredentialId(p.credentialID)
-        if (!normalizedStoredId) return false
+        const storedCandidates = getCredentialIdCandidates(p.credentialID)
 
-        if (normalizedStoredId === normalizedIncomingCredentialId) {
-          // Permanently update stored ID if it wasn't normalized
-          if (p.credentialID !== normalizedStoredId) {
-            p.credentialID = normalizedStoredId
+        if (storedCandidates.includes(normalizedIncomingCredentialId)) {
+          if (p.credentialID !== normalizedIncomingCredentialId) {
+            p.credentialID = normalizedIncomingCredentialId
           }
           return true
         }
@@ -279,6 +279,6 @@ export const webauthnRouter = router({
 
       authenticationChallenges.delete(user.id)
       const token = generatePasskeyToken(user.id)
-      return { verified: true, token }
+      return { ok: true, token }
     }),
 })

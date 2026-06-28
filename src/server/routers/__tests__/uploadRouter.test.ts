@@ -10,15 +10,16 @@ vi.mock("@vercel/blob", () => ({
 }))
 
 // Mock context helper
-const createMockContext = (role: string = "USER") => ({
-  prisma: {} as any,
-  session: {
-    user: {
-      id: "test-user-id",
-      role: role,
+const createMockContext = (role: string = "USER") =>
+  ({
+    prisma: {} as any,
+    session: {
+      user: {
+        id: "test-user-id",
+        role: role,
+      },
     },
-  },
-} as unknown as Context)
+  }) as unknown as Context
 
 describe("uploadRouter.uploadItemImage", () => {
   beforeEach(() => {
@@ -34,7 +35,7 @@ describe("uploadRouter.uploadItemImage", () => {
       caller.uploadItemImage({
         fileName: "test.png",
         fileContentBase64: "base64content",
-      })
+      }),
     ).rejects.toThrow()
   })
 
@@ -64,7 +65,7 @@ describe("uploadRouter.uploadItemImage", () => {
       caller.uploadItemImage({
         fileName: "test.png",
         fileContentBase64: largeContent,
-      })
+      }),
     ).rejects.toThrow()
   })
 
@@ -72,7 +73,14 @@ describe("uploadRouter.uploadItemImage", () => {
     const ctx = createMockContext("ADMIN")
     const caller = uploadRouter.createCaller(ctx)
 
-    vi.mocked(put).mockResolvedValue({ url: "https://blob.example.com/items/uuid.png", downloadUrl: "", pathname: "", size: 0, uploadedAt: new Date() })
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example.com/items/uuid.png",
+      downloadUrl: "",
+      pathname: "",
+      contentType: "image/png",
+      contentDisposition: "inline",
+      etag: "etag",
+    })
 
     const result = await caller.uploadItemImage({
       fileName: "test.png",
@@ -87,7 +95,7 @@ describe("uploadRouter.uploadItemImage", () => {
         contentType: "image/png",
         access: "public",
         token: "test-token",
-      })
+      }),
     )
   })
 
@@ -95,7 +103,14 @@ describe("uploadRouter.uploadItemImage", () => {
     const ctx = createMockContext("ADMIN")
     const caller = uploadRouter.createCaller(ctx)
 
-    vi.mocked(put).mockResolvedValue({ url: "https://blob.example.com/items/uuid.jpg", downloadUrl: "", pathname: "", size: 0, uploadedAt: new Date() })
+    vi.mocked(put).mockResolvedValue({
+      url: "https://blob.example.com/items/uuid.jpg",
+      downloadUrl: "",
+      pathname: "",
+      contentType: "image/jpeg",
+      contentDisposition: "inline",
+      etag: "etag",
+    })
 
     await caller.uploadItemImage({
       fileName: "test.jpg",
@@ -107,7 +122,7 @@ describe("uploadRouter.uploadItemImage", () => {
       expect.any(Buffer),
       expect.objectContaining({
         contentType: "image/jpeg",
-      })
+      }),
     )
   })
 })
