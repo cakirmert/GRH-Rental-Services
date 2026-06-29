@@ -21,6 +21,8 @@ enum LogType {
   SYSTEM = "SYSTEM",
 }
 
+const MAX_IMAGE_BYTES = 7.5 * 1024 * 1024
+
 function ensureAdmin(ctx: Context) {
   if (ctx.session?.user.role !== "ADMIN") {
     throw new TRPCError({ code: "FORBIDDEN" })
@@ -34,6 +36,50 @@ function ensureSuperAdmin(ctx: Context) {
       message: "Only the super admin can change admin roles.",
     })
   }
+}
+
+function decodeImageUpload(base64: string, fileExtension: string) {
+  const normalizedBase64 = base64.trim()
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalizedBase64)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid image data." })
+  }
+
+  const buffer = Buffer.from(normalizedBase64, "base64")
+  if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid image size." })
+  }
+
+  const isJpeg =
+    fileExtension === ".jpg" || fileExtension === ".jpeg"
+      ? buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+      : false
+  const isPng =
+    fileExtension === ".png" &&
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  const isWebp =
+    fileExtension === ".webp" &&
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  const isGif =
+    fileExtension === ".gif" &&
+    buffer.length >= 6 &&
+    (buffer.subarray(0, 6).toString("ascii") === "GIF87a" ||
+      buffer.subarray(0, 6).toString("ascii") === "GIF89a")
+
+  if (!isJpeg && !isPng && !isWebp && !isGif) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Image content does not match file type." })
+  }
+
+  return buffer
 }
 
 export const adminRouter = router({
@@ -469,7 +515,7 @@ export const uploadRouter = router({
         }
 
         const uniqueFileName = `items/${uuidv4()}${fileExtension}`
-        const buffer = Buffer.from(input.fileContentBase64, "base64")
+        const buffer = decodeImageUpload(input.fileContentBase64, fileExtension)
         const token = process.env.BLOB_READ_WRITE_TOKEN
         if (!token) throw new Error("Missing BLOB_READ_WRITE_TOKEN")
 
