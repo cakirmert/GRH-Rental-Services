@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { normalizeCredentialId } from "../webauthn"
+import { getCredentialIdCandidates, normalizeCredentialId } from "../webauthn"
 
 describe("normalizeCredentialId", () => {
   it("returns null for empty input", () => {
@@ -15,15 +15,16 @@ describe("normalizeCredentialId", () => {
   })
 
   it("converts base64 to base64url", () => {
-    const base64 = "SGVsbG8rd29ybGQvMTIzNDU2Nzg5MA=="
-    const expectedBase64url = "SGVsbG8td29ybGQtMTIzNDU2Nzg5MA"
+    const base64 = "AAAAAAAAAAAAAAAAAAAA+/=="
+    const expectedBase64url = "AAAAAAAAAAAAAAAAAAAA-_"
     expect(normalizeCredentialId(base64)).toBe(expectedBase64url)
   })
 
-  it("handles double-encoded IDs", () => {
+  it("exposes double-encoded IDs as compatibility candidates", () => {
     const id = "SGVsbG8td29ybGQtMTIzNDU2Nzg5MA"
     const doubleEncoded = Buffer.from(id).toString("base64url")
-    expect(normalizeCredentialId(doubleEncoded)).toBe(id)
+    expect(normalizeCredentialId(doubleEncoded)).toBe(doubleEncoded)
+    expect(getCredentialIdCandidates(doubleEncoded)).toContain(id)
   })
 
   it("returns null for too short IDs", () => {

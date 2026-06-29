@@ -24,6 +24,22 @@ interface NotifyBookingStatusChangeArgs {
   }
 }
 
+type NotificationCreateData = Parameters<PrismaClient["notification"]["create"]>[0]["data"]
+
+async function createNotifications(prisma: PrismaClient, data: NotificationCreateData[]) {
+  const notificationDelegate = prisma.notification as PrismaClient["notification"] & {
+    createManyAndReturn?: (args: {
+      data: NotificationCreateData[]
+    }) => Promise<Array<Awaited<ReturnType<PrismaClient["notification"]["create"]>>>>
+  }
+
+  if (typeof notificationDelegate.createManyAndReturn === "function") {
+    return notificationDelegate.createManyAndReturn({ data })
+  }
+
+  return Promise.all(data.map((entry) => notificationDelegate.create({ data: entry })))
+}
+
 const messageMap: Record<BookingStatus, { base: string; withActor?: string }> = {
   [BookingStatus.REQUESTED]: {
     base: "notifications.status.requested",
@@ -103,11 +119,11 @@ export async function notifyBookingStatusChange({
     }),
   }))
 
-  const createdNotifications = await prisma.notification.createManyAndReturn({
-    data: notificationData,
-  })
+  const createdNotifications = await createNotifications(prisma, notificationData)
 
   for (const notification of createdNotifications) {
+    if (!notification) continue
+
     notificationEmitter.emit("new", notification)
 
     const recipient = dedupedRecipients.get(notification.userId)

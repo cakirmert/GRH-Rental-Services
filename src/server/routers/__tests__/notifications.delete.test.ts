@@ -7,7 +7,7 @@ import type { Request } from "express"
 function createCaller() {
   const prisma = {
     notification: {
-      delete: vi.fn(),
+      deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   }
   const ctx: Context = {
@@ -25,6 +25,8 @@ describe("notification delete", () => {
   it("deletes notification by id", async () => {
     const { caller, prisma } = createCaller()
     await caller.delete({ id: "n1" })
-    expect(prisma.notification.delete).toHaveBeenCalledWith({ where: { id: "n1" } })
+    expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+      where: { id: "n1", userId: "admin1" },
+    })
   })
 })

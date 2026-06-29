@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, afterEach } from "vitest"
 import { getOptimizedImageUrl, getOptimizedImageUrls } from "../imageUtils"
 
 describe("imageUtils", () => {
@@ -24,6 +24,11 @@ describe("imageUtils", () => {
       expect(getOptimizedImageUrl(url)).toBe(url)
     })
 
+    it("should not treat raw URLs containing the blob hostname as Blob storage", () => {
+      const url = "https://example.com/test.jpg?next=.blob.vercel-storage.com"
+      expect(getOptimizedImageUrl(url)).toBe(url)
+    })
+
     it("should transform external URLs matching IMAGE_DOMAIN", () => {
       process.env.IMAGE_DOMAIN = "example.com"
       const url = "https://example.com/test.jpg"
@@ -31,8 +36,7 @@ describe("imageUtils", () => {
       expect(getOptimizedImageUrl(url)).toBe(expected)
 
       const httpUrl = "http://example.com/test.jpg"
-      const expectedHttp = `/api/edgeImage?url=${encodeURIComponent(httpUrl)}`
-      expect(getOptimizedImageUrl(httpUrl)).toBe(expectedHttp)
+      expect(getOptimizedImageUrl(httpUrl)).toBe(httpUrl)
     })
 
     it("should return other external URLs as-is", () => {
@@ -51,15 +55,11 @@ describe("imageUtils", () => {
   describe("getOptimizedImageUrls", () => {
     it("should transform an array of URLs", () => {
       process.env.IMAGE_DOMAIN = "example.com"
-      const urls = [
-        "/local.jpg",
-        "https://example.com/external.jpg",
-        "https://other.com/other.jpg"
-      ]
+      const urls = ["/local.jpg", "https://example.com/external.jpg", "https://other.com/other.jpg"]
       const expected = [
         "/local.jpg",
         `/api/edgeImage?url=${encodeURIComponent("https://example.com/external.jpg")}`,
-        "https://other.com/other.jpg"
+        "https://other.com/other.jpg",
       ]
       expect(getOptimizedImageUrls(urls)).toEqual(expected)
     })

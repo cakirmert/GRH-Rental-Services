@@ -27,7 +27,6 @@ const DEFAULT_TRANSPORT_HINTS: AuthenticatorTransportFuture[] = [
 
 /**
  * Convert assorted credential ID encodings into a normalized base64url string.
- * This also recovers IDs that were accidentally double-encoded when stored.
  */
 export function normalizeCredentialId(id: string | null | undefined): string | null {
   if (!id) return null
@@ -35,26 +34,39 @@ export function normalizeCredentialId(id: string | null | undefined): string | n
   if (!trimmed) return null
 
   const normalized = trimmed.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
-  const candidate =
-    normalized.length >= MIN_CREDENTIAL_ID_LENGTH && BASE64URL_PATTERN.test(normalized)
-      ? normalized
-      : null
+  return normalized.length >= MIN_CREDENTIAL_ID_LENGTH && BASE64URL_PATTERN.test(normalized)
+    ? normalized
+    : null
+}
+
+/**
+ * Return valid credential ID candidates, including legacy records that were
+ * accidentally stored as base64url(base64url(id)).
+ */
+export function getCredentialIdCandidates(id: string | null | undefined): string[] {
+  const candidate = normalizeCredentialId(id)
+  if (!candidate) return []
+  const candidates = [candidate]
 
   try {
-    const decoded = Buffer.from(trimmed, "base64url").toString("utf8")
-    const decodedNormalized = decoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
-    if (
-      decodedNormalized.length >= MIN_CREDENTIAL_ID_LENGTH &&
-      BASE64URL_PATTERN.test(decodedNormalized) &&
-      decodedNormalized !== candidate
-    ) {
-      return decodedNormalized
+    const decoded = Buffer.from(candidate, "base64url").toString("utf8").trim()
+    const decodedNormalized = normalizeCredentialId(decoded)
+    if (decodedNormalized && decodedNormalized !== candidate) {
+      candidates.push(decodedNormalized)
     }
   } catch {
-    /* Ignore decoding errors; fall through */
+    /* Ignore decoding errors; only the original candidate is valid */
   }
 
-  return candidate
+  return Array.from(new Set(candidates))
+}
+
+function credentialIdsMatch(storedId: string, incomingId: string) {
+  return getCredentialIdCandidates(storedId).includes(incomingId)
+}
+
+function getPreferredCredentialId(storedId: string, incomingId: string) {
+  return credentialIdsMatch(storedId, incomingId) ? incomingId : normalizeCredentialId(storedId)
 }
 
 export async function getRegistrationOptions(
@@ -98,22 +110,18 @@ export async function verifyRegistration(
 export async function getAuthenticationOptions(
   allowCredentials: Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>,
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
-  const processedCredentials = allowCredentials
-    .map(({ id, transports }) => {
-      const normalizedId = normalizeCredentialId(id)
-      if (!normalizedId) return null
+  const processedCredentials = allowCredentials.flatMap(({ id, transports }) => {
+    const candidateIds = getCredentialIdCandidates(id)
+    if (candidateIds.length === 0) return []
+    const transportHints =
+      transports && transports.length > 0 ? transports : DEFAULT_TRANSPORT_HINTS
 
-      const transportHints =
-        transports && transports.length > 0 ? transports : DEFAULT_TRANSPORT_HINTS
-
-      return { id: normalizedId, type: "public-key" as const, transports: transportHints }
-    })
-    .filter(
-      (
-        cred,
-      ): cred is { id: string; type: "public-key"; transports: AuthenticatorTransportFuture[] } =>
-        cred !== null,
-    )
+    return candidateIds.map((candidateId) => ({
+      id: candidateId,
+      type: "public-key" as const,
+      transports: transportHints,
+    }))
+  })
 
   return generateAuthenticationOptions({
     rpID,
@@ -132,21 +140,23 @@ export async function verifyAuthentication(
     counter: number
   },
 ) {
-  const normalizedStoredID = normalizeCredentialId(authenticator.credentialID)
-  if (!normalizedStoredID) {
-    throw new Error(`Unable to normalize stored credential ID: ${authenticator.credentialID}`)
-  }
-
-  // Self-heal stored ID if it wasn't normalized
-  if (authenticator.credentialID !== normalizedStoredID) {
-    authenticator.credentialID = normalizedStoredID
-  }
-
   const incomingCredentialId =
     normalizeCredentialId(credential.rawId) || normalizeCredentialId(credential.id)
 
   if (!incomingCredentialId) {
     throw new Error(`Unable to normalize incoming credential ID: ${credential.id}`)
+  }
+
+  const normalizedStoredID = getPreferredCredentialId(
+    authenticator.credentialID,
+    incomingCredentialId,
+  )
+  if (!normalizedStoredID) {
+    throw new Error(`Unable to normalize stored credential ID: ${authenticator.credentialID}`)
+  }
+
+  if (authenticator.credentialID !== normalizedStoredID) {
+    authenticator.credentialID = normalizedStoredID
   }
 
   const normalizedCredential = {

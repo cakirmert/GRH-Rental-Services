@@ -163,6 +163,10 @@ export default function MyBookingsComponent({
     [userBookingsData],
   )
 
+  function ensureDateObject(dateInput: Date | string): Date {
+    return dateInput instanceof Date ? dateInput : parseISO(dateInput)
+  }
+
   useEffect(() => {
     if (fetchBookingsError) {
       toast({
@@ -220,11 +224,6 @@ export default function MyBookingsComponent({
     if (isNaN(hh) || isNaN(mm)) throw new Error(t("errors.invalidTimeFormat"))
     const newDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm) // More robust Date creation
     return newDate
-  }
-
-  // Ensure dates are Date objects before passing to date-fns
-  const ensureDateObject = (dateInput: Date | string): Date => {
-    return dateInput instanceof Date ? dateInput : parseISO(dateInput)
   }
 
   const bookingsByTime = useMemo(() => {

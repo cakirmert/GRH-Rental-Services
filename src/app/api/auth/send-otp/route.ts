@@ -71,7 +71,10 @@ export async function POST(req: Request) {
         }
 
         if (!verificationResult.success) {
-          return NextResponse.json({ error: "Please verify you are human before requesting a code." }, { status: 400 })
+          return NextResponse.json(
+            { error: "Please verify you are human before requesting a code." },
+            { status: 400 },
+          )
         }
       } catch (error) {
         console.error("Error verifying Turnstile token:", error)
@@ -103,12 +106,13 @@ export async function POST(req: Request) {
     crypto.getRandomValues(array)
     const code = (100000 + (array[0] % 900000)).toString()
 
-    if (!process.env.AUTH_SECRET) {
+    const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+    if (!authSecret) {
       console.error("AUTH_SECRET environment variable is not set")
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    const h = await generateHmacSha256(code, process.env.AUTH_SECRET)
+    const h = await generateHmacSha256(code, authSecret)
     const token = `${code}.${h}`
 
     // Store the verification token in database

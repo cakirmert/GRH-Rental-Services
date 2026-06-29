@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
     const expectedToken =
       process.env.CACHE_WARM_TOKEN || process.env.CRON_SECRET || process.env.AUTH_SECRET
 
-    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+    if (!expectedToken) {
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 })
+    }
+
+    if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

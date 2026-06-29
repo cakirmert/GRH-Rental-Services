@@ -162,11 +162,11 @@ export default function Header() {
     }
   }, [status])
 
-  const ThemeIcon = React.useCallback(() => {
+  const themeIcon = (() => {
     if (!mounted) return <Sun className="h-5 w-5" />
     const current = theme === "system" ? resolvedTheme : theme
     return current === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />
-  }, [mounted, theme, resolvedTheme])
+  })()
   const openHelpDialog = () => {
     setIsHelpDialogOpen(true)
     setIsMenuOpen(false)
@@ -327,7 +327,7 @@ export default function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
-                  <ThemeIcon />
+                  {themeIcon}
                   <span className="sr-only">{t("header.toggleTheme")}</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -443,7 +443,7 @@ export default function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
-                  <ThemeIcon />
+                  {themeIcon}
                   <span className="sr-only">{t("header.toggleTheme")}</span>
                 </Button>
               </DropdownMenuTrigger>

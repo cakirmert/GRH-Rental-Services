@@ -18,6 +18,28 @@ const toArrayBuffer = (view: Uint8Array): ArrayBuffer => {
   return buffer
 }
 
+const isAllowedImageSource = (imageUrl: string): URL | null => {
+  let parsed: URL
+  try {
+    parsed = new URL(imageUrl)
+  } catch {
+    return null
+  }
+
+  const isVercelBlob =
+    parsed.protocol === "https:" &&
+    (parsed.hostname === "blob.vercel-storage.com" ||
+      parsed.hostname.endsWith(".blob.vercel-storage.com"))
+
+  const configuredDomain = process.env.IMAGE_DOMAIN
+  const isConfiguredDomain =
+    Boolean(configuredDomain) &&
+    parsed.protocol === "https:" &&
+    parsed.hostname === configuredDomain
+
+  return isVercelBlob || isConfiguredDomain ? parsed : null
+}
+
 /**
  * Edge function for optimizing and serving images with format conversion and caching
  * @param request - The incoming request with image URL parameter
@@ -31,12 +53,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Allow any Vercel blob storage URL and configured image domain
-    const isVercelBlob = imageUrl.includes(".blob.vercel-storage.com")
-    const isConfiguredDomain =
-      process.env.IMAGE_DOMAIN && imageUrl.startsWith(`https://${process.env.IMAGE_DOMAIN}/`)
-
-    if (!isVercelBlob && !isConfiguredDomain) {
+    const parsedImageUrl = isAllowedImageSource(imageUrl)
+    if (!parsedImageUrl) {
       return NextResponse.json({ error: "Invalid image source" }, { status: 403 })
     }
 
@@ -64,7 +82,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch and process image
-    const originalResponse = await fetch(imageUrl)
+    const originalResponse = await fetch(parsedImageUrl)
     if (!originalResponse.ok) {
       throw new Error(`Failed to fetch source image: ${originalResponse.status}`)
     }
@@ -118,6 +136,10 @@ export async function HEAD(request: NextRequest) {
   }
 
   try {
+    if (!isAllowedImageSource(imageUrl)) {
+      return new NextResponse(null, { status: 403 })
+    }
+
     // Check if image is in cache with format detection (same as GET)
     const accept = request.headers.get("Accept") || ""
     let format: "webp" | "avif" | undefined = undefined

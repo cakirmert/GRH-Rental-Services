@@ -1,4 +1,5 @@
 import { trpc } from "@/utils/trpc"
+import { startAuthentication } from "@simplewebauthn/browser"
 
 /**
  * Converts ArrayBuffer to base64 URL-safe string
@@ -102,38 +103,20 @@ export function useWebAuthn() {
   }
 
   const login = async (usernameOrEmail: string) => {
-    const opts = (await loginOptions.mutateAsync({ usernameOrEmail })) as unknown as {
-      userId: string
-    } & PublicKeyCredentialRequestOptions
-    const cred = (await navigator.credentials.get({
-      publicKey: opts as unknown as PublicKeyCredentialRequestOptions,
-    })) as PublicKeyCredential
-    const credential = {
-      rawId: arrayBufferToB64(cred.rawId),
-      id: cred.id,
-      response: {
-        clientDataJSON: arrayBufferToB64(
-          (cred.response as AuthenticatorAssertionResponse).clientDataJSON,
-        ),
-        authenticatorData: arrayBufferToB64(
-          (cred.response as AuthenticatorAssertionResponse).authenticatorData,
-        ),
-        signature: arrayBufferToB64((cred.response as AuthenticatorAssertionResponse).signature),
-        userHandle: (cred.response as AuthenticatorAssertionResponse).userHandle
-          ? arrayBufferToB64((cred.response as AuthenticatorAssertionResponse).userHandle!)
-          : undefined,
-      },
-      type: cred.type,
-    }
+    const opts = await loginOptions.mutateAsync({ usernameOrEmail })
+    const credential = await startAuthentication({ optionsJSON: opts })
     const result = (await loginFinish.mutateAsync({
-      userId: opts.userId,
+      userId: "auto-detect",
       credential,
     })) as unknown as { token: string }
-    await fetch("/api/auth/passkey", {
+    const response = await fetch("/api/auth/passkey", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: result.token }),
     })
+    if (!response.ok) {
+      throw new Error("Passkey session creation failed")
+    }
   }
 
   return { register, login, registerOptions, registerFinish, loginOptions, loginFinish }

@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer-secure"
 
 export const isDev = process.env.NODE_ENV !== "production"
 
