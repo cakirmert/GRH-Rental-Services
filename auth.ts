@@ -56,6 +56,15 @@ async function consumeOtpCode(email: string, token: string) {
   const fail = otpFailures.get(email)
   if (fail && fail.locked > now) return false
 
+  const activeToken = await prisma.verificationToken.findFirst({
+    where: {
+      identifier: email,
+      expires: { gt: new Date() },
+    },
+    select: { identifier: true },
+  })
+  if (!activeToken) return false
+
   const code = token.trim()
   if (!OTP_CODE_PATTERN.test(code)) {
     handleOtpFailure(email, fail, now)

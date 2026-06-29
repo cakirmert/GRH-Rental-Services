@@ -21,6 +21,11 @@ const createMockContext = (role: string = "USER") =>
     },
   }) as unknown as Context
 
+const validPngBase64 = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]).toString("base64")
+const validJpegBase64 = Buffer.from([0xff, 0xd8, 0xff, 0xdb]).toString("base64")
+
 describe("uploadRouter.uploadItemImage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -69,6 +74,22 @@ describe("uploadRouter.uploadItemImage", () => {
     ).rejects.toThrow()
   })
 
+  it("should reject image content that does not match the extension", async () => {
+    const ctx = createMockContext("ADMIN")
+    const caller = uploadRouter.createCaller(ctx)
+
+    await expect(
+      caller.uploadItemImage({
+        fileName: "test.png",
+        fileContentBase64: Buffer.from("not an image").toString("base64"),
+      }),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Image content does not match file type.",
+    })
+    expect(put).not.toHaveBeenCalled()
+  })
+
   it("should upload successfully if user is admin and file is valid", async () => {
     const ctx = createMockContext("ADMIN")
     const caller = uploadRouter.createCaller(ctx)
@@ -84,7 +105,7 @@ describe("uploadRouter.uploadItemImage", () => {
 
     const result = await caller.uploadItemImage({
       fileName: "test.png",
-      fileContentBase64: Buffer.from("fake image content").toString("base64"),
+      fileContentBase64: validPngBase64,
     })
 
     expect(result).toEqual({ imageUrl: "https://blob.example.com/items/uuid.png" })
@@ -114,7 +135,7 @@ describe("uploadRouter.uploadItemImage", () => {
 
     await caller.uploadItemImage({
       fileName: "test.jpg",
-      fileContentBase64: Buffer.from("fake image content").toString("base64"),
+      fileContentBase64: validJpegBase64,
     })
 
     expect(put).toHaveBeenCalledWith(
