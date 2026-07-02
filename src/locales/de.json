@@ -590,6 +590,8 @@
     "rentalDashboard": "Chat",
     "inputPlaceholder": "Nachricht hier eingeben...",
     "sendInstructions": "Enter zum Senden, Shift+Enter für neue Zeile",
+    "today": "Heute",
+    "yesterday": "Gestern",
     "messageRead": "Gelesen",
     "messageSent": "Gesendet"
   },
