@@ -10,11 +10,67 @@ import { notificationEmitter } from "@/lib/notifications"
 import { sendBookingRequestEmail } from "@/server/email/sendBookingRequestEmail"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 import { markUpcomingBookingsBorrowed } from "@/server/jobs/autoBorrowed"
+import { usesAdminBlockPrefix } from "@/utils/adminBlock"
 
-// Helper (already defined)
 const isRentalTeamMember = (ctx: Context) => {
   const role = ctx.session?.user?.role
   return role === "RENTAL" || role === "ADMIN"
+}
+
+type BookingRentalScope = {
+  assignedToId?: string | null
+  item?: {
+    responsibleMembers?: Array<{ id: string }> | null
+  } | null
+}
+
+const canManageScopedBooking = (ctx: Context, booking: BookingRentalScope) => {
+  const user = ctx.session?.user
+  if (!user?.id) return false
+  if (user.role === "ADMIN") return true
+  if (user.role !== "RENTAL") return false
+  if (booking.assignedToId === user.id) return true
+  return Boolean(booking.item?.responsibleMembers?.some((member) => member.id === user.id))
+}
+
+const assertCanManageScopedBooking = (ctx: Context, booking: BookingRentalScope) => {
+  if (!canManageScopedBooking(ctx, booking)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Action not allowed." })
+  }
+}
+
+const assertUserNotesDoNotUseAdminBlockPrefix = (notes?: string | null) => {
+  if (usesAdminBlockPrefix(notes)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Notes cannot use reserved admin block syntax.",
+    })
+  }
+}
+
+const canTeamTransitionStatus = (
+  currentStatus: BookingStatus,
+  nextStatus: BookingStatus,
+  startDate: Date,
+  now: Date,
+) => {
+  switch (currentStatus) {
+    case BookingStatus.REQUESTED:
+      return nextStatus === BookingStatus.ACCEPTED || nextStatus === BookingStatus.DECLINED
+    case BookingStatus.ACCEPTED:
+      return (
+        nextStatus === BookingStatus.CANCELLED ||
+        (nextStatus === BookingStatus.BORROWED &&
+          startDate.getTime() <= now.getTime() + 4 * 60 * 60 * 1000)
+      )
+    case BookingStatus.BORROWED:
+      return (
+        nextStatus === BookingStatus.CANCELLED ||
+        (nextStatus === BookingStatus.COMPLETED && startDate <= now)
+      )
+    default:
+      return false
+  }
 }
 
 type NotificationRecipient = {
@@ -45,10 +101,14 @@ export const bookingsRouter = router({
       const where: Prisma.BookingWhereInput = {}
       if (input.status) where.status = input.status
 
-      // This is for "My Bookings" page.
-      // If 'all' is true AND user is rental/admin, it shows all bookings.
-      // Otherwise, it's restricted to the current user's bookings.
-      if (!(input.all && isRentalTeamMember(ctx))) {
+      if (input.all && ctx.session.user.role === "ADMIN") {
+        // Admins can review the full booking inventory.
+      } else if (input.all && ctx.session.user.role === "RENTAL") {
+        where.OR = [
+          { assignedToId: ctx.session.user.id },
+          { item: { responsibleMembers: { some: { id: ctx.session.user.id } } } },
+        ]
+      } else {
         where.userId = ctx.session.user.id
       }
 
@@ -74,6 +134,8 @@ export const bookingsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      assertUserNotesDoNotUseAdminBlockPrefix(input.notes)
+
       const startDate = parseISO(input.start)
       const endDate = parseISO(input.end)
       if (endDate <= startDate) {
@@ -218,6 +280,8 @@ export const bookingsRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      assertUserNotesDoNotUseAdminBlockPrefix(input.notes)
+
       const startDate = parseISO(input.start)
       const endDate = parseISO(input.end)
 
@@ -285,14 +349,19 @@ export const bookingsRouter = router({
       const booking = await ctx.prisma.booking.findUnique({
         where: { id: input.id },
         include: {
-          item: { select: { titleEn: true } },
+          item: {
+            select: {
+              titleEn: true,
+              responsibleMembers: { select: { id: true } },
+            },
+          },
           user: { select: { id: true, email: true, name: true } },
           assignedTo: { select: { id: true, email: true, name: true } },
         },
       })
       if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-      if (booking.userId !== ctx.session.user.id && !isRentalTeamMember(ctx)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Action not allowed." })
+      if (booking.userId !== ctx.session.user.id) {
+        assertCanManageScopedBooking(ctx, booking)
       }
       if (booking.status !== BookingStatus.REQUESTED && booking.status !== BookingStatus.ACCEPTED) {
         throw new TRPCError({
@@ -442,11 +511,17 @@ export const bookingsRouter = router({
 
       const booking = await ctx.prisma.booking.findUnique({
         where: { id: input.bookingId },
-        select: { id: true, notes: true },
+        select: {
+          id: true,
+          notes: true,
+          assignedToId: true,
+          item: { select: { responsibleMembers: { select: { id: true } } } },
+        },
       })
       if (!booking) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
       }
+      assertCanManageScopedBooking(ctx, booking)
 
       const noteEntry = [
         `Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):`,
@@ -483,14 +558,23 @@ export const bookingsRouter = router({
       }
       const booking = await ctx.prisma.booking.findUnique({
         where: { id: input.bookingId },
-        include: { item: { select: { titleEn: true } } },
+        include: {
+          item: {
+            select: {
+              titleEn: true,
+              responsibleMembers: { select: { id: true } },
+            },
+          },
+        },
       })
       if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+      assertCanManageScopedBooking(ctx, booking)
 
-      if (input.newStatus === BookingStatus.COMPLETED && booking.startDate > new Date()) {
+      const now = new Date()
+      if (!canTeamTransitionStatus(booking.status, input.newStatus, booking.startDate, now)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Cannot mark booking as completed before it begins.",
+          message: `Cannot change booking status from "${booking.status}" to "${input.newStatus}".`,
         })
       }
 

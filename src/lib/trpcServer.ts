@@ -14,7 +14,7 @@ export const createTRPCRouter = t.router
 export const publicProcedure = t.procedure
 
 const enforceAuth = t.middleware(({ ctx, next }) => {
-  if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" })
+  if (!ctx.session?.user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
   return next({ ctx: { ...ctx, session: ctx.session } })
 })
 

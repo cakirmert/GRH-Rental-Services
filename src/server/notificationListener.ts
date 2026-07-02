@@ -1,6 +1,7 @@
 import webpush from "web-push"
 import prisma from "@/lib/prismadb"
 import { notificationEmitter } from "@/lib/notifications"
+import { toWebPushSubscription } from "@/lib/pushSubscription"
 
 // Configure web push once
 webpush.setVapidDetails(
@@ -27,15 +28,14 @@ async function sendNotification(
   }
 
   for (const sub of subs) {
+    const subscription = toWebPushSubscription(sub)
+    if (!subscription) {
+      await prisma.pushSubscription.delete({ where: { id: sub.id } })
+      continue
+    }
+
     try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          expirationTime: sub.expirationTime ?? undefined,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-        JSON.stringify(payload),
-      )
+      await webpush.sendNotification(subscription, JSON.stringify(payload))
     } catch (err) {
       console.error(
         `[Push] Error sending push notification to ${sub.endpoint.substring(0, 50)}...`,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { isAdminBlockBooking, getAdminBlockReason } from "../adminBlock"
+import { isAdminBlockBooking, getAdminBlockReason, usesAdminBlockPrefix } from "../adminBlock"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 
 describe("adminBlock", () => {
@@ -59,6 +59,20 @@ describe("adminBlock", () => {
 
     it("returns null when notes are empty string", () => {
       expect(getAdminBlockReason("")).toBe(null)
+    })
+  })
+
+  describe("usesAdminBlockPrefix", () => {
+    it("returns true when user input starts with reserved admin syntax", () => {
+      expect(usesAdminBlockPrefix(`${ADMIN_BLOCK_PREFIX} hidden`)).toBe(true)
+    })
+
+    it("returns true when user input has leading whitespace before reserved admin syntax", () => {
+      expect(usesAdminBlockPrefix(`  ${ADMIN_BLOCK_PREFIX} hidden`)).toBe(true)
+    })
+
+    it("returns false for normal user notes", () => {
+      expect(usesAdminBlockPrefix("normal user notes")).toBe(false)
     })
   })
 })
