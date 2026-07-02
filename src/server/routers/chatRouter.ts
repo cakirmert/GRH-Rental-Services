@@ -116,8 +116,24 @@ export const chatRouter = router({
   markRead: protectedProcedure
     .input(z.object({ messageIds: z.string().array().min(1) }))
     .mutation(async ({ input, ctx }) => {
+      const messageIds = Array.from(new Set(input.messageIds))
+      const messages = await ctx.prisma.bookingChatMessage.findMany({
+        where: { id: { in: messageIds } },
+        select: {
+          id: true,
+          thread: { select: { bookingId: true } },
+        },
+      })
+
+      if (messages.length !== messageIds.length) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+
+      const bookingIds = Array.from(new Set(messages.map((message) => message.thread.bookingId)))
+      await Promise.all(bookingIds.map((bookingId) => assertCanAccessBooking(ctx, bookingId)))
+
       await Promise.all(
-        input.messageIds.map((messageId) =>
+        messageIds.map((messageId) =>
           ctx.prisma.bookingChatRead.upsert({
             where: { userId_messageId: { userId: ctx.session.user.id, messageId } },
             update: {},
@@ -152,12 +168,20 @@ async function createNotifications(ctx: Context, data: NotificationCreateData[])
 async function assertCanAccessBooking(ctx: Context, bookingId: string) {
   const b = await ctx.prisma.booking.findUnique({
     where: { id: bookingId },
-    select: { userId: true, assignedToId: true },
+    select: {
+      userId: true,
+      assignedToId: true,
+      item: { select: { responsibleMembers: { select: { id: true } } } },
+    },
   })
   if (!b) throw new TRPCError({ code: "NOT_FOUND" })
   const me = ctx.session?.user
-  const rental = me?.role === "RENTAL" || me?.role === "ADMIN"
-  const allowed = rental || b.userId === me?.id || b.assignedToId === me?.id
+  const admin = me?.role === "ADMIN"
+  const scopedRental =
+    me?.role === "RENTAL" &&
+    (b.assignedToId === me.id ||
+      b.item?.responsibleMembers?.some((member) => member.id === me.id))
+  const allowed = admin || scopedRental || b.userId === me?.id || b.assignedToId === me?.id
   if (!allowed) throw new TRPCError({ code: "FORBIDDEN" })
 }
 

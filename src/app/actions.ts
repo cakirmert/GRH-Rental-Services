@@ -2,13 +2,15 @@
 
 import prisma from "@/lib/prismadb"
 import { auth } from "../../auth"
+import { assertValidPushSubscription } from "@/lib/pushSubscription"
 
 // Save subscription for current user
 export async function subscribeUser(
   sub: PushSubscription & { keys: { p256dh: string; auth: string } },
 ) {
   const session = await auth()
-  if (!session?.user) throw new Error("Unauthorized")
+  if (!session?.user?.id) throw new Error("Unauthorized")
+  assertValidPushSubscription(sub)
 
   await prisma.pushSubscription.upsert({
     where: { endpoint: sub.endpoint },
@@ -31,7 +33,7 @@ export async function subscribeUser(
 
 export async function unsubscribeUser(endpoint: string) {
   const session = await auth()
-  if (!session?.user) throw new Error("Unauthorized")
+  if (!session?.user?.id) throw new Error("Unauthorized")
   await prisma.pushSubscription.deleteMany({ where: { userId: session.user.id, endpoint } })
   return { success: true }
 }

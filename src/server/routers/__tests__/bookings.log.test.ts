@@ -20,6 +20,7 @@ async function createCaller() {
     id: "b1",
     userId: "u1",
     assignedToId: null,
+    status: BookingStatus.REQUESTED,
     notes: null,
     item: { titleEn: "Item" },
     user: { id: "u1", email: "test@example.com", name: "Test User" },

@@ -190,7 +190,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     async session({ session, token }) {
-      if (token.sub) {
+      if (token.sub && session.user) {
         session.user.id = token.sub
         session.user.role = token.role as string
         session.user.isSuperAdmin = Boolean(token.isSuperAdmin)
@@ -200,12 +200,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           select: { name: true, email: true, role: true, isSuperAdmin: true },
         })
 
-        if (dbUser) {
-          session.user.name = dbUser.name
-          session.user.email = dbUser.email
-          session.user.role = dbUser.role
-          session.user.isSuperAdmin = dbUser.isSuperAdmin
+        if (!dbUser) {
+          session.user.id = ""
+          session.user.name = null
+          session.user.email = ""
+          session.user.role = undefined
+          session.user.isSuperAdmin = false
+          return session
         }
+
+        session.user.name = dbUser.name
+        session.user.email = dbUser.email
+        session.user.role = dbUser.role
+        session.user.isSuperAdmin = dbUser.isSuperAdmin
       }
       return session
     },
