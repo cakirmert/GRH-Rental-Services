@@ -8,9 +8,14 @@ import { ArrowLeft, Send, Check } from "lucide-react"
 import clsx from "clsx"
 import { useSession } from "next-auth/react"
 import { trpc } from "@/utils/trpc"
+import {
+  formatChatMessageDate,
+  formatChatMessageTime,
+  shouldShowChatDateDivider,
+} from "@/utils/chatDates"
 import { useI18n } from "@/locales/i18n"
 import { toast } from "@/components/ui/use-toast"
-import { useRef, useEffect, useMemo, useState } from "react"
+import { Fragment, useRef, useEffect, useMemo, useState } from "react"
 import { Spinner } from "@/components/ui/spinner"
 
 interface Props {
@@ -25,7 +30,7 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
   const { data: session } = useSession()
   const meId = session?.user.id
 
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
 
   const [body, setBody] = useState("")
 
@@ -69,9 +74,7 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
   // unread → mark read
   const unreadIds = useMemo(() => {
     if (!meId) return []
-    return messages
-      .filter((m) => m.sender.id !== meId && m.reads.length === 0)
-      .map((m) => m.id)
+    return messages.filter((m) => m.sender.id !== meId && m.reads.length === 0).map((m) => m.id)
   }, [messages, meId])
 
   useEffect(() => {
@@ -165,45 +168,60 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
                 </div>
               )}
 
-              {messages.map((m) => {
+              {messages.map((m, index) => {
                 const isMe = m.sender.id === meId
+                const dateLabel = shouldShowChatDateDivider(
+                  m.createdAt,
+                  messages[index - 1]?.createdAt,
+                )
+                  ? formatChatMessageDate(m.createdAt, locale, {
+                      today: t("Chat.today"),
+                      yesterday: t("Chat.yesterday"),
+                    })
+                  : null
+                const timeLabel = formatChatMessageTime(m.createdAt, locale)
+
                 return (
-                  <div
-                    key={m.id}
-                    className={clsx(
-                      "max-w-[85%] px-4 py-3 text-sm rounded-2xl shadow-sm break-words",
-                      isMe
-                        ? "ml-auto rounded-br-md bg-primary text-primary-foreground"
-                        : "rounded-bl-md border bg-card text-card-foreground",
-                    )}
-                  >
-                    {!isMe && (
-                      <div className="mb-2 text-xs font-semibold text-primary">
-                        {m.sender.name || "User"}
+                  <Fragment key={m.id}>
+                    {dateLabel && (
+                      <div className="flex justify-center">
+                        <span className="rounded-full border bg-background/95 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+                          {dateLabel}
+                        </span>
                       </div>
                     )}
 
-                    <div className="max-h-60 overflow-y-auto pr-1 whitespace-pre-wrap leading-relaxed">
-                      {m.body}
-                    </div>
+                    <div
+                      className={clsx(
+                        "max-w-[85%] px-4 py-3 text-sm rounded-2xl shadow-sm break-words",
+                        isMe
+                          ? "ml-auto rounded-br-md bg-primary text-primary-foreground"
+                          : "rounded-bl-md border bg-card text-card-foreground",
+                      )}
+                    >
+                      {!isMe && (
+                        <div className="mb-2 text-xs font-semibold text-primary">
+                          {m.sender.name || "User"}
+                        </div>
+                      )}
 
-                    <div className="mt-2 flex justify-between text-[10px] opacity-70">
-                      <span>
-                        {typeof window !== "undefined"
-                          ? new Date(m.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "--:--"}
-                      </span>
-                      {isMe &&
-                        (m.reads.length ? (
-                          <Check className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                        ))}
+                      <div className="max-h-60 overflow-y-auto pr-1 whitespace-pre-wrap leading-relaxed">
+                        {m.body}
+                      </div>
+
+                      {(timeLabel || isMe) && (
+                        <div className="mt-2 flex items-center justify-between gap-2 text-[10px] opacity-70">
+                          {timeLabel ? <span>{timeLabel}</span> : <span aria-hidden="true" />}
+                          {isMe &&
+                            (m.reads.length ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                            ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </Fragment>
                 )
               })}
 
