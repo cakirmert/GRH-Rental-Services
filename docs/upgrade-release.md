@@ -24,6 +24,16 @@ already-running site. The runner overrides live integrations and never selects
 a database from the production dotenv files. Starting a process still requires
 permission from the execution environment; the script does not change that policy.
 
+For manual local sign-in, request an email code with your normal account address.
+The isolated runner prints the code in its terminal as `[local-otp]`; no email is
+sent. Normal expiry, rate limits, and single-use verification still apply. Console
+codes require the explicit local-runner marker, disabled outbound integrations,
+loopback database, localhost origin/RP ID, and no hosted deployment metadata.
+They are never returned in the HTTP response. A production passkey is bound to
+`grh-rentals.de` and cannot authenticate on localhost. After local OTP sign-in,
+register a separate local test passkey if desired; the production credential is
+unchanged.
+
 Use an explicit process-level `DATABASE_URL` pointing to disposable PostgreSQL.
 Do not copy the production environment wholesale into a test deployment. Set
 `DISABLE_OUTBOUND=true` to suppress email, push, uploads, and scheduled jobs.

@@ -1,4 +1,5 @@
-import { transporter, CONTACT_EMAIL, isDev } from "@/lib/mail"
+import { transporter, EMAIL_FROM, EMAIL_REPLY_TO, isDev } from "@/lib/mail"
+import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
 
 interface SendChatMessageEmailArgs {
   to: { email: string; name?: string | null }
@@ -34,6 +35,7 @@ export async function sendChatMessageEmail({
   const preview = messagePreview.length > 200 ? messagePreview.substring(0, 200) + "…" : messagePreview
 
   const subject = `New message from ${senderName} — ${itemTitle}`
+  const chatUrl = emailAppUrl(bookingId)
 
   const text = [
     greeting,
@@ -42,7 +44,9 @@ export async function sendChatMessageEmail({
     "",
     `"${preview}"`,
     "",
-    "Log in to GRH Rental Services to view and reply.",
+    `View and reply in your booking's app chat: ${chatUrl}`,
+    "",
+    automatedEmailNotice,
     "",
     "- GRH Rental Services",
   ].join("\n")
@@ -62,11 +66,11 @@ export async function sendChatMessageEmail({
               <p style="margin: 0; font-size: 15px; color: #111827; line-height: 1.6; white-space: pre-line;">${escapeHtml(preview)}</p>
             </div>
             <div style="margin-top: 28px; text-align: center;">
-              <p style="margin: 0; color: #4b5563; font-size: 14px;">Log in to GRH Rental Services to view the full conversation and reply.</p>
+              <p style="margin: 0; color: #4b5563; font-size: 14px;"><a href="${escapeHtml(chatUrl)}" style="color: #1d4ed8;">Open your booking chat</a> to view the full conversation and reply in the app.</p>
             </div>
           </div>
           <div style="padding: 20px 36px 32px; border-top: 1px solid #f3f4f6; text-align: center;">
-            <p style="margin: 0; font-size: 13px; color: #9ca3af;">Sent by GRH Rental Services</p>
+            <p style="margin: 0; font-size: 13px; color: #6b7280;">${automatedEmailNotice}</p>
           </div>
         </div>
       </div>
@@ -75,7 +79,8 @@ export async function sendChatMessageEmail({
 
   await transporter.sendMail({
     to: to.email,
-    from: CONTACT_EMAIL,
+    from: EMAIL_FROM,
+    replyTo: EMAIL_REPLY_TO,
     subject,
     text,
     html,

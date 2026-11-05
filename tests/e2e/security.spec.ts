@@ -1,12 +1,13 @@
 import { test, expect } from "@playwright/test"
 import { Client } from "pg"
 import { createHash, createHmac, randomUUID } from "node:crypto"
+import { localDatabaseUrl } from "../../scripts/local-database.mjs"
 
 test("OTP, real WebAuthn registration/login, revocation and public rendering", async ({ page, context }) => {
-  const url = process.env.GRH_TEST_DATABASE_URL
-  if (!url || !["localhost", "127.0.0.1"].includes(new URL(url).hostname)) {
-    throw new Error("Use an isolated local GRH_TEST_DATABASE_URL")
+  if (process.env.GRH_LOCAL_TEST !== "true" || process.env.DISABLE_OUTBOUND !== "true") {
+    throw new Error("Run browser tests through scripts/local-site.mjs e2e in explicit local test mode")
   }
+  const url = localDatabaseUrl(process.env.GRH_TEST_DATABASE_URL)
   const email = "browser-" + randomUUID() + "@example.test"
   const code = "123456"
   const secret = process.env.AUTH_SECRET

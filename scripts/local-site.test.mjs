@@ -51,6 +51,8 @@ describe("local website runner", () => {
     "https://localhost/local_test",
     "postgresql://localhost/",
     `${localUrl}?host=remote.example.com`,
+    `${localUrl}?%68ost=remote.example.com`,
+    `${localUrl}?host=localhost&host=remote.example.com`,
     `${localUrl}?hostaddr=192.0.2.1`,
     `${localUrl}?sslmode=disable&host=remote.example.com`,
     `${localUrl}?options=-csearch_path=another_schema`,
@@ -105,11 +107,13 @@ describe("local website runner", () => {
     expect(env.PATH).toBe("/tools")
     expect(env.__NEXT_PROCESSED_ENV).toBe("true")
     expect(env.DISABLE_OUTBOUND).toBe("true")
+    expect(env.GRH_LOCAL_TEST).toBe("true")
     for (const key of [
       "BLOB_READ_WRITE_TOKEN",
       "EMAIL_PASSWORD",
       "VAPID_PRIVATE_KEY",
       "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+      "TURNSTILE_SECRET_KEY",
     ]) {
       expect(env[key]).toBe("")
     }
@@ -128,8 +132,20 @@ describe("local website runner", () => {
       expect(env.NEXTAUTH_URL).toBe(env.AUTH_URL)
       expect(env.ORIGIN).toBe(env.AUTH_URL)
       expect(env.RP_ID).toBe("localhost")
+      expect(env.GRH_LOCAL_TEST).toBe("true")
     },
   )
+
+  it.each([
+    ["VERCEL", "1"],
+    ["VERCEL_ENV", "production"],
+    ["VERCEL_ENV", "preview"],
+    ["VERCEL_TARGET_ENV", "staging"],
+    ["VERCEL_URL", "deployment.vercel.app"],
+    ["VERCEL_PROJECT_PRODUCTION_URL", "production.vercel.app"],
+  ])("refuses to conceal hosted metadata %s", (name, value) => {
+    expect(() => localEnvironment(local, { [name]: value }, "start")).toThrow("Vercel deployment")
+  })
 
   it("refuses arbitrary commands and short secrets", () => {
     expect(() => localEnvironment(local, {}, "seed")).toThrow("Choose a local command")

@@ -1,5 +1,6 @@
 import { format } from "date-fns"
-import { transporter, CONTACT_EMAIL, isDev } from "@/lib/mail"
+import { transporter, EMAIL_FROM, EMAIL_REPLY_TO, isDev } from "@/lib/mail"
+import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
 
 interface Recipient {
   email: string
@@ -52,6 +53,7 @@ export async function sendBookingRequestEmail({
   const startLabel = format(booking.startDate, "PPpp")
   const endLabel = format(booking.endDate, "PPpp")
   const notes = booking.notes?.trim()
+  const appUrl = emailAppUrl()
 
   const textLines = [
     `Hello${to.name ? ` ${to.name.split(" ")[0]}` : ""},`,
@@ -66,7 +68,9 @@ export async function sendBookingRequestEmail({
 
   textLines.push(
     "",
-    "Please review the request in the rental dashboard.",
+    `Please review the request in the rental dashboard: ${appUrl}`,
+    "",
+    automatedEmailNotice,
     "",
     "– GRH Rental Services",
   )
@@ -104,11 +108,11 @@ export async function sendBookingRequestEmail({
     }
           </div>
           <p style="margin: 24px 0 0; color: #475569; line-height: 1.6;">
-            Review the request in the rental dashboard and respond when ready.
+            <a href="${escapeHtml(appUrl)}" style="color: #1d4ed8;">Open the app</a> to review the request in the rental dashboard and respond when ready.
           </p>
         </div>
         <div style="padding: 20px 32px; border-top: 1px solid #f1f5f9; text-align: center;">
-          <p style="margin: 0; font-size: 13px; color: #94a3b8;">Sent automatically by GRH Rental Services</p>
+          <p style="margin: 0; font-size: 13px; color: #64748b;">${automatedEmailNotice}</p>
         </div>
       </div>
     </div>
@@ -120,7 +124,8 @@ export async function sendBookingRequestEmail({
 
   await transporter.sendMail({
     to: to.email,
-    from: CONTACT_EMAIL,
+    from: EMAIL_FROM,
+    replyTo: EMAIL_REPLY_TO,
     subject,
     text,
     html,

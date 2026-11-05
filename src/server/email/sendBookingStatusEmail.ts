@@ -1,6 +1,7 @@
 import { format } from "date-fns"
 import { BookingStatus } from "@prisma/client"
-import { transporter, CONTACT_EMAIL, isDev } from "@/lib/mail"
+import { transporter, EMAIL_FROM, EMAIL_REPLY_TO, isDev } from "@/lib/mail"
+import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
 
 interface Recipient {
   email: string
@@ -139,6 +140,7 @@ function buildEmailContent({
   const endLabel = format(booking.endDate, "PPpp")
   const notesText = notes?.trim()
   const handledByText = handledBy?.trim()
+  const appUrl = emailAppUrl()
 
   const textLines = [
     greeting,
@@ -157,7 +159,8 @@ function buildEmailContent({
 
   textLines.push(
     "",
-    "If you have any questions, please reply to this email.",
+    automatedEmailNotice,
+    `Open the app: ${appUrl}`,
     "",
     "- GRH Rental Services",
   )
@@ -198,7 +201,7 @@ function buildEmailContent({
             ${formatNotesHtml(notes)}
             <div style="margin-top: 32px; padding: 24px 20px; border-radius: 16px; background: #eff6ff; text-align: left;">
               <p style="margin: 0 0 4px; font-weight: 600; color: #1d4ed8;">Need help?</p>
-              <p style="margin: 0; color: #1f2937; line-height: 1.6;">Reply to this email and our rental team will be happy to assist you.</p>
+              <p style="margin: 0; color: #1f2937; line-height: 1.6;">${automatedEmailNotice} <a href="${escapeHtml(appUrl)}" style="color: #1d4ed8;">Open the app</a>.</p>
             </div>
           </div>
           <div style="padding: 20px 36px 32px; border-top: 1px solid #f3f4f6; text-align: center;">
@@ -235,7 +238,8 @@ export async function sendBookingStatusEmail({
 
   await transporter.sendMail({
     to: to.email,
-    from: CONTACT_EMAIL,
+    from: EMAIL_FROM,
+    replyTo: EMAIL_REPLY_TO,
     subject,
     text,
     html,

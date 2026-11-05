@@ -4,36 +4,14 @@ import { createRequire } from "node:module"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { parseEnv } from "node:util"
+import { localDatabaseUrl } from "./local-database.mjs"
+
+export { localDatabaseUrl } from "./local-database.mjs"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 const require = createRequire(import.meta.url)
 const modes = ["build", "start", "dev", "test", "e2e", "check"]
 const origin = "http://localhost:3100"
-
-export function localDatabaseUrl(value) {
-  let url
-  try {
-    url = new URL(value ?? "")
-  } catch {
-    throw new Error("Set GRH_TEST_DATABASE_URL to a named loopback PostgreSQL database.")
-  }
-  if (
-    !["postgres:", "postgresql:"].includes(url.protocol) ||
-    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
-    !url.pathname ||
-    url.pathname === "/" ||
-    url.hash
-  ) {
-    throw new Error("GRH_TEST_DATABASE_URL must name a loopback PostgreSQL database.")
-  }
-  for (const [key, value] of url.searchParams) {
-    if (key !== "sslmode" || value !== "disable") {
-      throw new Error("Local mode refuses database connection URL overrides.")
-    }
-  }
-  url.search = ""
-  return url.toString()
-}
 
 export function localImageOrigin(value) {
   if (!value) return ""
@@ -57,6 +35,9 @@ export function localImageOrigin(value) {
 
 export function localEnvironment(fileValues, inherited, mode) {
   if (!modes.includes(mode)) throw new Error(`Choose a local command: ${modes.join(", ")}.`)
+  if (["VERCEL", "VERCEL_ENV", "VERCEL_TARGET_ENV", "VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL"].some(name => inherited[name])) {
+    throw new Error("Local test mode cannot run in a Vercel deployment environment.")
+  }
   const databaseUrl = localDatabaseUrl(
     inherited.GRH_TEST_DATABASE_URL ?? fileValues.GRH_TEST_DATABASE_URL,
   )
@@ -100,6 +81,7 @@ export function localEnvironment(fileValues, inherited, mode) {
     ORIGIN: origin,
     PORT: "3100",
     DISABLE_OUTBOUND: "true",
+    GRH_LOCAL_TEST: "true",
     VERCEL: "",
     VERCEL_ENV: "",
     VERCEL_URL: "",

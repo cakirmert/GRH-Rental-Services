@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { transporter, isDev, CONTACT_EMAIL } from "@/lib/mail"
+import { transporter, isDev, CONTACT_EMAIL, EMAIL_FROM } from "@/lib/mail"
 import { z } from "zod"
 import { consumeBudget, requestAddress } from "@/lib/auth/state"
 
@@ -74,7 +74,8 @@ export async function POST(req: Request) {
     } else {
       await transporter!.sendMail({
         to: CONTACT_EMAIL,
-        from: CONTACT_EMAIL,
+        from: EMAIL_FROM,
+        replyTo: email,
         subject: `Contact form: ${sanitizedIssue}`,
         text,
       })

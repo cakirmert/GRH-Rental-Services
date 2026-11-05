@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
-import { transporter, isDev, CONTACT_EMAIL } from "../../../../lib/mail"
+import { transporter, isDev, EMAIL_FROM, EMAIL_REPLY_TO } from "../../../../lib/mail"
 import { issueOtp, parseMailbox } from "@/lib/auth/otp"
 import { consumeBudget, requestAddress } from "@/lib/auth/state"
+import { localOtpLoggingEnabled } from "@/lib/auth/local-otp"
+import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
 
 export async function POST(req: Request) {
   try {
@@ -96,7 +98,8 @@ export async function POST(req: Request) {
 
     // Send email
     const host = new URL(process.env.ORIGIN || req.url).host
-    const text = `Your ${host} verification code is ${code}`
+    const appUrl = emailAppUrl()
+    const text = `Your ${host} verification code is ${code}\n\nEnter this code in the app to sign in: ${appUrl}\n\n${automatedEmailNotice}`
     const html = `
       <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -109,15 +112,17 @@ export async function POST(req: Request) {
         </div>
         <p style="color: #444; font-size: 1rem; margin-bottom: 0;">Enter this code in the app to sign in.<br>For your security, this code will expire soon.</p>
         <p style="color: #888; font-size: 0.95rem; margin-top: 24px; text-align: center;">If you did not request this, you can ignore this email.</p>
+        <p style="color: #666; font-size: 0.9rem; margin-top: 24px;">${automatedEmailNotice} <a href="${appUrl}" style="color: #1a73e8;">Open the app</a>.</p>
       </div>
     `
 
     if (isDev) {
-      // skip sending mail in dev
+      if (localOtpLoggingEnabled()) console.info(`[local-otp] ${key}: ${code}`)
     } else {
       await transporter!.sendMail({
         to: key,
-        from: CONTACT_EMAIL,
+        from: EMAIL_FROM,
+        replyTo: EMAIL_REPLY_TO,
         subject: `Your ${host} verification code`,
         text,
         html,

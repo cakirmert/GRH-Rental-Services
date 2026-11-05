@@ -28,6 +28,7 @@ vi.mock("@/lib/mail", () => ({
   },
   isDev: false,
   CONTACT_EMAIL: "contact@example.com",
+  EMAIL_FROM: "automated@example.com",
 }))
 
 describe("POST /api/contact", () => {
@@ -130,8 +131,23 @@ describe("POST /api/contact", () => {
 
     expect(transporter!.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
+        to: "contact@example.com",
+        from: "automated@example.com",
+        replyTo: "test@example.com",
         subject: "Contact form: Line1 Bcc: victim@example.com",
       }),
     )
   })
+
+  it.each(["one@example.com,two@example.com", "one@example.com\r\nBcc: two@example.com"])(
+    "rejects a submitter address that cannot safely be a reply destination: %j", async (email) => {
+      const { transporter } = await import("@/lib/mail")
+      const req = {
+        headers: new Headers(),
+        json: async () => ({ name: "Test User", email, room: "101", issue: "test", message: "hello" }),
+      } as unknown as Request
+      expect((await POST(req)).status).toBe(400)
+      expect(transporter!.sendMail).not.toHaveBeenCalled()
+    },
+  )
 })
