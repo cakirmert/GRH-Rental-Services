@@ -1,6 +1,13 @@
 "use client"
 
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react"
 import { RELEASE_ID, type ReleaseMode } from "@/constants/release"
 
 const storageKey = `grh-interface:${RELEASE_ID}`
@@ -11,8 +18,10 @@ function readMode(): ReleaseMode {
   if (volatileMode) return volatileMode
   try {
     const stored = localStorage.getItem(storageKey)
-    return stored === "preview" ? "preview" : "classic"
-  } catch { return "classic" }
+    return stored === "classic" ? "classic" : "preview"
+  } catch {
+    return "preview"
+  }
 }
 
 function subscribe(notify: () => void) {
@@ -27,15 +36,20 @@ function subscribe(notify: () => void) {
   }
 }
 
-const ReleaseContext = createContext<{ mode: ReleaseMode; setMode: (mode: ReleaseMode) => void } | null>(null)
+const ReleaseContext = createContext<{
+  mode: ReleaseMode
+  setMode: (mode: ReleaseMode) => void
+} | null>(null)
 
 export function ReleaseProvider({ children }: { children: ReactNode }) {
-  const mode = useSyncExternalStore(subscribe, readMode, () => "classic" as const)
+  const mode = useSyncExternalStore(subscribe, readMode, () => "preview" as const)
   const setMode = useCallback((next: ReleaseMode) => {
     try {
       localStorage.setItem(storageKey, next)
       volatileMode = null
-    } catch { volatileMode = next }
+    } catch {
+      volatileMode = next
+    }
     window.dispatchEvent(new Event(changeEvent))
   }, [])
   const value = useMemo(() => ({ mode, setMode }), [mode, setMode])

@@ -98,7 +98,7 @@ afterEach(() => {
 })
 
 describe("calendar navigation", () => {
-  it("keeps classic as the default and switches back from the preview agenda without leaking view state", async () => {
+  it("starts with the new agenda and switches through classic without leaking view state", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
@@ -111,12 +111,12 @@ describe("calendar navigation", () => {
         </ReleaseProvider>
       </I18nProvider>,
     )
-    expect(screen.queryByRole("button", { name: "Agenda" })).toBeNull()
-    await userEvent.click(screen.getByRole("button", { name: "Switch interface" }))
     expect(screen.getByRole("button", { name: "Agenda" }).getAttribute("aria-pressed")).toBe("true")
     await userEvent.click(screen.getByRole("button", { name: "Switch interface" }))
     expect(screen.queryByRole("button", { name: "Agenda" })).toBeNull()
     expect(screen.getByRole("button", { name: "Week" })).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Switch interface" }))
+    expect(screen.getByRole("button", { name: "Agenda" }).getAttribute("aria-pressed")).toBe("true")
   })
   it("moves by the active view, jumps to a local calendar date, and returns to today", async () => {
     const user = userEvent.setup()

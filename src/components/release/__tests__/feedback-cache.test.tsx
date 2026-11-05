@@ -14,7 +14,10 @@ const { account, fetchMine, cacheKey } = vi.hoisted(() => ({
 }))
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { id: account.id, role: account.role } }, status: "authenticated" }),
+  useSession: () => ({
+    data: { user: { id: account.id, role: account.role } },
+    status: "authenticated",
+  }),
 }))
 vi.mock("@/contexts/AuthModalContext", () => ({ useAuthModal: () => ({ openAuthModal: vi.fn() }) }))
 vi.mock("@/contexts/ReleaseContext", () => ({ useRelease: () => ({ mode: "classic" }) }))

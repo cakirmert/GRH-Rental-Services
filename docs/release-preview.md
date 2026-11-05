@@ -1,22 +1,27 @@
-# Optional release preview
+# Calendar update and feedback
 
-The rollout has two stages. First, deploy the verified security/dependency/backend
-upgrade with the familiar interface. After that is stable, publish the optional
-interface preview and its feedback storage. The preview switch never selects an
-older backend or database.
+The backend-only branch remains available for a staged rollout of the verified
+security/dependency upgrade. The complete release also contains the calendar
+update and its feedback storage. Calendar choices never select an older backend
+or database.
 
-Classic is the default. Only rental team members and administrators see the
-preview controls and feedback form. Regular users retain the familiar interface.
-The footer lets eligible staff opt into the release preview
-and return to Classic at any time. Both use the same accounts, passkeys, booking
-records, authorization rules, and updated dependencies. Classic preserves the
-earlier calendar layout; Preview adds localized navigation, date jump, a mobile
+The new calendar is the default. Only rental team members and administrators see
+the calendar feedback and view controls. Regular users retain the familiar interface.
+The footer lets eligible staff give feedback or choose the classic calendar.
+Switching to classic asks for a nonblank explanation and saves it before switching.
+If saving fails, an explicit escape still allows classic without saving; the reason
+stays only in the open form and is cleared when accounts change. Returning to the
+new calendar is immediate. Both use the same accounts, passkeys, booking records,
+authorization rules, and updated dependencies. Classic preserves the earlier
+calendar layout; the new calendar adds localized navigation, date jump, a mobile
 agenda, clearer status labels, and overlapping booking layout. The choice is
 stored locally for this release, not used as an authorization decision.
 
 Rental team members and administrators can submit or update one feedback response for version
 `0.2.0-rc.1`: interface choice, experience rating, and an optional comment. The
-footer explains storage and visibility before submission. Administrators can
+footer explains storage and visibility before submission. A classic-switch reason
+replaces the current response with the classic view and a mixed rating; the form
+explains this before submission. Administrators can
 open **Feedback overview** there to see totals and recent comments. Other
 eligible staff can read only their own response. Role eligibility is rechecked
 against the database before submission or reading. The cache key includes the session account ID,
