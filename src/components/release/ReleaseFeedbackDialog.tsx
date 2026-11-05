@@ -42,21 +42,22 @@ function FeedbackPanel({ onClose }: { onClose: () => void }) {
   const copy = releaseCopy[locale]
   const userId = session?.user?.id ?? ""
   const signedIn = Boolean(userId)
+  const canGiveFeedback = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
   const query = trpc.releaseFeedback.getMine.useQuery({ releaseId: RELEASE_ID, userId }, {
-    enabled: signedIn, refetchOnMount: "always", refetchOnWindowFocus: false,
+    enabled: signedIn && canGiveFeedback, refetchOnMount: "always", refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })
   // Fetch once on opening before initializing editable state; later refetches must
   // not reset a draft. Account identity is part of the server-validated cache key.
-  if (status === "loading" || (signedIn && (query.isPending || !query.isFetchedAfterMount))) {
-    return <p role="status">{copy.loading}</p>
-  }
+  if (status === "loading") return <p role="status">{copy.loading}</p>
   if (!signedIn) return (
     <div className="space-y-4 py-3">
       <p className="text-sm text-muted-foreground">{copy.signInDetail}</p>
       <Button onClick={() => { onClose(); openAuthModal() }}>{copy.signIn}</Button>
     </div>
   )
+  if (!canGiveFeedback) return <p className="text-sm text-muted-foreground">{copy.staffOnly}</p>
+  if (query.isPending || !query.isFetchedAfterMount) return <p role="status">{copy.loading}</p>
   if (query.isError) return (
     <div className="space-y-3"><p role="alert">{copy.error}</p>
       <Button variant="outline" onClick={() => void query.refetch()}>{copy.retry}</Button>

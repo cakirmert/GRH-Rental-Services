@@ -18,6 +18,7 @@ export default function ReleaseControls() {
   const copy = releaseCopy[locale]
   const { data: session } = useSession()
   const [dialog, setDialog] = useState<"submit" | "summary" | null>(null)
+  if (session?.user?.role !== "RENTAL" && session?.user?.role !== "ADMIN") return null
   return (
     <section aria-labelledby="release-title" className="mt-8 rounded-xl border bg-background/70 p-5 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">

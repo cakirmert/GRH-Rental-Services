@@ -8,13 +8,13 @@ type Feedback = { sentiment: "good"; interfaceMode: "classic"; message: string }
 type Input = { releaseId: string; userId: string }
 
 const { account, fetchMine, cacheKey } = vi.hoisted(() => ({
-  account: { id: "account-a" },
+  account: { id: "account-a", role: "RENTAL" },
   fetchMine: vi.fn<(input: Input) => Promise<Feedback | null>>(),
   cacheKey: (input: Input) => ["releaseFeedback.getMine", input] as const,
 }))
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { id: account.id, role: "USER" } }, status: "authenticated" }),
+  useSession: () => ({ data: { user: { id: account.id, role: account.role } }, status: "authenticated" }),
 }))
 vi.mock("@/contexts/AuthModalContext", () => ({ useAuthModal: () => ({ openAuthModal: vi.fn() }) }))
 vi.mock("@/contexts/ReleaseContext", () => ({ useRelease: () => ({ mode: "classic" }) }))
@@ -75,6 +75,7 @@ function dialog() {
 
 beforeEach(() => {
   account.id = "account-a"
+  account.role = "RENTAL"
   fetchMine.mockReset()
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
 })
@@ -84,6 +85,16 @@ afterEach(() => {
 })
 
 describe("release feedback cache privacy and draft lifecycle", () => {
+  it("hides existing feedback immediately when staff access is removed", async () => {
+    fetchMine.mockResolvedValue(feedback("Staff draft"))
+    const view = render(dialog())
+    await screen.findByRole("textbox")
+    account.role = "USER"
+    view.rerender(dialog())
+    expect(screen.queryByRole("textbox")).toBeNull()
+    expect(screen.getByText(/available to rental team members/)).toBeTruthy()
+  })
+
   it("never shows the previous account's cached feedback after a live identity change", async () => {
     const first = deferred<Feedback>()
     const second = deferred<Feedback>()

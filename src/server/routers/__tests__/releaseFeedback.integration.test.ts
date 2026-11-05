@@ -21,7 +21,7 @@ integration("release feedback persistence in disposable PostgreSQL", () => {
     process.env.DATABASE_URL = target
     prisma = (await import("@/lib/prismadb")).default
     router = (await import("../releaseFeedbackRouter")).releaseFeedbackRouter
-    await prisma.user.createMany({ data: userIds.map(id => ({ id, email: `${id}@example.test` })) })
+    await prisma.user.createMany({ data: userIds.map(id => ({ id, email: `${id}@example.test`, role: "RENTAL" as const })) })
   })
 
   afterAll(async () => {
@@ -37,7 +37,7 @@ integration("release feedback persistence in disposable PostgreSQL", () => {
   function asUser(id: string) {
     return router.createCaller({
       prisma,
-      session: { user: { id, email: `${id}@example.test`, role: "USER" }, expires: "2026-12-31" },
+      session: { user: { id, email: `${id}@example.test`, role: "RENTAL" }, expires: "2026-12-31" },
       req: new Request("http://localhost/api/trpc"),
     })
   }
@@ -61,6 +61,18 @@ integration("release feedback persistence in disposable PostgreSQL", () => {
     await expect(asUser(userIds[1]).getMine({ releaseId: RELEASE_ID, userId: userIds[0] }))
       .rejects.toMatchObject({ code: "FORBIDDEN" })
     expect(await asUser(userIds[0]).getMine({ releaseId: RELEASE_ID, userId: userIds[0] })).toMatchObject({ id: feedbackId, message: prefix })
+  })
+
+  it("rejects a demoted account despite an existing rental session", async () => {
+    const stale = asUser(userIds[1])
+    await prisma.user.update({ where: { id: userIds[1] }, data: { role: "USER" } })
+    await expect(stale.getMine({ releaseId: RELEASE_ID, userId: userIds[1] }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(stale.submit({ releaseId: RELEASE_ID, interfaceMode: "preview", sentiment: "good" }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(await prisma.releaseFeedback.count({ where: { userId: userIds[1] } })).toBe(0)
+    const { digest } = await import("@/lib/auth/state")
+    expect(await prisma.authState.findUnique({ where: { key: `rate:release-feedback-user:${digest(userIds[1])}` } })).toBeNull()
   })
 
   it("preserves feedback but removes the account link on deletion", async () => {

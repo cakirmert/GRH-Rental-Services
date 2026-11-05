@@ -5,18 +5,21 @@ upgrade with the familiar interface. After that is stable, publish the optional
 interface preview and its feedback storage. The preview switch never selects an
 older backend or database.
 
-Classic is the default. The footer lets each browser opt into the release preview
+Classic is the default. Only rental team members and administrators see the
+preview controls and feedback form. Regular users retain the familiar interface.
+The footer lets eligible staff opt into the release preview
 and return to Classic at any time. Both use the same accounts, passkeys, booking
 records, authorization rules, and updated dependencies. Classic preserves the
 earlier calendar layout; Preview adds localized navigation, date jump, a mobile
 agenda, clearer status labels, and overlapping booking layout. The choice is
 stored locally for this release, not used as an authorization decision.
 
-Signed-in users can submit or update one feedback response for version
+Rental team members and administrators can submit or update one feedback response for version
 `0.2.0-rc.1`: interface choice, experience rating, and an optional comment. The
 footer explains storage and visibility before submission. Administrators can
-open **Feedback overview** there to see totals and recent comments. Other users
-can read only their own response. The cache key includes the session account ID,
+open **Feedback overview** there to see totals and recent comments. Other
+eligible staff can read only their own response. Role eligibility is rechecked
+against the database before submission or reading. The cache key includes the session account ID,
 which the server checks, and a freshly opened form waits for current server data.
 
 The third, additive migration creates `ReleaseFeedback`. It does not change

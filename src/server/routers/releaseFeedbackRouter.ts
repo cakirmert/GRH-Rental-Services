@@ -3,6 +3,7 @@ import { z } from "zod"
 import { RELEASE_ID } from "@/constants/release"
 import { consumeBudget } from "@/lib/auth/state"
 import { protectedProcedure, router } from "@/lib/trpcServer"
+import type { Context } from "@/server/context"
 
 const interfaceModeSchema = z.enum(["classic", "preview"])
 const sentimentSchema = z.enum(["good", "mixed", "problem"])
@@ -24,9 +25,17 @@ const feedbackOutput = z.object({
   sentiment: sentimentSchema, message: z.string(), createdAt: z.date(), updatedAt: z.date(),
 })
 
+async function requireStaff(db: Context["prisma"], userId: string) {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } })
+  if (user?.role !== "RENTAL" && user?.role !== "ADMIN") {
+    throw new TRPCError({ code: "FORBIDDEN" })
+  }
+}
+
 export const releaseFeedbackRouter = router({
   submit: protectedProcedure.input(submissionInput).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id
+    await requireStaff(ctx.prisma, userId)
     // This key is a verified account: reject its excess retries before charging shared capacity.
     if (!(await consumeBudget("release-feedback-user", userId, 10, 3_600_000, ctx.prisma)) ||
         !(await consumeBudget("release-feedback-global", "all", 500, 3_600_000, ctx.prisma))) {
@@ -45,6 +54,7 @@ export const releaseFeedbackRouter = router({
   getMine: protectedProcedure.input(ownFeedbackInput).query(async ({ ctx, input }) => {
     // Account identity must be part of the client cache key, without granting access to another account.
     if (input.userId !== ctx.session.user.id) throw new TRPCError({ code: "FORBIDDEN" })
+    await requireStaff(ctx.prisma, ctx.session.user.id)
     const feedback = await ctx.prisma.releaseFeedback.findUnique({
       where: { userId_releaseId: { userId: ctx.session.user.id, releaseId: input.releaseId } },
       select: feedbackSelect,

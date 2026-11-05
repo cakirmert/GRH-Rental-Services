@@ -14,7 +14,7 @@ vi.mock("@/lib/auth/state", () => ({ consumeBudget }))
 
 import { releaseFeedbackRouter } from "../releaseFeedbackRouter"
 
-function caller(role: "ADMIN" | "RENTAL" | "USER" | null = "USER", id = "resident-1") {
+function caller(role: "ADMIN" | "RENTAL" | "USER" | null = "RENTAL", id = "resident-1") {
   return releaseFeedbackRouter.createCaller({
     prisma: prisma as unknown as Context["prisma"],
     session: role ? { user: { id, role, email: "private@example.test" }, expires: "2026-12-31" } : null,
@@ -35,7 +35,7 @@ describe("release feedback ownership, admission, and privacy", () => {
     prisma.releaseFeedback.findUnique.mockResolvedValue(record)
     prisma.releaseFeedback.groupBy.mockResolvedValue([])
     prisma.releaseFeedback.findMany.mockResolvedValue([])
-    prisma.user.findUnique.mockResolvedValue({ role: "ADMIN" })
+    prisma.user.findUnique.mockResolvedValue({ role: "RENTAL" })
   })
 
   it("requires an account for submission, own feedback, and summary", async () => {
@@ -44,6 +44,7 @@ describe("release feedback ownership, admission, and privacy", () => {
     await expect(anonymous.getMine({ releaseId: RELEASE_ID, userId: "resident-1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" })
     await expect(anonymous.summary({ releaseId: RELEASE_ID })).rejects.toMatchObject({ code: "UNAUTHORIZED" })
     expect(consumeBudget).not.toHaveBeenCalled()
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.upsert).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.findUnique).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.groupBy).not.toHaveBeenCalled()
@@ -58,6 +59,7 @@ describe("release feedback ownership, admission, and privacy", () => {
   ])("rejects unsupported or oversized input before allocating a budget: %j", async invalid => {
     await expect(caller().submit({ ...input, ...invalid } as never)).rejects.toMatchObject({ code: "BAD_REQUEST" })
     expect(consumeBudget).not.toHaveBeenCalled()
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.upsert).not.toHaveBeenCalled()
   })
 
@@ -91,20 +93,49 @@ describe("release feedback ownership, admission, and privacy", () => {
 
   it("looks up only the authenticated user's feedback", async () => {
     prisma.releaseFeedback.findUnique.mockResolvedValue(null)
-    expect(await caller("USER", "resident-2").getMine({ releaseId: RELEASE_ID, userId: "resident-2" })).toBeNull()
+    expect(await caller("RENTAL", "resident-2").getMine({ releaseId: RELEASE_ID, userId: "resident-2" })).toBeNull()
     expect(prisma.releaseFeedback.findUnique).toHaveBeenCalledWith(expect.objectContaining({
       where: { userId_releaseId: { userId: "resident-2", releaseId: RELEASE_ID } },
     }))
   })
 
   it("rejects a forged account identity before reading feedback", async () => {
-    await expect(caller("USER", "resident-2").getMine({ releaseId: RELEASE_ID, userId: "resident-1" }))
+    await expect(caller("RENTAL", "resident-2").getMine({ releaseId: RELEASE_ID, userId: "resident-1" }))
       .rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.findUnique).not.toHaveBeenCalled()
   })
 
   it.each(["", "x".repeat(257)])("bounds the identity used in the feedback cache key", async userId => {
     await expect(caller().getMine({ releaseId: RELEASE_ID, userId })).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(prisma.releaseFeedback.findUnique).not.toHaveBeenCalled()
+  })
+
+  it.each(["RENTAL", "ADMIN"] as const)("allows current %s accounts to submit and retrieve their own feedback", async role => {
+    prisma.user.findUnique.mockResolvedValue({ role })
+    const promoted = caller("USER")
+    expect(await promoted.submit(input)).toEqual(record)
+    expect(await promoted.getMine({ releaseId: RELEASE_ID, userId: "resident-1" })).toEqual(record)
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: "resident-1" }, select: { role: true } })
+  })
+
+  it.each(["USER", "RENTAL", "ADMIN"] as const)("rejects a current USER even if its session says %s, before budgets or feedback access", async role => {
+    prisma.user.findUnique.mockResolvedValue({ role: "USER" })
+    await expect(caller(role).submit(input)).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(caller(role).getMine({ releaseId: RELEASE_ID, userId: "resident-1" }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(consumeBudget).not.toHaveBeenCalled()
+    expect(prisma.releaseFeedback.upsert).not.toHaveBeenCalled()
+    expect(prisma.releaseFeedback.findUnique).not.toHaveBeenCalled()
+  })
+
+  it("rejects a deleted staff account before budgets or feedback access", async () => {
+    prisma.user.findUnique.mockResolvedValue(null)
+    await expect(caller("ADMIN").submit(input)).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(caller("RENTAL").getMine({ releaseId: RELEASE_ID, userId: "resident-1" }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(consumeBudget).not.toHaveBeenCalled()
+    expect(prisma.releaseFeedback.upsert).not.toHaveBeenCalled()
     expect(prisma.releaseFeedback.findUnique).not.toHaveBeenCalled()
   })
 
@@ -133,6 +164,7 @@ describe("release feedback ownership, admission, and privacy", () => {
   })
 
   it("aggregates the current release for a current admin and bounds comments without account details", async () => {
+    prisma.user.findUnique.mockResolvedValue({ role: "ADMIN" })
     prisma.releaseFeedback.groupBy.mockResolvedValue([
       { interfaceMode: "preview", sentiment: "good", _count: { _all: 8 } },
       { interfaceMode: "classic", sentiment: "mixed", _count: { _all: 2 } },
