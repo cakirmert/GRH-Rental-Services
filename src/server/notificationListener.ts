@@ -3,12 +3,14 @@ import prisma from "@/lib/prismadb"
 import { notificationEmitter } from "@/lib/notifications"
 import { toWebPushSubscription } from "@/lib/pushSubscription"
 
-// Configure web push once
-webpush.setVapidDetails(
-  `mailto:${process.env.CONTACT_EMAIL}`,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
+// Isolated environments must import this module without production push keys.
+if (process.env.VERCEL_ENV !== "preview" && process.env.DISABLE_OUTBOUND !== "true") {
+  webpush.setVapidDetails(
+    `mailto:${process.env.CONTACT_EMAIL}`,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  )
+}
 
 async function sendNotification(
   userId: string,
@@ -21,6 +23,7 @@ async function sendNotification(
     data?: Record<string, unknown>
   },
 ) {
+  if (process.env.VERCEL_ENV === "preview" || process.env.DISABLE_OUTBOUND === "true") return
   const subs = await prisma.pushSubscription.findMany({ where: { userId } })
 
   if (subs.length === 0) {

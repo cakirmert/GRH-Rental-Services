@@ -4,7 +4,10 @@ import { BookingStatus } from "@prisma/client"
 import type { Context } from "@/server/context"
 
 const prisma = {
+  $transaction: vi.fn(async (operation: (tx: unknown) => Promise<unknown>) => operation(prisma)),
   booking: {
+    findMany: vi.fn().mockResolvedValue([]),
+    aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }),
     findUnique: vi.fn(),
     update: vi.fn(),
   },
@@ -22,7 +25,8 @@ async function createCaller() {
     assignedToId: null,
     status: BookingStatus.REQUESTED,
     notes: null,
-    item: { titleEn: "Item" },
+    item: { titleEn: "Item", active: true, totalQuantity: 1 },
+    quantity: 1,
     user: { id: "u1", email: "test@example.com", name: "Test User" },
     assignedTo: null,
     startDate: new Date(),

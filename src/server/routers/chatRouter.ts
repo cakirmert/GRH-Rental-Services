@@ -10,7 +10,7 @@ export const chatRouter = router({
       z.object({
         bookingId: z.string(),
         cursor: z.string().nullish(),
-        limit: z.number().max(50).default(30),
+        limit: z.number().int().min(1).max(50).default(30),
       }),
     )
     .query(async ({ input, ctx }) => {
@@ -114,7 +114,7 @@ export const chatRouter = router({
     }),
 
   markRead: protectedProcedure
-    .input(z.object({ messageIds: z.string().array().min(1) }))
+    .input(z.object({ messageIds: z.string().array().min(1).max(100) }))
     .mutation(async ({ input, ctx }) => {
       const messageIds = Array.from(new Set(input.messageIds))
       const messages = await ctx.prisma.bookingChatMessage.findMany({
@@ -179,9 +179,8 @@ async function assertCanAccessBooking(ctx: Context, bookingId: string) {
   const admin = me?.role === "ADMIN"
   const scopedRental =
     me?.role === "RENTAL" &&
-    (b.assignedToId === me.id ||
-      b.item?.responsibleMembers?.some((member) => member.id === me.id))
-  const allowed = admin || scopedRental || b.userId === me?.id || b.assignedToId === me?.id
+    (b.assignedToId === me.id || b.item?.responsibleMembers?.some((member) => member.id === me.id))
+  const allowed = admin || scopedRental || b.userId === me?.id
   if (!allowed) throw new TRPCError({ code: "FORBIDDEN" })
 }
 
@@ -205,14 +204,18 @@ async function createMessageNotifications(
           assignedToId: true,
           item: { select: { titleEn: true } },
           user: { select: { id: true, email: true, name: true } },
-          assignedTo: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true, role: true } },
         },
       },
     },
   })
   if (!thread) return
 
-  const recips = [thread.booking.userId, thread.booking.assignedToId].filter(
+  const staffAssignee =
+    thread.booking.assignedTo && ["ADMIN", "RENTAL"].includes(thread.booking.assignedTo.role)
+      ? thread.booking.assignedTo
+      : null
+  const recips = [thread.booking.userId, staffAssignee?.id].filter(
     (id) => id && id !== senderId,
   ) as string[]
   if (!recips.length) return
@@ -241,7 +244,7 @@ async function createMessageNotifications(
   }
 
   // Send email notifications to recipients
-  const recipientUsers = [thread.booking.user, thread.booking.assignedTo].filter(
+  const recipientUsers = [thread.booking.user, staffAssignee].filter(
     (u) => u && u.id !== senderId,
   ) as { id: string; email: string; name: string | null }[]
 

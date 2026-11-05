@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { POST } from "./route"
+const budgets = vi.hoisted(() => new Map<string, number>())
+vi.mock("@/lib/auth/state", () => ({
+  requestAddress: (req: Request) => req.headers.get("x-forwarded-for") || "local",
+  consumeBudget: vi.fn(async (scope: string, subject: string, limit: number) => {
+    const key = scope + subject
+    const count = (budgets.get(key) || 0) + 1
+    budgets.set(key, count)
+    return count <= limit
+  }),
+}))
 
 // Mock Next.js Response
 vi.mock("next/server", () => ({
@@ -23,6 +33,7 @@ vi.mock("@/lib/mail", () => ({
 describe("POST /api/contact", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    budgets.clear()
     vi.useFakeTimers()
   })
 

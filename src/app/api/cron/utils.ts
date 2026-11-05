@@ -6,10 +6,13 @@ type CronTask = {
 }
 
 export function authorizeCronRequest(req: NextRequest): Response | null {
-  const expectedSecret = process.env.CRON_SECRET ?? process.env.AUTH_SECRET
+  if (process.env.VERCEL_ENV === "preview" || process.env.DISABLE_OUTBOUND === "true") {
+    return new Response("Scheduled jobs disabled in this environment", { status: 403 })
+  }
+  const expectedSecret = process.env.CRON_SECRET
 
   if (!expectedSecret) {
-    console.warn("[cron] No CRON_SECRET or AUTH_SECRET set; denying request by default.")
+    console.warn("[cron] No CRON_SECRET set; denying request by default.")
     return new Response("Server misconfigured", { status: 500 })
   }
 

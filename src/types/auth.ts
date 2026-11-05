@@ -28,4 +28,6 @@ export interface UserPasskey {
   createdAt?: string
   lastUsed?: string
   transports?: string[]
+  deviceType?: string
+  backedUp?: boolean
 }

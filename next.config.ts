@@ -1,6 +1,12 @@
 import type { NextConfig } from "next"
+import { version } from "./package.json"
+
+const imageOrigins = [process.env.BLOB_URL_BASE, process.env.IMAGE_DOMAIN && `https://${process.env.IMAGE_DOMAIN}`]
+  .filter((value): value is string => Boolean(value))
+  .map((value) => new URL(value))
 
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_APP_VERSION: version },
   agentRules: false,
   cacheComponents: true,
   partialPrefetching: true,
@@ -16,32 +22,22 @@ const nextConfig: NextConfig = {
   images: {
     localPatterns: [
       {
-        pathname: "/api/edgeImage",
-      },
-      {
         pathname: "/**",
       },
     ],
     remotePatterns: [
-      // Allow our custom image optimization endpoint
-      {
-        protocol: "http",
-        hostname: "localhost",
-        pathname: "/api/edgeImage",
-      },
-      {
-        protocol: "https",
-        hostname: "*.vercel.app",
-        pathname: "/api/edgeImage",
-      },
-      // Allow Vercel blob storage images
-      {
-        protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
-      },
+      ...imageOrigins.map((url) => ({
+        protocol: "https" as const,
+        hostname: url.hostname,
+        port: "",
+        pathname: "/**",
+      })),
     ],
-    formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60,
+    formats: ["image/webp"],
+    minimumCacheTTL: 3600,
+    maximumRedirects: 0,
+    dangerouslyAllowSVG: false,
+    contentDispositionType: "attachment",
     deviceSizes: [640, 750, 1080, 1200, 1920],
   },
   headers: async () => {
@@ -55,7 +51,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/(.*)\\.(css|js|woff2?|ico|png|jpg|jpeg|gif|webp|avif)$",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        headers: [{ key: "Cache-Control", value: "public, max-age=3600, must-revalidate" }],
       },
       {
         source: "/sw.js",

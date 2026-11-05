@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/
@@ -33,6 +35,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.test.example
 
 # vercel
 .vercel
@@ -43,9 +46,7 @@ next-env.d.ts
 
 #Prisma
 prisma/dev.db
-prisma/migrations/migration_lock.toml
 prisma/migrations/20250531212754_add_booking_chat/migration.sql
-prisma/migrations/migration_lock.toml
 prisma/migrations/20250430184116_init/migration.sql
 
 .agent

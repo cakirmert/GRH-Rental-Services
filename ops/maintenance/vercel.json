@@ -1,0 +1,27 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "devCommand": "",
+  "outputDirectory": ".",
+  "crons": [],
+  "routes": [
+    {
+      "src": "/.*",
+      "dest": "/index.html",
+      "status": 503,
+      "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "CDN-Cache-Control": "no-store",
+        "Vercel-CDN-Cache-Control": "no-store",
+        "Retry-After": "300",
+        "X-Robots-Tag": "noindex, nofollow",
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
+      }
+    }
+  ]
+}

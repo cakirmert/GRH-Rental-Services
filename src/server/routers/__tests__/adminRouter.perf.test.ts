@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { adminRouter } from "../adminRouter"
 import type { Context } from "@/server/context"
 
+vi.mock("@/lib/prismadb", () => ({ default: { log: { create: vi.fn() } } }))
+
 // Mock Prisma
 const prisma = {
   item: {

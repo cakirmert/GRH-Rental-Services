@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { uploadRouter } from "../adminRouter"
 import { TRPCError } from "@trpc/server"
 import type { Context } from "@/server/context"
 import { put } from "@vercel/blob"
+
+vi.mock("@/lib/prismadb", () => ({ default: { log: { create: vi.fn() } } }))
 
 // Mock @vercel/blob
 vi.mock("@vercel/blob", () => ({
@@ -21,15 +23,32 @@ const createMockContext = (role: string = "USER") =>
     },
   }) as unknown as Context
 
-const validPngBase64 = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]).toString("base64")
+const validPngBase64 = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString(
+  "base64",
+)
 const validJpegBase64 = Buffer.from([0xff, 0xd8, 0xff, 0xdb]).toString("base64")
 
 describe("uploadRouter.uploadItemImage", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.BLOB_READ_WRITE_TOKEN = "test-token"
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-token")
+    vi.stubEnv("VERCEL_ENV", "production")
+    vi.stubEnv("DISABLE_OUTBOUND", "false")
+  })
+
+  afterEach(() => vi.unstubAllEnvs())
+
+  it.each(["preview", "disabled outbound"])("blocks uploads in %s environments", async (mode) => {
+    if (mode === "preview") vi.stubEnv("VERCEL_ENV", "preview")
+    else vi.stubEnv("DISABLE_OUTBOUND", "true")
+
+    await expect(
+      uploadRouter.createCaller(createMockContext("ADMIN")).uploadItemImage({
+        fileName: "test.png",
+        fileContentBase64: validPngBase64,
+      }),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
+    expect(put).not.toHaveBeenCalled()
   })
 
   it("should throw FORBIDDEN if user is not an admin", async () => {

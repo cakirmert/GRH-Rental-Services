@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { transporter, isDev, CONTACT_EMAIL } from "@/lib/mail"
 import { z } from "zod"
+import { consumeBudget, requestAddress } from "@/lib/auth/state"
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
@@ -11,25 +12,6 @@ const contactSchema = z.object({
   turnstileToken: z.string().optional(),
 })
 
-const rateLimit = new Map<string, { count: number; ts: number }>()
-
-function checkRateLimit(ip: string) {
-  const now = Date.now()
-  const windowMs = 60 * 60 * 1000 // 1 hour
-  const maxRequests = 5
-
-  const entry = rateLimit.get(ip)
-  if (entry && now - entry.ts < windowMs) {
-    if (entry.count >= maxRequests) {
-      return false
-    }
-    entry.count += 1
-  } else {
-    rateLimit.set(ip, { count: 1, ts: now })
-  }
-  return true
-}
-
 /**
  * Handle contact form submissions
  * @param req - The incoming request with contact form data
@@ -37,18 +19,14 @@ function checkRateLimit(ip: string) {
  */
 export async function POST(req: Request) {
   try {
-    const clientIp =
-      req.headers.get("cf-connecting-ip") ||
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "127.0.0.1"
-
-    if (!checkRateLimit(clientIp)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 },
-      )
+    const clientIp = requestAddress(req)
+    if (!(await consumeBudget("contact-global", "all", 100, 3_600_000)) ||
+        !(await consumeBudget("contact-client", clientIp, 5, 3_600_000))) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 })
     }
-
+    if (Number(req.headers.get("content-length") || 0) > 16_384) {
+      return NextResponse.json({ error: "Request too large" }, { status: 413 })
+    }
     const body = await req.json()
     const result = contactSchema.safeParse(body)
 
@@ -74,6 +52,7 @@ export async function POST(req: Request) {
         "https://challenges.cloudflare.com/turnstile/v0/siteverify",
         {
           method: "POST",
+          signal: AbortSignal.timeout(10_000),
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: payload,
         },

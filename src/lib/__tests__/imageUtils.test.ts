@@ -29,10 +29,10 @@ describe("imageUtils", () => {
       expect(getOptimizedImageUrl(url)).toBe(url)
     })
 
-    it("should transform external URLs matching IMAGE_DOMAIN", () => {
+    it("should send owned sources directly to native image optimization", () => {
       process.env.IMAGE_DOMAIN = "example.com"
       const url = "https://example.com/test.jpg"
-      const expected = `/api/edgeImage?url=${encodeURIComponent(url)}`
+      const expected = url
       expect(getOptimizedImageUrl(url)).toBe(expected)
 
       const httpUrl = "http://example.com/test.jpg"
@@ -58,7 +58,7 @@ describe("imageUtils", () => {
       const urls = ["/local.jpg", "https://example.com/external.jpg", "https://other.com/other.jpg"]
       const expected = [
         "/local.jpg",
-        `/api/edgeImage?url=${encodeURIComponent("https://example.com/external.jpg")}`,
+        "https://example.com/external.jpg",
         "https://other.com/other.jpg",
       ]
       expect(getOptimizedImageUrls(urls)).toEqual(expected)

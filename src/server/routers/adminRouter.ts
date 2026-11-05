@@ -12,6 +12,7 @@ import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 import { normalizeEmail } from "@/utils/email"
 import { revalidateTag } from "next/cache"
 import { EQUIPMENT_CACHE_TAG } from "@/app/_data/equipment"
+import { staffBooking } from "@/server/bookingSecurity"
 
 // Define LogType enum locally since it's not in Prisma schema
 enum LogType {
@@ -463,9 +464,9 @@ export const adminRouter = router({
 
     const staffMembers = staffIds.length
       ? await ctx.prisma.user.findMany({
-        where: { id: { in: staffIds } },
-        select: { id: true, name: true, email: true, role: true },
-      })
+          where: { id: { in: staffIds } },
+          select: { id: true, name: true, email: true, role: true },
+        })
       : []
 
     const staffById = new Map(staffMembers.map((staff) => [staff.id, staff]))
@@ -479,7 +480,7 @@ export const adminRouter = router({
         const staff = staffById.get(log.userId)
         if (!staff || !allowedRoles.has(staff.role)) return null
         return {
-          ...booking,
+          ...staffBooking(booking),
           cancelledBy: {
             id: staff.id,
             name: staff.name,
@@ -503,6 +504,12 @@ export const uploadRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       ensureAdmin(ctx)
+      if (process.env.VERCEL_ENV === "preview" || process.env.DISABLE_OUTBOUND === "true") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Image uploads are disabled in this environment.",
+        })
+      }
       try {
         const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
         const fileExtension = path.extname(input.fileName).toLowerCase()

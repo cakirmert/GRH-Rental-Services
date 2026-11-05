@@ -1,23 +1,28 @@
 import { NextResponse } from "next/server"
-import { otpRequests, generateHmacSha256 } from "../../../../../auth"
 import { transporter, isDev, CONTACT_EMAIL } from "../../../../lib/mail"
-import prisma from "../../../../lib/prismadb"
-import { normalizeEmail } from "@/utils/email"
+import { issueOtp, parseMailbox } from "@/lib/auth/otp"
+import { consumeBudget, requestAddress } from "@/lib/auth/state"
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as {
+    if (!(await consumeBudget("otp-http-global", "all", 1000, 3_600_000)) ||
+        !(await consumeBudget("otp-http-address", requestAddress(req), 30, 3_600_000))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+    }
+    const raw = await req.text()
+    if (raw.length > 8192) return NextResponse.json({ error: "Request too large" }, { status: 413 })
+    const body = JSON.parse(raw) as {
       email?: unknown
       turnstileToken?: unknown
     }
 
-    const email = typeof body.email === "string" ? body.email : ""
+    const email = parseMailbox(body.email)
 
     if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 })
+      return NextResponse.json({ error: "A single valid email address is required" }, { status: 400 })
     }
 
-    const key = normalizeEmail(email)
+    const key = email
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim()
 
@@ -50,6 +55,7 @@ export async function POST(req: Request) {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: payload,
+            signal: AbortSignal.timeout(10_000),
           },
         )
 
@@ -85,48 +91,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const now = Date.now()
-
-    // Check rate limiting
-    const entry = otpRequests.get(key)
-    if (entry && now - entry.ts < 60 * 60 * 1000) {
-      if (entry.count >= 5) {
-        return NextResponse.json(
-          { error: "Too many OTP requests. Please try again later." },
-          { status: 429 },
-        )
-      }
-      entry.count += 1
-    } else {
-      otpRequests.set(key, { count: 1, ts: now })
-    }
-
-    // Generate OTP code and token
-    const array = new Uint32Array(1)
-    crypto.getRandomValues(array)
-    const code = (100000 + (array[0] % 900000)).toString()
-
-    const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
-    if (!authSecret) {
-      console.error("AUTH_SECRET environment variable is not set")
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
-    }
-
-    const h = await generateHmacSha256(code, authSecret)
-    const token = `${code}.${h}`
-
-    // Store the verification token in database
-    const expires = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-    await prisma.verificationToken.create({
-      data: {
-        identifier: key,
-        token: token,
-        expires: expires,
-      },
-    })
+    const code = await issueOtp(key, requestAddress(req))
+    if (!code) return NextResponse.json({ error: "Too many OTP requests. Please try again later." }, { status: 429 })
 
     // Send email
-    const host = new URL(req.url).host
+    const host = new URL(process.env.ORIGIN || req.url).host
     const text = `Your ${host} verification code is ${code}`
     const html = `
       <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; padding: 32px 24px;">
@@ -160,7 +129,7 @@ export async function POST(req: Request) {
       message: "Verification code sent successfully",
     })
   } catch (error) {
-    console.error("Error sending OTP:", error)
+    console.error("Error sending OTP")
     return NextResponse.json({ error: "Failed to send verification code" }, { status: 500 })
   }
 }

@@ -2,6 +2,8 @@ import { router, protectedProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import { BookingStatus } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
+import { bookingTransaction } from "@/server/bookingSecurity"
+import { revokePasskey } from "@/lib/auth/passkey-store"
 
 export const userRouter = router({
   updateName: protectedProcedure
@@ -59,78 +61,43 @@ export const userRouter = router({
     }),
   deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
     const userId = ctx.session.user.id
-
-    const activeBooking = await ctx.prisma.booking.findFirst({
-      where: {
-        userId,
-        status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
-      },
-      select: { id: true },
-    })
-
-    if (activeBooking) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Cannot delete account with active bookings.",
-      })
-    }
-
-    // Capture the role before deleting
-    const userRole = ctx.session.user.role
-
-    await ctx.prisma.booking.deleteMany({ where: { userId } })
-    await ctx.prisma.user.delete({ where: { id: userId } })
-
-    // Auto-admin logic: if the user was staff, check if we need to promote the last remaining staff member
-    if (userRole === "ADMIN" || userRole === "RENTAL") {
-      const remainingStaff = await ctx.prisma.user.findMany({
-        where: { role: { in: ["ADMIN", "RENTAL"] } }
-      })
-      if (remainingStaff.length === 1 && remainingStaff[0].role !== "ADMIN") {
-        await ctx.prisma.user.update({
-          where: { id: remainingStaff[0].id },
-          data: { role: "ADMIN" }
-        })
+    return bookingTransaction(ctx.prisma, async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { role: true, isSuperAdmin: true } })
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" })
+      if (user.isSuperAdmin || (user.role === "ADMIN" && await tx.user.count({ where: { role: "ADMIN" } }) <= 1)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer administrative responsibility before deleting this account." })
       }
-    }
-
-    return { success: true }
+      const activeBooking = await tx.booking.findFirst({
+        where: {
+          OR: [{ userId }, { assignedToId: userId }],
+          status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
+        },
+        select: { id: true },
+      })
+      if (activeBooking) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete account with active bookings." })
+      await tx.booking.deleteMany({ where: { userId } })
+      await tx.user.delete({ where: { id: userId } })
+      return { success: true }
+    })
   }),
   selfDemote: protectedProcedure.mutation(async ({ ctx }) => {
     const userId = ctx.session.user.id
-    const userRole = ctx.session.user.role
-
-    if (userRole !== "ADMIN" && userRole !== "RENTAL") {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "User is already not a staff member." })
-    }
-
-    if (userRole === "ADMIN") {
-      // Check if this is the last admin
-      const adminCount = await ctx.prisma.user.count({ where: { role: "ADMIN" } })
-      if (adminCount <= 1) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "You are the last active Admin. You cannot step down unless you delete your account." })
+    return bookingTransaction(ctx.prisma, async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { role: true, isSuperAdmin: true } })
+      if (!user || (user.role !== "ADMIN" && user.role !== "RENTAL")) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "User is already not a staff member." })
       }
-    }
-
-    await ctx.prisma.user.update({
-      where: { id: userId },
-      data: { role: "USER" }
-    })
-
-    // Re-check auto-admin logic if the demoted user was RENTAL and leaves only 1 RENTAL left.
-    // Wait, the logic is: if total staff drops to exactly 1, promote them to ADMIN.
-    const remainingStaff = await ctx.prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "RENTAL"] } }
-    })
-
-    if (remainingStaff.length === 1 && remainingStaff[0].role !== "ADMIN") {
-      await ctx.prisma.user.update({
-        where: { id: remainingStaff[0].id },
-        data: { role: "ADMIN" }
+      if (user.isSuperAdmin || (user.role === "ADMIN" && await tx.user.count({ where: { role: "ADMIN" } }) <= 1)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer administrative responsibility before stepping down." })
+      }
+      const assigned = await tx.booking.findFirst({
+        where: { assignedToId: userId, status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] } },
+        select: { id: true },
       })
-    }
-
-    return { success: true }
+      if (assigned) throw new TRPCError({ code: "BAD_REQUEST", message: "Reassign active bookings before stepping down." })
+      await tx.user.update({ where: { id: userId }, data: { role: "USER" } })
+      return { success: true }
+    })
   }),
   getPasskeys: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.prisma.user.findUnique({
@@ -158,31 +125,7 @@ export const userRouter = router({
   deletePasskey: protectedProcedure
     .input(z.object({ credentialId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: ctx.session.user.id },
-        select: { passkeys: true },
-      })
-
-      if (!user || !user.passkeys) {
-        throw new Error("No passkeys found")
-      }
-
-      const passkeys = user.passkeys as Array<{
-        credentialID: string
-        publicKey: string
-        counter: number
-      }>
-
-      const updatedPasskeys = passkeys.filter((p) => p.credentialID !== input.credentialId)
-
-      if (updatedPasskeys.length === passkeys.length) {
-        throw new Error("Passkey not found")
-      }
-
-      await ctx.prisma.user.update({
-        where: { id: ctx.session.user.id },
-        data: { passkeys: updatedPasskeys },
-      })
+      await revokePasskey(ctx.session.user.id, input.credentialId)
 
       return { success: true }
     }),

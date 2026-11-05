@@ -2,6 +2,7 @@ import prisma from "@/lib/prismadb"
 import { BookingStatus } from "@prisma/client"
 import { format } from "date-fns"
 import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusNotifier"
+import { bookingTransaction, customerNotes } from "@/server/bookingSecurity"
 
 const AUTO_CANCEL_REASON =
   "This booking was automatically cancelled because the booking end time has passed."
@@ -28,18 +29,29 @@ export async function cancelExpiredBookings() {
     const timestamp = format(now, "yyyy-MM-dd HH:mm")
     const autoNote = `System (${timestamp}):\n${AUTO_CANCEL_REASON}`
 
-    const updated = await prisma.booking.update({
-      where: { id: booking.id },
-      data: {
-        status: BookingStatus.CANCELLED,
-        notes: booking.notes ? `${booking.notes}\n\n${autoNote}` : autoNote,
-      },
-      include: {
-        item: { select: { titleEn: true } },
-        user: { select: { id: true, email: true, name: true } },
-        assignedTo: { select: { id: true, email: true, name: true } },
-      },
+    const updated = await bookingTransaction(prisma, async (tx) => {
+      const current = await tx.booking.findFirst({
+        where: {
+          id: booking.id,
+          endDate: { lt: now },
+          status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED] },
+        },
+      })
+      if (!current) return null
+      return tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.CANCELLED,
+          notes: current.notes ? `${current.notes}\n\n${autoNote}` : autoNote,
+        },
+        include: {
+          item: { select: { titleEn: true } },
+          user: { select: { id: true, email: true, name: true } },
+          assignedTo: { select: { id: true, email: true, name: true } },
+        },
+      })
     })
+    if (!updated) continue
 
     const recipients = [
       { id: updated.userId, email: updated.user.email, name: updated.user.name },
@@ -61,7 +73,7 @@ export async function cancelExpiredBookings() {
       itemTitle: updated.item.titleEn,
       startDate: updated.startDate,
       endDate: updated.endDate,
-      notes: updated.notes,
+      notes: customerNotes(updated.notes),
       recipients,
     })
   }

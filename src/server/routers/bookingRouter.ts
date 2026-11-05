@@ -11,6 +11,16 @@ import { sendBookingRequestEmail } from "@/server/email/sendBookingRequestEmail"
 import { ADMIN_BLOCK_PREFIX } from "@/constants/booking"
 import { markUpcomingBookingsBorrowed } from "@/server/jobs/autoBorrowed"
 import { usesAdminBlockPrefix } from "@/utils/adminBlock"
+import {
+  assertDateRange,
+  bookingTransaction,
+  customerNotes,
+  legacyStaffNotes,
+  ownerBooking,
+  peakQuantity,
+  staffBooking,
+} from "@/server/bookingSecurity"
+import { consumeBudget } from "@/lib/auth/state"
 
 const isRentalTeamMember = (ctx: Context) => {
   const role = ctx.session?.user?.role
@@ -40,7 +50,7 @@ const assertCanManageScopedBooking = (ctx: Context, booking: BookingRentalScope)
 }
 
 const assertUserNotesDoNotUseAdminBlockPrefix = (notes?: string | null) => {
-  if (usesAdminBlockPrefix(notes)) {
+  if (usesAdminBlockPrefix(notes) || /(?:^|\n)\s*Rental Team \(/.test(notes ?? "")) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Notes cannot use reserved admin block syntax.",
@@ -112,7 +122,7 @@ export const bookingsRouter = router({
         where.userId = ctx.session.user.id
       }
 
-      return ctx.prisma.booking.findMany({
+      const bookings = await ctx.prisma.booking.findMany({
         where,
         include: {
           item: true, // Item details are needed for display
@@ -121,6 +131,7 @@ export const bookingsRouter = router({
         },
         orderBy: { startDate: "asc" },
       })
+      return bookings.map(input.all && isRentalTeamMember(ctx) ? staffBooking : ownerBooking)
     }),
 
   create: protectedProcedure
@@ -130,14 +141,24 @@ export const bookingsRouter = router({
         quantity: z.number().int().min(1).default(1),
         start: z.string(), // ISO string
         end: z.string(), // ISO string
-        notes: z.string().optional(),
+        notes: z.string().max(5000).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       assertUserNotesDoNotUseAdminBlockPrefix(input.notes)
 
+      if (
+        !(await consumeBudget("booking-create-user", ctx.session.user.id, 20, 86400000, ctx.prisma))
+      ) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Booking request limit reached.",
+        })
+      }
+
       const startDate = parseISO(input.start)
       const endDate = parseISO(input.end)
+      assertDateRange(startDate, endDate, 14)
       if (endDate <= startDate) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "End date must be after start date." })
       }
@@ -157,57 +178,94 @@ export const bookingsRouter = router({
         })
       }
 
-      const item = await ctx.prisma.item.findUnique({
-        where: { id: input.itemId },
-        select: {
-          type: true,
-          totalQuantity: true,
-          titleEn: true,
-          titleDe: true,
-          responsibleMembers: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              emailBookingNotifications: true,
+      const { item, booking } = await bookingTransaction(ctx.prisma, async (tx) => {
+        const item = await tx.item.findUnique({
+          where: { id: input.itemId },
+          select: {
+            type: true,
+            totalQuantity: true,
+            active: true,
+            titleEn: true,
+            titleDe: true,
+            responsibleMembers: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                emailBookingNotifications: true,
+              },
             },
           },
-        },
-      })
-      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
-
-      if (item.type === "ROOM" && !input.notes?.trim()) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required for room bookings." })
-      }
-
-      const used = await ctx.prisma.booking.aggregate({
-        where: {
-          itemId: input.itemId,
-          status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
-          startDate: { lte: endDate },
-          endDate: { gte: startDate },
-        },
-        _sum: { quantity: true },
-      })
-
-      const alreadyUsed = used._sum.quantity ?? 0
-      if (alreadyUsed + input.quantity > item.totalQuantity) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Not enough units available for that time.",
         })
-      }
+        if (!item || !item.active)
+          throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
 
-      const booking = await ctx.prisma.booking.create({
-        data: {
-          userId: ctx.session.user.id,
-          itemId: input.itemId,
-          quantity: input.quantity,
-          startDate,
-          endDate,
-          status: BookingStatus.REQUESTED,
-          notes: input.notes ?? null,
-        },
+        const recentCount = await tx.booking.count({
+          where: {
+            userId: ctx.session.user.id,
+            createdAt: { gt: new Date(Date.now() - 86400000) },
+          },
+        })
+        const pendingCount = await tx.booking.count({
+          where: { userId: ctx.session.user.id, status: BookingStatus.REQUESTED },
+        })
+        if (recentCount >= 20 || pendingCount >= 20) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Booking request limit reached.",
+          })
+        }
+        const duplicate = await tx.booking.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            itemId: input.itemId,
+            startDate,
+            endDate,
+            status: {
+              in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED],
+            },
+          },
+        })
+        if (duplicate)
+          throw new TRPCError({ code: "CONFLICT", message: "This booking already exists." })
+
+        if (item.type === "ROOM" && !input.notes?.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Notes are required for room bookings.",
+          })
+        }
+
+        const used = await tx.booking.findMany({
+          where: {
+            itemId: input.itemId,
+            status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
+            startDate: { lt: endDate },
+            endDate: { gt: startDate },
+          },
+          select: { startDate: true, endDate: true, quantity: true },
+        })
+
+        const alreadyUsed = peakQuantity(used)
+        if (alreadyUsed + input.quantity > item.totalQuantity) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Not enough units available for that time.",
+          })
+        }
+
+        const booking = await tx.booking.create({
+          data: {
+            userId: ctx.session.user.id,
+            itemId: input.itemId,
+            quantity: input.quantity,
+            startDate,
+            endDate,
+            status: BookingStatus.REQUESTED,
+            notes: input.notes ?? null,
+          },
+        })
+        return { item, booking }
       })
 
       const responsibleMembers = item.responsibleMembers ?? []
@@ -276,7 +334,7 @@ export const bookingsRouter = router({
         id: z.string(),
         start: z.string(), // ISO string
         end: z.string(), // ISO string
-        notes: z.string().optional(),
+        notes: z.string().max(5000).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -284,6 +342,7 @@ export const bookingsRouter = router({
 
       const startDate = parseISO(input.start)
       const endDate = parseISO(input.end)
+      assertDateRange(startDate, endDate, 14)
 
       if (endDate <= startDate) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "End date must be after start date." })
@@ -306,78 +365,94 @@ export const bookingsRouter = router({
         })
       }
 
-      const booking = await ctx.prisma.booking.findUnique({
-        where: { id: input.id },
-        select: { userId: true, status: true }, // Select only needed fields
-      })
-
-      if (!booking) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-      }
-
-      // Allow update only if user is the owner AND booking is REQUESTED or ACCEPTED
-      // If ACCEPTED, updating it should revert status to REQUESTED.
-      if (booking.userId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only update your own bookings.",
+      return bookingTransaction(ctx.prisma, async (tx) => {
+        const booking = await tx.booking.findUnique({
+          where: { id: input.id },
+          select: { userId: true, status: true, notes: true, staffNotes: true },
         })
-      }
-      if (booking.status !== BookingStatus.REQUESTED && booking.status !== BookingStatus.ACCEPTED) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Bookings with status "${booking.status}" cannot be updated by user.`,
-        })
-      }
 
-      const newStatus = BookingStatus.REQUESTED // Always revert to REQUESTED on user update
+        if (!booking) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+        }
 
-      return ctx.prisma.booking.update({
-        where: { id: input.id },
-        data: {
-          startDate,
-          endDate,
-          notes: input.notes, // Prisma handles undefined by not updating if input.notes is undefined
-          status: newStatus,
-        },
+        // Allow update only if user is the owner AND booking is REQUESTED or ACCEPTED
+        // If ACCEPTED, updating it should revert status to REQUESTED.
+        if (booking.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only update your own bookings.",
+          })
+        }
+        if (
+          booking.status !== BookingStatus.REQUESTED &&
+          booking.status !== BookingStatus.ACCEPTED
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Bookings with status "${booking.status}" cannot be updated by user.`,
+          })
+        }
+
+        const newStatus = BookingStatus.REQUESTED // Always revert to REQUESTED on user update
+
+        return ownerBooking(
+          await tx.booking.update({
+            where: { id: input.id },
+            data: {
+              startDate,
+              endDate,
+              notes: input.notes ?? customerNotes(booking.notes),
+              staffNotes:
+                [legacyStaffNotes(booking.notes), booking.staffNotes]
+                  .filter(Boolean)
+                  .join("\n\n") || null,
+              status: newStatus,
+            },
+          }),
+        )
       })
     }),
 
   cancel: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const booking = await ctx.prisma.booking.findUnique({
-        where: { id: input.id },
-        include: {
-          item: {
-            select: {
-              titleEn: true,
-              responsibleMembers: { select: { id: true } },
+      const updated = await bookingTransaction(ctx.prisma, async (tx) => {
+        const booking = await tx.booking.findUnique({
+          where: { id: input.id },
+          include: {
+            item: {
+              select: {
+                titleEn: true,
+                responsibleMembers: { select: { id: true } },
+              },
             },
+            user: { select: { id: true, email: true, name: true } },
+            assignedTo: { select: { id: true, email: true, name: true } },
           },
-          user: { select: { id: true, email: true, name: true } },
-          assignedTo: { select: { id: true, email: true, name: true } },
-        },
-      })
-      if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-      if (booking.userId !== ctx.session.user.id) {
-        assertCanManageScopedBooking(ctx, booking)
-      }
-      if (booking.status !== BookingStatus.REQUESTED && booking.status !== BookingStatus.ACCEPTED) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Bookings with status "${booking.status}" cannot be cancelled.`,
         })
-      }
+        if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+        if (booking.userId !== ctx.session.user.id) {
+          assertCanManageScopedBooking(ctx, booking)
+        }
+        if (
+          booking.status !== BookingStatus.REQUESTED &&
+          booking.status !== BookingStatus.ACCEPTED
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Bookings with status "${booking.status}" cannot be cancelled.`,
+          })
+        }
 
-      const updated = await ctx.prisma.booking.update({
-        where: { id: input.id },
-        data: { status: BookingStatus.CANCELLED },
-        include: {
-          item: { select: { titleEn: true } },
-          user: { select: { id: true, email: true, name: true } },
-          assignedTo: { select: { id: true, email: true, name: true } },
-        },
+        return tx.booking.update({
+          where: { id: input.id },
+          data: { status: BookingStatus.CANCELLED },
+          include: {
+            item: { select: { titleEn: true } },
+            user: { select: { id: true, email: true, name: true } },
+            assignedTo: { select: { id: true, email: true, name: true } },
+          },
+        })
       })
 
       await notifyBookingStatusChange({
@@ -387,7 +462,7 @@ export const bookingsRouter = router({
         itemTitle: updated.item.titleEn,
         startDate: updated.startDate,
         endDate: updated.endDate,
-        notes: updated.notes,
+        notes: customerNotes(updated.notes),
         recipients: filterRecipients([
           { id: updated.userId, email: updated.user.email, name: updated.user.name },
           updated.assignedTo
@@ -410,7 +485,7 @@ export const bookingsRouter = router({
         bookingId: updated.id,
         message: "status:CANCELLED",
       })
-      return updated
+      return ownerBooking(updated)
     }),
 
   // listForRentalTeam - (already good, minor type safety from Prisma)
@@ -489,14 +564,14 @@ export const bookingsRouter = router({
         const nextItem = bookings.pop()
         nextCursor = nextItem!.id
       }
-      return { bookings, nextCursor }
+      return { bookings: bookings.map(staffBooking), nextCursor }
     }),
 
   addRentalNote: protectedProcedure
     .input(
       z.object({
         bookingId: z.string(),
-        note: z.string(),
+        note: z.string().max(5000),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -509,29 +584,34 @@ export const bookingsRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Note cannot be empty." })
       }
 
-      const booking = await ctx.prisma.booking.findUnique({
-        where: { id: input.bookingId },
-        select: {
-          id: true,
-          notes: true,
-          assignedToId: true,
-          item: { select: { responsibleMembers: { select: { id: true } } } },
-        },
-      })
-      if (!booking) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-      }
-      assertCanManageScopedBooking(ctx, booking)
+      const updated = await bookingTransaction(ctx.prisma, async (tx) => {
+        const booking = await tx.booking.findUnique({
+          where: { id: input.bookingId },
+          select: {
+            id: true,
+            notes: true,
+            staffNotes: true,
+            assignedToId: true,
+            item: { select: { responsibleMembers: { select: { id: true } } } },
+          },
+        })
+        if (!booking) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+        }
+        assertCanManageScopedBooking(ctx, booking)
 
-      const noteEntry = [
-        `Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):`,
-        trimmedNote,
-      ].join("\n")
-      const updatedNotes = booking.notes ? [booking.notes, noteEntry].join("\n\n") : noteEntry
+        const noteEntry = [
+          `Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):`,
+          trimmedNote,
+        ].join("\n")
+        const updatedNotes = booking.staffNotes
+          ? [booking.staffNotes, noteEntry].join("\n\n")
+          : noteEntry
 
-      const updated = await ctx.prisma.booking.update({
-        where: { id: input.bookingId },
-        data: { notes: updatedNotes },
+        return tx.booking.update({
+          where: { id: input.bookingId },
+          data: { staffNotes: updatedNotes },
+        })
       })
 
       await logAction({
@@ -541,7 +621,7 @@ export const bookingsRouter = router({
         message: "notes:added",
       })
 
-      return updated
+      return staffBooking(updated)
     }),
 
   // updateBookingStatusByTeam - (already good, minor type safety)
@@ -556,46 +636,71 @@ export const bookingsRouter = router({
       if (!isRentalTeamMember(ctx)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." })
       }
-      const booking = await ctx.prisma.booking.findUnique({
-        where: { id: input.bookingId },
-        include: {
-          item: {
-            select: {
-              titleEn: true,
-              responsibleMembers: { select: { id: true } },
+      const updated = await bookingTransaction(ctx.prisma, async (tx) => {
+        const booking = await tx.booking.findUnique({
+          where: { id: input.bookingId },
+          include: {
+            item: {
+              select: {
+                titleEn: true,
+                totalQuantity: true,
+                active: true,
+                responsibleMembers: { select: { id: true } },
+              },
             },
           },
-        },
-      })
-      if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-      assertCanManageScopedBooking(ctx, booking)
-
-      const now = new Date()
-      if (!canTeamTransitionStatus(booking.status, input.newStatus, booking.startDate, now)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Cannot change booking status from "${booking.status}" to "${input.newStatus}".`,
         })
-      }
+        if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
+        assertCanManageScopedBooking(ctx, booking)
 
-      // Add any specific business logic for status transitions by team
-      // e.g. if newStatus is BORROWED, assign self to assignedToId
-      let assignedToUpdate: Prisma.BookingUpdateInput["assignedTo"] = undefined
-      if (input.newStatus === BookingStatus.BORROWED && !booking.assignedToId) {
-        assignedToUpdate = { connect: { id: ctx.session.user.id } }
-      }
+        const now = new Date()
+        if (!canTeamTransitionStatus(booking.status, input.newStatus, booking.startDate, now)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot change booking status from "${booking.status}" to "${input.newStatus}".`,
+          })
+        }
 
-      const updated = await ctx.prisma.booking.update({
-        where: { id: input.bookingId },
-        data: {
-          status: input.newStatus,
-          assignedTo: assignedToUpdate,
-        },
-        include: {
-          item: { select: { titleEn: true } },
-          user: { select: { id: true, email: true, name: true } },
-          assignedTo: { select: { id: true, email: true, name: true } },
-        },
+        if (input.newStatus === BookingStatus.ACCEPTED) {
+          if (!booking.item.active)
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Item is inactive." })
+          const used = await tx.booking.findMany({
+            where: {
+              id: { not: booking.id },
+              itemId: booking.itemId,
+              status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
+              startDate: { lt: booking.endDate },
+              endDate: { gt: booking.startDate },
+            },
+            select: { startDate: true, endDate: true, quantity: true },
+          })
+          if (peakQuantity(used) + booking.quantity > booking.item.totalQuantity) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Not enough units available for that time.",
+            })
+          }
+        }
+
+        // Add any specific business logic for status transitions by team
+        // e.g. if newStatus is BORROWED, assign self to assignedToId
+        let assignedToUpdate: Prisma.BookingUpdateInput["assignedTo"] = undefined
+        if (input.newStatus === BookingStatus.BORROWED && !booking.assignedToId) {
+          assignedToUpdate = { connect: { id: ctx.session.user.id } }
+        }
+
+        return tx.booking.update({
+          where: { id: input.bookingId },
+          data: {
+            status: input.newStatus,
+            assignedTo: assignedToUpdate,
+          },
+          include: {
+            item: { select: { titleEn: true } },
+            user: { select: { id: true, email: true, name: true } },
+            assignedTo: { select: { id: true, email: true, name: true } },
+          },
+        })
       })
 
       await notifyBookingStatusChange({
@@ -605,7 +710,7 @@ export const bookingsRouter = router({
         itemTitle: updated.item.titleEn,
         startDate: updated.startDate,
         endDate: updated.endDate,
-        notes: updated.notes,
+        notes: customerNotes(updated.notes),
         recipients: filterRecipients([
           { id: updated.userId, email: updated.user.email, name: updated.user.name },
           updated.assignedTo
@@ -627,7 +732,7 @@ export const bookingsRouter = router({
         bookingId: updated.id,
         message: `status:${input.newStatus}`,
       })
-      return updated
+      return staffBooking(updated)
     }),
 
   blockSlots: protectedProcedure
@@ -663,119 +768,127 @@ export const bookingsRouter = router({
         })
       }
 
-      const item = await ctx.prisma.item.findUnique({
-        where: { id: input.itemId },
-        select: { id: true, totalQuantity: true, titleEn: true },
-      })
-      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
-
-      const quantity = input.quantity ?? item.totalQuantity
-      if (quantity > item.totalQuantity) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Block quantity cannot exceed available quantity.",
+      const result = await bookingTransaction(ctx.prisma, async (tx) => {
+        const item = await tx.item.findUnique({
+          where: { id: input.itemId },
+          select: { id: true, totalQuantity: true, titleEn: true },
         })
-      }
+        if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
 
-      const recurrence = input.recurrence ?? { frequency: "NONE" as const }
-      const recurrenceUntil = recurrence.until ? parseISO(recurrence.until) : startDate
-      if (recurrence.until && Number.isNaN(recurrenceUntil.getTime())) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid recurrence end date." })
-      }
-
-      const maxOccurrences = 52
-      const occurrences: Array<{ start: Date; end: Date }> = []
-      const durationMs = endDate.getTime() - startDate.getTime()
-
-      const advance = (date: Date) => {
-        switch (recurrence.frequency) {
-          case "DAILY":
-            return addDays(date, 1)
-          case "WEEKLY":
-            return addWeeks(date, 1)
-          case "BIWEEKLY":
-            return addWeeks(date, 2)
-          case "MONTHLY":
-            return addMonths(date, 1)
-          default:
-            return date
-        }
-      }
-
-      let currentStart = startDate
-      while (occurrences.length < maxOccurrences) {
-        const currentEnd = new Date(currentStart.getTime() + durationMs)
-        occurrences.push({ start: currentStart, end: currentEnd })
-        if (recurrence.frequency === "NONE") break
-        currentStart = advance(currentStart)
-        if (currentStart > recurrenceUntil) break
-      }
-
-      const conflictStatuses = [
-        BookingStatus.REQUESTED,
-        BookingStatus.ACCEPTED,
-        BookingStatus.BORROWED,
-      ]
-
-      const createdBlocks: string[] = []
-      const skipped: Array<{ start: Date; end: Date; conflictingBookingId: string }> = []
-
-      for (const occurrence of occurrences) {
-        const conflict = await ctx.prisma.booking.findFirst({
-          where: {
-            itemId: input.itemId,
-            status: { in: conflictStatuses },
-            startDate: { lt: occurrence.end },
-            endDate: { gt: occurrence.start },
-          },
-        })
-
-        if (conflict) {
-          skipped.push({
-            start: occurrence.start,
-            end: occurrence.end,
-            conflictingBookingId: conflict.id,
+        const quantity = input.quantity ?? item.totalQuantity
+        if (quantity > item.totalQuantity) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Block quantity cannot exceed available quantity.",
           })
-          continue
         }
 
-        const reasonNote = input.reason?.trim()
-          ? `${ADMIN_BLOCK_PREFIX} ${input.reason.trim()}`
-          : ADMIN_BLOCK_PREFIX
+        const recurrence = input.recurrence ?? { frequency: "NONE" as const }
+        const recurrenceUntil = recurrence.until ? parseISO(recurrence.until) : startDate
+        if (recurrence.until && Number.isNaN(recurrenceUntil.getTime())) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid recurrence end date." })
+        }
 
-        const block = await ctx.prisma.booking.create({
-          data: {
+        const maxOccurrences = 52
+        const occurrences: Array<{ start: Date; end: Date }> = []
+        const durationMs = endDate.getTime() - startDate.getTime()
+
+        const advance = (date: Date) => {
+          switch (recurrence.frequency) {
+            case "DAILY":
+              return addDays(date, 1)
+            case "WEEKLY":
+              return addWeeks(date, 1)
+            case "BIWEEKLY":
+              return addWeeks(date, 2)
+            case "MONTHLY":
+              return addMonths(date, 1)
+            default:
+              return date
+          }
+        }
+
+        let currentStart = startDate
+        while (occurrences.length < maxOccurrences) {
+          const currentEnd = new Date(currentStart.getTime() + durationMs)
+          occurrences.push({ start: currentStart, end: currentEnd })
+          if (recurrence.frequency === "NONE") break
+          currentStart = advance(currentStart)
+          if (currentStart > recurrenceUntil) break
+        }
+
+        const conflictStatuses = [
+          BookingStatus.REQUESTED,
+          BookingStatus.ACCEPTED,
+          BookingStatus.BORROWED,
+        ]
+
+        const createdBlocks: string[] = []
+        const skipped: Array<{ start: Date; end: Date; conflictingBookingId: string }> = []
+
+        for (const occurrence of occurrences) {
+          const conflict = await tx.booking.findFirst({
+            where: {
+              itemId: input.itemId,
+              status: { in: conflictStatuses },
+              startDate: { lt: occurrence.end },
+              endDate: { gt: occurrence.start },
+            },
+          })
+
+          if (conflict) {
+            skipped.push({
+              start: occurrence.start,
+              end: occurrence.end,
+              conflictingBookingId: conflict.id,
+            })
+            continue
+          }
+
+          const reasonNote = input.reason?.trim()
+            ? `${ADMIN_BLOCK_PREFIX} ${input.reason.trim()}`
+            : ADMIN_BLOCK_PREFIX
+
+          const block = await tx.booking.create({
+            data: {
+              userId: ctx.session.user.id,
+              itemId: input.itemId,
+              quantity,
+              startDate: occurrence.start,
+              endDate: occurrence.end,
+              status: BookingStatus.ACCEPTED,
+              notes: reasonNote,
+              assignedToId: ctx.session.user.id,
+            },
+          })
+
+          createdBlocks.push(block.id)
+        }
+
+        return {
+          createdBlocks,
+          createdCount: createdBlocks.length,
+          skippedCount: skipped.length,
+          skipped: skipped.map((entry) => ({
+            start: entry.start.toISOString(),
+            end: entry.end.toISOString(),
+            conflictingBookingId: entry.conflictingBookingId,
+          })),
+          title: item.titleEn,
+        }
+      })
+      await Promise.all(
+        result.createdBlocks.map((bookingId) =>
+          logAction({
+            type: LogType.BOOKING,
             userId: ctx.session.user.id,
-            itemId: input.itemId,
-            quantity,
-            startDate: occurrence.start,
-            endDate: occurrence.end,
-            status: BookingStatus.ACCEPTED,
-            notes: reasonNote,
-            assignedToId: ctx.session.user.id,
-          },
-        })
-
-        await logAction({
-          type: LogType.BOOKING,
-          userId: ctx.session.user.id,
-          bookingId: block.id,
-          message: "blocked:create",
-        })
-
-        createdBlocks.push(block.id)
-      }
-
-      return {
-        createdCount: createdBlocks.length,
-        skippedCount: skipped.length,
-        skipped: skipped.map((entry) => ({
-          start: entry.start.toISOString(),
-          end: entry.end.toISOString(),
-          conflictingBookingId: entry.conflictingBookingId,
-        })),
-        title: item.titleEn,
-      }
+            bookingId,
+            message: "blocked:create",
+          }),
+        ),
+      )
+      const { createdBlocks: _createdBlocks, ...response } = result
+      return response
     }),
 
   listForRentalCalendar: protectedProcedure
@@ -805,7 +918,7 @@ export const bookingsRouter = router({
         },
         orderBy: { startDate: "asc" },
       })
-      return bookings
+      return bookings.map(staffBooking)
     }),
 
   getBookings: protectedProcedure
@@ -843,7 +956,7 @@ export const bookingsRouter = router({
         },
         orderBy: { startDate: "asc" },
       })
-      return bookings
+      return bookings.map(isRentalTeamMember(ctx) ? staffBooking : ownerBooking)
     }),
 
   availability: publicProcedure /* Unchanged from previous correct version */
@@ -857,6 +970,17 @@ export const bookingsRouter = router({
     .query(async ({ input, ctx }) => {
       const queryStartBoundary = parseISO(input.from)
       const queryEndBoundary = parseISO(input.to)
+      assertDateRange(queryStartBoundary, queryEndBoundary, 62)
+      const now = Date.now()
+      if (
+        queryStartBoundary.getTime() < now - 7 * 86400000 ||
+        queryEndBoundary.getTime() > now + 400 * 86400000
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Availability is limited to the current booking window.",
+        })
+      }
       const bookings = await ctx.prisma.booking.findMany({
         where: {
           itemId: input.itemId,
@@ -866,7 +990,11 @@ export const bookingsRouter = router({
           AND: [{ startDate: { lte: queryEndBoundary } }, { endDate: { gte: queryStartBoundary } }],
         },
         select: { id: true, startDate: true, endDate: true, status: true, quantity: true },
+        take: 1001,
+        orderBy: { startDate: "asc" },
       })
+      if (bookings.length > 1000)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Select a smaller date range." })
       return bookings
     }),
 })

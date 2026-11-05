@@ -12,8 +12,18 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/server-v14"
 
-const rpID = process.env.RP_ID!
-const origin = process.env.ORIGIN!
+function relyingParty() {
+  const rpID = process.env.RP_ID?.trim()
+  const configuredOrigin = process.env.ORIGIN?.trim()
+  if (!rpID || !configuredOrigin) throw new Error("RP_ID and ORIGIN are required")
+  const url = new URL(configuredOrigin)
+  if (url.origin !== configuredOrigin || url.username || url.password ||
+      (url.protocol !== "https:" && !(url.protocol === "http:" && url.hostname === "localhost")) ||
+      (url.hostname !== rpID && !url.hostname.endsWith(`.${rpID}`))) {
+    throw new Error("Invalid relying party configuration")
+  }
+  return { rpID, origin: configuredOrigin }
+}
 
 const BASE64URL_PATTERN = /^[A-Za-z0-9\-_]+$/
 const MIN_CREDENTIAL_ID_LENGTH = 16
@@ -74,9 +84,10 @@ export async function getRegistrationOptions(
   username: string,
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   const userIdBuffer = new TextEncoder().encode(userId)
+  const { rpID } = relyingParty()
 
   return generateRegistrationOptions({
-    rpName: "GRH Booking",
+    rpName: process.env.RP_NAME || "GRH Booking",
     rpID,
     timeout: 60_000,
     userID: userIdBuffer,
@@ -98,6 +109,7 @@ export async function verifyRegistration(
   credential: RegistrationResponseJSON,
   expectedChallenge: string,
 ) {
+  const { rpID, origin } = relyingParty()
   return verifyRegistrationResponse({
     response: credential,
     expectedChallenge,
@@ -110,6 +122,7 @@ export async function verifyRegistration(
 export async function getAuthenticationOptions(
   allowCredentials: Array<{ id: string; transports?: AuthenticatorTransport[] }>,
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
+  const { rpID } = relyingParty()
   const processedCredentials = allowCredentials.flatMap(({ id, transports }) => {
     const candidateIds = getCredentialIdCandidates(id)
     if (candidateIds.length === 0) return []
@@ -140,11 +153,12 @@ export async function verifyAuthentication(
     counter: number
   },
 ) {
+  const { rpID, origin } = relyingParty()
   const incomingCredentialId =
     normalizeCredentialId(credential.rawId) || normalizeCredentialId(credential.id)
 
   if (!incomingCredentialId) {
-    throw new Error(`Unable to normalize incoming credential ID: ${credential.id}`)
+    throw new Error("Unable to normalize incoming credential ID")
   }
 
   const normalizedStoredID = getPreferredCredentialId(
@@ -152,7 +166,7 @@ export async function verifyAuthentication(
     incomingCredentialId,
   )
   if (!normalizedStoredID) {
-    throw new Error(`Unable to normalize stored credential ID: ${authenticator.credentialID}`)
+    throw new Error("Unable to normalize stored credential ID")
   }
 
   if (authenticator.credentialID !== normalizedStoredID) {
@@ -177,7 +191,7 @@ export async function verifyAuthentication(
     try {
       publicKeyBuffer = Buffer.from(authenticator.credentialPublicKey, "base64")
     } catch (e2) {
-      throw new Error(`Failed to parse credentialPublicKey: ${authenticator.credentialPublicKey}`)
+      throw new Error("Failed to parse credential public key")
     }
   }
 

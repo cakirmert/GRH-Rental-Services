@@ -4,6 +4,7 @@ import { BookingStatus } from "@prisma/client"
 import type { Context } from "@/server/context"
 
 const prisma = {
+  $transaction: vi.fn(async (operation: (tx: unknown) => Promise<unknown>) => operation(prisma)),
   booking: {
     findUnique: vi.fn().mockResolvedValue({ userId: "user1", status: BookingStatus.REQUESTED }),
     update: vi.fn(),

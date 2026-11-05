@@ -64,6 +64,7 @@ describe("chatRouter.send optimization", () => {
         id: bookingId,
         userId: "requester-1",
         assignedToId: "staff-1",
+        assignedTo: { id: "staff-1", role: "RENTAL", email: "staff@example.test", name: "Staff" },
         item: { titleEn: "Test Item" },
       },
     })

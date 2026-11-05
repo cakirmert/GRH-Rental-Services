@@ -5,6 +5,7 @@ export async function deleteOldBookings() {
   await prisma.booking.deleteMany({
     where: {
       endDate: { lt: threshold },
+      status: { in: ["COMPLETED", "CANCELLED", "DECLINED"] },
     },
   })
 }

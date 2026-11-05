@@ -55,6 +55,18 @@ describe("chat router security boundaries", () => {
     vi.clearAllMocks()
   })
 
+  it("rejects a demoted assignee even if the old assignment remains", async () => {
+    prisma.booking.findUnique.mockResolvedValue({
+      userId: "resident-1",
+      assignedToId: "former-staff",
+      item: { responsibleMembers: [] },
+    })
+    await expect(
+      chatRouter.createCaller(context("USER", "former-staff")).list({ bookingId: "booking-1" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(prisma.bookingChatThread.upsert).not.toHaveBeenCalled()
+  })
+
   it("does not let rental users list chat messages for unrelated bookings", async () => {
     prisma.booking.findUnique.mockResolvedValue(inaccessibleBooking())
 

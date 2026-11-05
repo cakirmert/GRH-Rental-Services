@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer-secure"
 
-export const isDev = process.env.NODE_ENV !== "production"
+export const isDev = process.env.NODE_ENV !== "production" ||
+  process.env.VERCEL_ENV === "preview" || process.env.DISABLE_OUTBOUND === "true"
 
 export const CONTACT_EMAIL = process.env.CONTACT_EMAIL!
 

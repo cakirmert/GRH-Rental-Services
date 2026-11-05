@@ -1,282 +1,123 @@
 import { router, publicProcedure, protectedProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
-import { generatePasskeyToken } from "../../../auth"
 import {
-  getRegistrationOptions,
-  verifyRegistration,
-  getAuthenticationOptions,
-  verifyAuthentication,
-  normalizeCredentialId,
-  getCredentialIdCandidates,
+  getRegistrationOptions, verifyRegistration, getAuthenticationOptions,
+  verifyAuthentication, normalizeCredentialId,
 } from "@/lib/webauthn"
-import type { Prisma } from "@prisma/client"
-import type {
-  RegistrationResponseJSON,
-  AuthenticationResponseJSON,
-  AuthenticatorTransport,
-} from "@simplewebauthn/server-v14"
-import type { UserPasskey } from "@/types/auth"
+import { consumeBudget, requestAddress, putSecretState, maintainAuthState } from "@/lib/auth/state"
+import { browserBinding, clientChallenge, consumeCeremony, saveCeremony } from "@/lib/auth/ceremony"
+import { commitPasskeyAuthentication, registerPasskey } from "@/lib/auth/passkey-store"
+import type { RegistrationResponseJSON, AuthenticationResponseJSON } from "@simplewebauthn/server-v14"
 
-const registrationChallenges = new Map<string, string>()
-const authenticationChallenges = new Map<string, string>()
-const rateLimit = new Map<string, { count: number; ts: number }>()
-const VALID_TRANSPORTS: ReadonlySet<AuthenticatorTransport> = new Set([
-  "ble",
-  "hybrid",
-  "internal",
-  "nfc",
-  "usb",
-])
+// Strict outer limits before parsing/cryptographic work. The verifier validates the protocol fields.
+const credentialSchema = z.object({
+  id: z.string().min(16).max(2048), rawId: z.string().min(16).max(2048),
+  type: z.string().refine(value => value === "public-key"),
+  response: z.object({
+    clientDataJSON: z.string().max(8192),
+    attestationObject: z.string().max(65536).optional(),
+    authenticatorData: z.string().max(65536).optional(),
+    signature: z.string().max(8192).optional(),
+    userHandle: z.string().max(1024).nullable().optional(),
+    transports: z.array(z.string().max(32)).max(10).optional(),
+    publicKey: z.string().max(8192).optional(),
+    publicKeyAlgorithm: z.number().int().optional(),
+  }),
+  clientExtensionResults: z.custom<object>(
+    value => value !== null && typeof value === "object" && !Array.isArray(value),
+  ).optional(),
+  authenticatorAttachment: z.enum(["platform", "cross-platform"]).optional(),
+})
 
-function normalizeTransports(transports?: unknown): AuthenticatorTransport[] | undefined {
-  if (!Array.isArray(transports)) return undefined
-  const normalized = transports
-    .map((value) => (typeof value === "string" ? value.toLowerCase() : null))
-    .filter((value): value is AuthenticatorTransport => {
-      if (!value) return false
-      return VALID_TRANSPORTS.has(value as AuthenticatorTransport)
-    })
-  return normalized.length ? normalized : undefined
-}
-
-function checkRateLimit(key: string, max: number, windowMs: number) {
-  const now = Date.now()
-  const entry = rateLimit.get(key)
-  if (entry && now - entry.ts < windowMs) {
-    if (entry.count >= max) throw new TRPCError({ code: "TOO_MANY_REQUESTS" })
-    entry.count += 1
-  } else {
-    rateLimit.set(key, { count: 1, ts: now })
+async function budget(req: Request | undefined, userId?: string) {
+  if (!(await consumeBudget("webauthn-global", "all", 600, 60_000)) ||
+      !(await consumeBudget("webauthn-address", requestAddress(req), 30, 60_000)) ||
+      (userId && !(await consumeBudget("webauthn-user", userId, 20, 60_000)))) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS" })
   }
 }
+
+const rejected = () => new TRPCError({ code: "BAD_REQUEST", message: "Passkey verification failed. Please try again." })
 
 export const webauthnRouter = router({
   registerOptions: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      checkRateLimit(
-        ctx.req?.headers?.get("x-forwarded-for") ||
-          (ctx.req as unknown as { ip?: string }).ip ||
-          "ip",
-        5,
-        60_000,
-      )
-      const user = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
-      if (!user) throw new TRPCError({ code: "NOT_FOUND" })
+      if (input.userId !== ctx.session.user.id) throw new TRPCError({ code: "FORBIDDEN" })
+      await budget(ctx.req, ctx.session.user.id)
+      const user = await ctx.prisma.user.findUnique({ where: { id: ctx.session.user.id } })
+      if (!user) throw rejected()
       const opts = await getRegistrationOptions(user.id, user.email)
-      registrationChallenges.set(user.id, opts.challenge)
+      await saveCeremony(opts.challenge, "registration", user.id)
       return opts
     }),
+
   register: protectedProcedure
-    .input(z.object({ credential: z.any() }))
+    .input(z.object({ credential: credentialSchema }))
     .mutation(async ({ input, ctx }) => {
-      const challenge = registrationChallenges.get(ctx.session.user.id)
-      if (!challenge) throw new TRPCError({ code: "BAD_REQUEST" })
-      const verification = await verifyRegistration(
-        input.credential as RegistrationResponseJSON,
-        challenge,
-      )
-      if (!verification.verified || !verification.registrationInfo) {
-        throw new TRPCError({ code: "BAD_REQUEST" })
-      }
-
-      const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo
-
-      const rawCredentialId =
-        typeof credential.id === "string"
-          ? credential.id
-          : Buffer.from(credential.id).toString("base64url")
-      const normalizedCredentialID = normalizeCredentialId(rawCredentialId)
-
-      if (!normalizedCredentialID) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Unable to store credential ID" })
-      }
-
-      const publicKeyBytes =
-        typeof credential.publicKey === "string"
-          ? Buffer.from(credential.publicKey, "base64url")
-          : Buffer.from(credential.publicKey)
-
-      const passkeyRecord = {
-        credentialID: normalizedCredentialID,
-        credentialPublicKey: publicKeyBytes.toString("base64url"),
-        counter: credential.counter ?? 0,
-        transports: normalizeTransports(credential.transports),
-        deviceType: credentialDeviceType,
-        backedUp: credentialBackedUp,
-        createdAt: new Date().toISOString(),
-        name: `Device ${Date.now()}`,
-      }
-
-      await ctx.prisma.user.update({
-        where: { id: ctx.session.user.id },
-        data: {
-          passkeys: {
-            push: passkeyRecord,
-          },
-        },
-      })
-      registrationChallenges.delete(ctx.session.user.id)
-      return { ok: true }
+      await budget(ctx.req, ctx.session.user.id)
+      try {
+        const challenge = clientChallenge(input.credential)
+        if (!(await consumeCeremony(challenge, "registration", ctx.session.user.id))) throw rejected()
+        const verification = await verifyRegistration(input.credential as RegistrationResponseJSON, challenge)
+        if (!verification.verified || !verification.registrationInfo) throw rejected()
+        const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo
+        const id = normalizeCredentialId(credential.id)
+        if (!id) throw rejected()
+        await registerPasskey(ctx.session.user.id, {
+          credentialID: id,
+          credentialPublicKey: Buffer.from(credential.publicKey).toString("base64url"),
+          counter: credential.counter,
+          transports: credential.transports,
+          deviceType: credentialDeviceType,
+          backedUp: credentialBackedUp,
+          createdAt: new Date().toISOString(),
+          name: "Device " + Date.now(),
+        })
+        return { ok: true }
+      } catch { throw rejected() }
     }),
 
   loginOptions: publicProcedure
-    .input(z.object({ usernameOrEmail: z.string().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      checkRateLimit(
-        ctx.req?.headers?.get("x-forwarded-for") ||
-          (ctx.req as unknown as { ip?: string }).ip ||
-          "ip",
-        5,
-        60_000,
-      )
-
-      let allowCredentials: Array<{
-        id: string
-        transports?: AuthenticatorTransport[]
-      }> = []
-      let userIds: string[] = []
-
-      if (input.usernameOrEmail) {
-        // Traditional flow: find user by email/username first
-        const user = await ctx.prisma.user.findFirst({
-          where: { OR: [{ email: input.usernameOrEmail }, { name: input.usernameOrEmail }] },
-        })
-        if (!user || !user.passkeys.length) throw new TRPCError({ code: "NOT_FOUND" })
-
-        const userPasskeys = user.passkeys as unknown as UserPasskey[]
-
-        allowCredentials = userPasskeys.map((p) => ({
-          id: p.credentialID,
-          transports: normalizeTransports(p.transports),
-        }))
-        userIds = [user.id]
-      } else {
-        // Usernameless flow: find all users with passkeys
-        const users = await ctx.prisma.user.findMany({
-          select: {
-            id: true,
-            email: true,
-            passkeys: true,
-          },
-        })
-
-        // Collect all credential IDs and map them to user IDs
-        users.forEach((user) => {
-          if (user.passkeys && Array.isArray(user.passkeys)) {
-            const userPasskeys = user.passkeys as unknown as UserPasskey[]
-            allowCredentials.push(
-              ...userPasskeys.map((p) => ({
-                id: p.credentialID,
-                transports: normalizeTransports(p.transports),
-              })),
-            )
-            userIds.push(user.id)
-          }
-        })
-      }
-
-      if (allowCredentials.length === 0) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "No passkeys found" })
-      }
-
-      const opts = await getAuthenticationOptions(allowCredentials)
-
-      // Store challenge for all possible user IDs in usernameless flow
-      userIds.forEach((userId) => {
-        authenticationChallenges.set(userId, opts.challenge)
-      })
-
+    .input(z.object({ usernameOrEmail: z.string().max(254).optional() }))
+    .mutation(async ({ ctx }) => {
+      await budget(ctx.req)
+      await maintainAuthState()
+      // Discoverable credentials stay on the authenticator: never enumerate accounts or IDs.
+      const opts = await getAuthenticationOptions([])
+      await saveCeremony(opts.challenge, "authentication")
       return opts
     }),
 
   login: publicProcedure
-    .input(z.object({ userId: z.string(), credential: z.any() }))
+    .input(z.object({ userId: z.string().max(256), credential: credentialSchema }))
     .mutation(async ({ input, ctx }) => {
-      let user: Prisma.UserGetPayload<{}> | null = null
-
-      const incomingCredentialCandidate = input.credential.rawId || input.credential.id
-      const normalizedIncomingCredentialId = normalizeCredentialId(incomingCredentialCandidate)
-
-      if (!normalizedIncomingCredentialId) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid credential identifier" })
-      }
-
-      if (input.userId === "auto-detect") {
-        // Usernameless flow: find user by credential ID
-        const users = await ctx.prisma.user.findMany()
-
-        for (const u of users) {
-          if (!u.passkeys || !Array.isArray(u.passkeys)) continue
-          const userPasskeys = u.passkeys as unknown as UserPasskey[]
-          const foundPasskey = userPasskeys.find((p) => {
-            return getCredentialIdCandidates(p.credentialID).includes(
-              normalizedIncomingCredentialId,
-            )
-          })
-
-          if (foundPasskey) {
-            user = u
-            break
-          }
-        }
-      } else {
-        user = await ctx.prisma.user.findUnique({ where: { id: input.userId } })
-      }
-
-      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found for passkey" })
-
-      const challenge = authenticationChallenges.get(user.id)
-      if (!challenge) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No challenge found" })
-      }
-
-      const userPasskeys = user.passkeys as unknown as UserPasskey[]
-
-      const passkey = userPasskeys.find((p) => {
-        const storedCandidates = getCredentialIdCandidates(p.credentialID)
-
-        if (storedCandidates.includes(normalizedIncomingCredentialId)) {
-          if (p.credentialID !== normalizedIncomingCredentialId) {
-            p.credentialID = normalizedIncomingCredentialId
-          }
-          return true
-        }
-        return false
-      })
-
-      if (!passkey) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Passkey not found" })
-      }
-
-      if (!passkey.credentialPublicKey) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Passkey data is incomplete (missing credentialPublicKey). Please re-register your passkey.",
+      await budget(ctx.req)
+      try {
+        const challenge = clientChallenge(input.credential)
+        if (!(await consumeCeremony(challenge, "authentication"))) throw rejected()
+        const id = normalizeCredentialId(input.credential.rawId)
+        if (!id || id !== normalizeCredentialId(input.credential.id)) throw rejected()
+        const alias = await ctx.prisma.passkeyCredentialAlias.findUnique({
+          where: { id }, include: { credential: true },
         })
-      }
-
-      const verification = await verifyAuthentication(
-        input.credential as AuthenticationResponseJSON,
-        challenge,
-        passkey,
-      )
-
-      if (!verification.verified || !verification.authenticationInfo) {
-        throw new TRPCError({ code: "BAD_REQUEST" })
-      }
-
-      passkey.counter = verification.authenticationInfo.newCounter
-
-      await ctx.prisma.user.update({
-        where: { id: user.id },
-        data: { passkeys: userPasskeys as unknown as Prisma.InputJsonValue[] },
-      })
-
-      authenticationChallenges.delete(user.id)
-      const token = generatePasskeyToken(user.id)
-      return { ok: true, token }
+        const stored = alias?.credential
+        if (!stored || stored.revokedAt ||
+            (input.userId !== "auto-detect" && input.userId !== stored.userId)) throw rejected()
+        const verification = await verifyAuthentication(input.credential as AuthenticationResponseJSON, challenge, {
+          credentialID: stored.legacyCredentialId,
+          credentialPublicKey: stored.credentialPublicKey,
+          counter: Number(stored.counter),
+        })
+        if (!verification.verified) throw rejected()
+        const binding = await browserBinding()
+        if (!binding) throw rejected()
+        const token = await commitPasskeyAuthentication(
+          stored.id, stored.userId, Number(stored.counter), verification.authenticationInfo.newCounter,
+          tx => putSecretState("passkey-session", { userId: stored.userId, credentialId: stored.id, binding }, 60_000, tx),
+        )
+        return { ok: true, token }
+      } catch { throw rejected() }
     }),
 })

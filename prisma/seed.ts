@@ -2,20 +2,32 @@
 //  prisma/seed.ts
 //------------------------------------------------------------------
 import "dotenv/config"
-import prisma from "../src/lib/prismadb"
-import { Role, ItemType } from "@prisma/client"
+import { PrismaClient, Role, ItemType, type Prisma } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
 import fs from "fs/promises"
 import path from "path"
-import { put } from "@vercel/blob"
-import { v4 as uuidv4 } from "uuid"
-import sharp from "sharp"
+import { localSeedDatabaseUrl } from "./seedSafety"
 
 async function main() {
-  /* ───── Reset DB (optional) ───────────────────────────────────── */
+  const connectionString = localSeedDatabaseUrl(process.env)
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, ssl: false }) })
+  try {
+    await prisma.$transaction(seedLocalData, { timeout: 30000 })
+    console.log("🌱 Local seed finished successfully")
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+async function seedLocalData(prisma: Prisma.TransactionClient) {
+  /* Reset is restricted to explicitly opted-in local databases above. */
   await prisma.notification.deleteMany()
   await prisma.booking.deleteMany()
   await prisma.item.deleteMany()
   await prisma.user.deleteMany()
+  await prisma.verificationToken.deleteMany()
+  await prisma.authState.deleteMany()
+  await prisma.log.deleteMany()
 
   const now = new Date()
 
@@ -29,103 +41,40 @@ async function main() {
     },
   })
 
-  async function uploadImages(paths: string[]): Promise<string[]> {
-    const token = process.env.BLOB_READ_WRITE_TOKEN
-    if (!token) throw new Error("Missing BLOB_READ_WRITE_TOKEN")
-    const total = paths.length
-    let done = 0
-    function printProgress() {
-      const percent = Math.round((done / total) * 100)
-      const barLen = 30
-      const filled = Math.round((percent / 100) * barLen)
-      const bar =
-        "[" + "#".repeat(filled) + "-".repeat(barLen - filled) + `] ${percent}% (${done}/${total})`
-      process.stdout.write(`\r${bar}`)
-      if (done === total) process.stdout.write("\n")
-    }
-    const results: string[] = []
-    for (const p of paths) {
-      const abs = path.join(process.cwd(), "public", p.replace(/^\//, ""))
-      const data = await fs.readFile(abs)
-      let url
-      if (data.length < 1024 * 1024) {
-        // If already under 1MB, upload as-is
-        const ext = path.extname(p)
-        const name = `seed/${uuidv4()}${ext}`
-        ;({ url } = await put(name, data, { access: "public", token }))
-      } else {
-        // Otherwise, compress and resize to get under 1MB
-        let quality = 90
-        let width: number | undefined = undefined
-        // Ensure finalBuffer is a concrete Node.js Buffer to avoid
-        // TypeScript's generic Buffer<ArrayBufferLike> vs NonSharedBuffer
-        // mismatch. Create a new Buffer from the data which gives a
-        // concrete Buffer type and is safe for reassigning later.
-        let finalBuffer: Buffer = Buffer.from(data)
-        const image = sharp(data).rotate().withMetadata({ exif: undefined })
-        const metadata = await image.metadata()
-        // Try quality reduction first
-        for (; quality >= 40; quality -= 10) {
-          let tempImage = image
-          if (width) tempImage = tempImage.resize({ width })
-          if (metadata.format === "jpeg") {
-            finalBuffer = (await tempImage.jpeg({ quality, mozjpeg: true }).toBuffer()) as Buffer
-          } else if (metadata.format === "png") {
-            finalBuffer = (await tempImage.png({ compressionLevel: 9 }).toBuffer()) as Buffer
-          } else if (metadata.format === "webp") {
-            finalBuffer = (await tempImage.webp({ quality }).toBuffer()) as Buffer
-          } else {
-            finalBuffer = (await tempImage.toBuffer()) as Buffer
-          }
-          if (finalBuffer.length < 1024 * 1024) break
+  async function localImages(paths: string[]): Promise<string[]> {
+    return Promise.all(
+      paths.map(async (imagePath) => {
+        try {
+          await fs.access(path.join(process.cwd(), "public", imagePath.replace(/^\//, "")))
+          return imagePath
+        } catch {
+          // The repository does not include the production equipment photographs.
+          return "/gustav.png"
         }
-        // If still too large, iteratively resize
-        while (finalBuffer.length >= 1024 * 1024 && metadata.width && metadata.width > 200) {
-          width = width ? Math.floor(width * 0.8) : Math.floor((metadata.width || 2000) * 0.8)
-          const tempImage = image.resize({ width })
-          if (metadata.format === "jpeg") {
-            finalBuffer = (await tempImage
-              .jpeg({ quality: 70, mozjpeg: true })
-              .toBuffer()) as Buffer
-          } else if (metadata.format === "png") {
-            finalBuffer = (await tempImage.png({ compressionLevel: 9 }).toBuffer()) as Buffer
-          } else if (metadata.format === "webp") {
-            finalBuffer = (await tempImage.webp({ quality: 70 }).toBuffer()) as Buffer
-          } else {
-            finalBuffer = (await tempImage.toBuffer()) as Buffer
-          }
-        }
-        const ext = path.extname(p)
-        const name = `seed/${uuidv4()}${ext}`
-        ;({ url } = await put(name, finalBuffer, { access: "public", token }))
-      }
-      done++
-      printProgress()
-      results.push(url)
-    }
-    return results
+      }),
+    )
   }
 
   /* ───── Helper image groups ──────────────────────────────────── */
-  const barPics = await uploadImages([
+  const barPics = await localImages([
     "/photos/Bar14.jpg",
     "/photos/Bar6.jpg",
     "/photos/Bar13.jpg",
     "/photos/Bar3.jpg",
   ])
-  const loungePics = await uploadImages(["/photos/Lounge1.jpg"])
-  const hallPics = await uploadImages([
+  const loungePics = await localImages(["/photos/Lounge1.jpg"])
+  const hallPics = await localImages([
     "/photos/Sporthalle2.jpg",
     "/photos/Sporthalle6.jpg",
     "/photos/Sporthalle7.jpg",
   ])
-  const tearoomPics = await uploadImages([
+  const tearoomPics = await localImages([
     "/photos/Tearoom12.jpg",
     "/photos/Tearoom19.jpg",
     "/photos/Tearoom13.jpg",
     "/photos/Tearoom4.jpg",
   ])
-  const canoePics = await uploadImages([
+  const canoePics = await localImages([
     "/photos/Boats1.jpg",
     "/photos/Boats2.jpg",
     "/photos/Boats3.jpg",
@@ -133,11 +82,11 @@ async function main() {
     "/photos/Boats6.jpg",
   ])
 
-  const footballImg = (await uploadImages(["/photos/Games/Football.jpg"]))[0]
-  const basketballImg = (await uploadImages(["/photos/Games/Basketball.jpg"]))[0]
-  const volleyballImg = (await uploadImages(["/photos/Games/Volleyballs.jpg"]))[0]
-  const gustavImg = (await uploadImages(["/gustav.png"]))[0]
-  const ballpumpImg = (await uploadImages(["/Photos/ballpump.png"]))[0]
+  const footballImg = (await localImages(["/photos/Games/Football.jpg"]))[0]
+  const basketballImg = (await localImages(["/photos/Games/Basketball.jpg"]))[0]
+  const volleyballImg = (await localImages(["/photos/Games/Volleyballs.jpg"]))[0]
+  const gustavImg = (await localImages(["/gustav.png"]))[0]
+  const ballpumpImg = (await localImages(["/photos/ballpump.png"]))[0]
 
   /* ───── Items (rooms, sports, board games) ────────────────── */
   const items = [
@@ -470,7 +419,7 @@ async function main() {
           "Versteckte-Rollen-Eliminierung von Dorfbewohnern gegen Werwölfe.",
         ],
       ].map(async ([title, file, players, descEn, descDe]) => {
-        const [img] = await uploadImages([`/photos/Games/${file}`])
+        const [img] = await localImages([`/photos/Games/${file}`])
         return {
           type: ItemType.GAME,
           titleEn: title,
@@ -502,15 +451,9 @@ async function main() {
       }),
     ),
   )
-
-  console.log("🌱 Seed finished successfully")
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : "Local seed failed.")
+  process.exitCode = 1
+})

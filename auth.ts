@@ -2,103 +2,14 @@ import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { Prisma } from "@prisma/client"
-import { normalizeEmail } from "@/utils/email"
+import { consumeOtp, parseMailbox } from "@/lib/auth/otp"
+import { browserBinding } from "@/lib/auth/ceremony"
+import { consumeBoundSecretState, consumeBudget, requestAddress } from "@/lib/auth/state"
 import { authConfig } from "./auth.config"
 import prisma from "./src/lib/prismadb"
 
-const OTP_CODE_PATTERN = /^\d{6}$/
-const otpRequests = new Map<string, { count: number; ts: number }>()
-export const otpFailures = new Map<string, { count: number; locked: number }>()
-const passkeyTokens = new Map<string, { userId: string; expires: number }>()
-export { otpRequests }
-
-export function generatePasskeyToken(userId: string) {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  const token = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
-  passkeyTokens.set(token, { userId, expires: Date.now() + 5 * 60 * 1000 })
-  return token
-}
-
-export async function generateHmacSha256(data: string, secret: string): Promise<string> {
-  const secretKey = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  )
-  const signature = await crypto.subtle.sign("HMAC", secretKey, new TextEncoder().encode(data))
-  return Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-}
-
 function getAuthSecret() {
   return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
-}
-
-function handleOtpFailure(
-  emailKey: string,
-  currentFailState: { count: number; locked: number } | undefined,
-  currentTimestamp: number,
-) {
-  const count = currentFailState ? currentFailState.count + 1 : 1
-  if (count >= 5) {
-    otpFailures.set(emailKey, { count: 0, locked: currentTimestamp + 15 * 60 * 1000 })
-  } else {
-    otpFailures.set(emailKey, { count, locked: 0 })
-  }
-}
-
-async function consumeOtpCode(email: string, token: string) {
-  const now = Date.now()
-  const fail = otpFailures.get(email)
-  if (fail && fail.locked > now) return false
-
-  const activeToken = await prisma.verificationToken.findFirst({
-    where: {
-      identifier: email,
-      expires: { gt: new Date() },
-    },
-    select: { identifier: true },
-  })
-  if (!activeToken) return false
-
-  const code = token.trim()
-  if (!OTP_CODE_PATTERN.test(code)) {
-    handleOtpFailure(email, fail, now)
-    return false
-  }
-
-  const secret = getAuthSecret()
-  if (!secret) {
-    throw new Error("AUTH_SECRET environment variable is not set")
-  }
-
-  const h = await generateHmacSha256(code, secret)
-  const fullToken = `${code}.${h}`
-  const verificationToken = await prisma.verificationToken.findFirst({
-    where: {
-      identifier: email,
-      token: fullToken,
-      expires: { gt: new Date() },
-    },
-  })
-
-  if (!verificationToken) {
-    handleOtpFailure(email, fail, now)
-    return false
-  }
-
-  await prisma.verificationToken.deleteMany({
-    where: {
-      identifier: email,
-      token: fullToken,
-    },
-  })
-  otpFailures.delete(email)
-  return true
 }
 
 async function findOrCreateUserByEmail(email: string) {
@@ -152,16 +63,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         token: { type: "text" },
       },
-      async authorize(credentials) {
-        if (!credentials?.token) return null
-
-        const token = String(credentials.token)
-        const entry = passkeyTokens.get(token)
-        if (!entry || entry.expires < Date.now()) {
-          passkeyTokens.delete(token)
-          return null
-        }
-        passkeyTokens.delete(token)
+      async authorize(credentials, request) {
+        // Every exchange path, including Auth.js's public callback, crosses this budget.
+        if (!(await consumeBudget("passkey-exchange-global", "all", 600, 60_000)) ||
+            !(await consumeBudget("passkey-exchange-address", requestAddress(request), 30, 60_000))) return null
+        const token = credentials?.token
+        if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null
+        const binding = await browserBinding()
+        if (!binding) return null
+        const entry = await consumeBoundSecretState("passkey-session", token, binding)
+        if (!entry || entry.binding !== binding || typeof entry.userId !== "string" ||
+            typeof entry.credentialId !== "string") return null
+        const credential = await prisma.passkeyCredential.findUnique({ where: { id: entry.credentialId } })
+        if (!credential || credential.revokedAt || credential.userId !== entry.userId) return null
 
         return prisma.user.findUnique({
           where: { id: entry.userId },
@@ -179,8 +93,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.token) return null
 
-        const email = normalizeEmail(credentials.email as string)
-        const verified = await consumeOtpCode(email, String(credentials.token))
+        const email = parseMailbox(credentials.email)
+        if (!email) return null
+        const verified = await consumeOtp(email, String(credentials.token).trim())
         if (!verified) return null
 
         return findOrCreateUserByEmail(email)

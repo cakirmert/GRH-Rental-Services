@@ -4,6 +4,7 @@ import { userRouter } from "../user"
 import type { Context } from "@/server/context"
 import type { Request } from "express"
 import { BookingStatus } from "@prisma/client"
+vi.mock("@/lib/auth/passkey-store", () => ({ revokePasskey: vi.fn() }))
 
 function createCaller(status?: BookingStatus) {
   const prisma = {
@@ -11,8 +12,14 @@ function createCaller(status?: BookingStatus) {
       findFirst: vi.fn().mockResolvedValue(status ? { id: "b1", status } : null),
       deleteMany: vi.fn().mockResolvedValue({}),
     },
-    user: { delete: vi.fn().mockResolvedValue({}) },
+    user: {
+      delete: vi.fn().mockResolvedValue({}),
+      findUnique: vi.fn().mockResolvedValue({ role: "USER", isSuperAdmin: false }),
+      count: vi.fn().mockResolvedValue(2),
+    },
+    $transaction: vi.fn(),
   }
+  prisma.$transaction.mockImplementation((operation) => operation(prisma))
   const ctx: Context = {
     prisma: prisma as unknown as Context["prisma"],
     session: {

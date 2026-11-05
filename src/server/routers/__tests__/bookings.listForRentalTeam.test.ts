@@ -3,6 +3,8 @@ import { vi } from "vitest"
 import { bookingsRouter } from "../bookingRouter"
 import type { Context } from "@/server/context"
 
+vi.mock("@/lib/prismadb", () => ({ default: { log: { create: vi.fn() } } }))
+
 vi.mock("@/server/jobs/autoBorrowed", () => ({
   markUpcomingBookingsBorrowed: vi.fn(),
 }))

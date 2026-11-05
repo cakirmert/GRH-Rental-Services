@@ -64,6 +64,7 @@ model User {
   role          Role     @default(USER)
   isSuperAdmin  Boolean  @default(false)
   passkeys      Json[]   @default([])
+  passkeyCredentials PasskeyCredential[]
   emailBookingNotifications Boolean @default(true)
 
   /* relations */
@@ -216,6 +217,7 @@ model Booking {
   startDate    DateTime
   endDate      DateTime
   notes        String?
+  staffNotes   String?
 
   notifications Notification[]
 
@@ -261,6 +263,41 @@ model VerificationToken {
   updatedAt  DateTime @updatedAt
 
   @@unique([identifier, token])
+}
+
+// Short-lived authentication state, shared by all function instances.
+model AuthState {
+  key       String   @id
+  value     Json
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+// The original User.passkeys JSON is retained for the compatibility rollback window.
+model PasskeyCredential {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  legacyCredentialId  String
+  credentialPublicKey String
+  counter             BigInt   @default(0)
+  metadata            Json
+  revokedAt           DateTime?
+  createdAt           DateTime @default(now())
+  lastUsedAt          DateTime?
+  aliases             PasskeyCredentialAlias[]
+
+  @@unique([userId, legacyCredentialId])
+  @@index([userId, revokedAt])
+}
+
+model PasskeyCredentialAlias {
+  id           String @id
+  credentialId String
+  credential   PasskeyCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
 }
 
 model Log {

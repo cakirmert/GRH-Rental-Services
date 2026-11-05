@@ -36,6 +36,7 @@ describe("deleteOldBookings", () => {
     expect(prisma.booking.deleteMany).toHaveBeenCalledWith({
       where: {
         endDate: { lt: expectedThreshold },
+        status: { in: ["COMPLETED", "CANCELLED", "DECLINED"] },
       },
     })
   })

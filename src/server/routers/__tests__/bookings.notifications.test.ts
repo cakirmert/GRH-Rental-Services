@@ -11,7 +11,10 @@ vi.mock("@/server/notifications/bookingStatusNotifier", () => ({
 }))
 
 const prisma = {
+  $transaction: vi.fn(async (operation: (tx: unknown) => Promise<unknown>) => operation(prisma)),
   booking: {
+    findMany: vi.fn().mockResolvedValue([]),
+    aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }),
     findUnique: vi.fn(),
     update: vi.fn(),
   },
@@ -35,7 +38,8 @@ async function createCaller() {
     status: BookingStatus.REQUESTED,
     startDate: new Date("2024-01-01T10:00:00Z"),
     endDate: new Date("2024-01-01T12:00:00Z"),
-    item: { titleEn: "Item" },
+    item: { titleEn: "Item", active: true, totalQuantity: 1 },
+    quantity: 1,
     user: { id: "user1", email: "user@example.com", name: "User" },
     assignedTo: null,
   }

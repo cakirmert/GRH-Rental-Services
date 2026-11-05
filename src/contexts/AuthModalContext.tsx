@@ -223,11 +223,12 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
       })
 
       // Create session via NextAuth
-      await fetch("/api/auth/passkey", {
+      const sessionResponse = await fetch("/api/auth/passkey", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: (loginResult as { token: string }).token }),
       })
+      if (!sessionResponse.ok) throw new Error("Passkey session creation failed. Please try again.")
 
       // Success! Update session and close modal
       await updateSessionHook()

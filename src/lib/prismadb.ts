@@ -1,30 +1,22 @@
 import { PrismaClient } from "@prisma/client"
+import { Pool } from "pg"
+import { PrismaPg } from "@prisma/adapter-pg"
+import { verifiedDatabaseUrl } from "./databaseUrl"
 
 declare global {
-  // allow global `var` declarations
   var prisma: PrismaClient | undefined
 }
 
-import { Pool } from 'pg'
-import { PrismaPg } from '@prisma/adapter-pg'
+function createClient() {
+  const pool = new Pool({
+    connectionString: verifiedDatabaseUrl(process.env.DATABASE_URL!),
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+  })
+  return new PrismaClient({ adapter: new PrismaPg(pool) })
+}
 
-const connectionString = `${process.env.DATABASE_URL}`
-
-const pool = new Pool({
-  connectionString: (() => {
-    try {
-      const url = new URL(connectionString)
-      url.searchParams.set("sslmode", "require")
-      url.searchParams.set("uselibpqcompat", "true")
-      return url.toString()
-    } catch {
-      return connectionString
-    }
-  })()
-})
-const adapter = new PrismaPg(pool)
-
-const client = globalThis.prisma || new PrismaClient({ adapter })
-if (process.env.NODE_ENV !== "production") globalThis.prisma = client
-
+const client = globalThis.prisma || createClient()
+globalThis.prisma = client
 export default client
