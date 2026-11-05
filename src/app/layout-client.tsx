@@ -6,6 +6,7 @@ import type { Session } from "next-auth"
 import Providers from "./providers"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
+import { ReleaseProvider } from "@/contexts/ReleaseContext"
 
 const FlickeringGrid = dynamic(
   () => import("@/components/ui/shadcn-io/flickering-grid").then((mod) => mod.FlickeringGrid),
@@ -30,6 +31,7 @@ interface AppLayoutClientProps {
 export default function AppLayoutClient({ session, children }: AppLayoutClientProps) {
   return (
     <Providers session={session}>
+      <ReleaseProvider>
       <div className="relative flex flex-col min-h-screen tabindex--1">
         <FlickeringGrid
           className="absolute inset-0 -z-10 hidden h-full w-full pointer-events-none md:block"
@@ -48,6 +50,7 @@ export default function AppLayoutClient({ session, children }: AppLayoutClientPr
           <InstallPrompt />
         </div>
       </div>
+      </ReleaseProvider>
     </Providers>
   )
 }

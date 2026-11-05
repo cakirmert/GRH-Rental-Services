@@ -1,9 +1,19 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react"
 import type { CalendarBooking } from "./types"
 
-export type CalendarView = "month" | "week" | "day"
+export type CalendarView = "month" | "week" | "day" | "agenda"
+
+const compactQuery = "(max-width: 639px)"
+function subscribeToViewport(onChange: () => void) {
+  const query = window.matchMedia(compactQuery)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+const isCompact = () => window.matchMedia(compactQuery).matches
+const serverCompact = () => false
+const subscribeToNothing = () => () => {}
 
 interface CalendarContextType {
   currentDate: Date
@@ -18,9 +28,21 @@ interface CalendarContextType {
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined)
 
-export function CalendarProvider({ children }: { children: ReactNode }) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [view, setView] = useState<CalendarView>("week")
+export function CalendarProvider({
+  children,
+  responsive = true,
+}: {
+  children: ReactNode
+  responsive?: boolean
+}) {
+  const [currentDate, setCurrentDate] = useState(() => new Date())
+  const [chosenView, setView] = useState<CalendarView | null>(null)
+  const compact = useSyncExternalStore(
+    responsive ? subscribeToViewport : subscribeToNothing,
+    responsive ? isCompact : serverCompact,
+    serverCompact,
+  )
+  const view = chosenView ?? (compact ? "agenda" : "week")
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null)
 

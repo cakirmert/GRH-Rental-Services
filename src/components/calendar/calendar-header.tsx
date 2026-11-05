@@ -1,85 +1,136 @@
 "use client"
 
-import { useCalendar } from "./calendar-provider"
-import { format, addMonths, addWeeks, addDays } from "date-fns"
+import { useId } from "react"
+import { addDays, addMonths, addWeeks, format, isValid, parseISO } from "date-fns"
+import { ChevronLeft, ChevronRight, LockKeyhole } from "lucide-react"
+import { useCalendar, type CalendarView } from "./calendar-provider"
+import { calendarLocale, weekLabel } from "./calendar-utils"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/i18n"
+import { cn } from "@/lib/utils"
 
-interface CalendarHeaderProps {
-  onBlockSlot?: () => void
-}
+export function CalendarHeader({ onBlockSlot }: { onBlockSlot?: () => void }) {
+  const { currentDate, setCurrentDate, view, setView, selectedDate, setSelectedDate } =
+    useCalendar()
+  const { t, locale } = useI18n()
+  const dateInputId = useId()
+  const options = { locale: calendarLocale(locale) }
+  const title =
+    view === "month"
+      ? format(currentDate, "MMMM yyyy", options)
+      : view === "day"
+        ? format(currentDate, "EEEE, d MMM yyyy", options)
+        : weekLabel(currentDate, locale)
 
-export function CalendarHeader({ onBlockSlot }: CalendarHeaderProps) {
-  const { currentDate, setCurrentDate, view, setView } = useCalendar()
-  const { t } = useI18n()
-
-  const prev = () => {
+  function navigate(direction: number) {
     setCurrentDate(
       view === "month"
-        ? addMonths(currentDate, -1)
-        : view === "week"
-          ? addWeeks(currentDate, -1)
-          : addDays(currentDate, -1),
+        ? addMonths(currentDate, direction)
+        : view === "day"
+          ? addDays(currentDate, direction)
+          : addWeeks(currentDate, direction),
     )
-  }
-
-  const next = () => {
-    setCurrentDate(
-      view === "month"
-        ? addMonths(currentDate, 1)
-        : view === "week"
-          ? addWeeks(currentDate, 1)
-          : addDays(currentDate, 1),
-    )
+    setSelectedDate(null)
   }
 
   return (
-    <div className="flex items-center justify-between border-b bg-muted/50 rounded-t-md px-4 py-2">
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={prev}>
-          &lt;
-        </Button>
-        <Button variant="outline" size="sm" onClick={next}>
-          &gt;
-        </Button>
-        <div className="ml-4 font-semibold">
-          {format(currentDate, view === "month" ? "MMMM yyyy" : "PP")}
+    <div className="space-y-4 border-b px-4 py-5 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {t("calendar.eyebrow")}
+          </p>
+          <h2
+            className="text-lg font-semibold tracking-tight sm:text-2xl"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {title}
+          </h2>
+        </div>
+        {onBlockSlot && (
+          <Button type="button" variant="outline" onClick={onBlockSlot} className="min-h-10">
+            <LockKeyhole aria-hidden="true" />
+            {t("adminCalendar.block.button")}
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-1 rounded-lg border p-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t(`calendar.previous.${view}`)}
+              onClick={() => navigate(-1)}
+            >
+              <ChevronLeft aria-hidden="true" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setCurrentDate(new Date())
+                setSelectedDate(null)
+              }}
+            >
+              {t("calendar.today")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t(`calendar.next.${view}`)}
+              onClick={() => navigate(1)}
+            >
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+          <label htmlFor={dateInputId} className="sr-only">
+            {t("calendar.jumpToDate")}
+          </label>
+          <input
+            id={dateInputId}
+            type="date"
+            value={format(currentDate, "yyyy-MM-dd")}
+            className="min-h-11 min-w-0 max-w-full rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(event) => {
+              const date = parseISO(event.target.value)
+              if (isValid(date)) {
+                setCurrentDate(date)
+                setSelectedDate(null)
+              }
+            }}
+          />
+        </div>
+        <div
+          role="group"
+          aria-label={t("calendar.viewLabel")}
+          className="grid grid-cols-4 gap-1 rounded-lg bg-muted/70 p-1 lg:w-auto"
+        >
+          {(["agenda", "month", "week", "day"] as CalendarView[]).map((option) => (
+            <Button
+              key={option}
+              type="button"
+              variant="ghost"
+              aria-pressed={view === option}
+              onClick={() => setView(option)}
+              className={cn(
+                "min-h-10 px-3 text-xs sm:text-sm",
+                view === option && "bg-background shadow-sm hover:bg-background",
+              )}
+            >
+              {t(`calendar.views.${option}`)}
+            </Button>
+          ))}
         </div>
       </div>
-      <div className="flex gap-2">
-        <Button
-          variant={view === "month" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("month")}
-          className="hidden sm:inline-flex"
-        >
-          Month
-        </Button>
-        <Button
-          variant={view === "week" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("week")}
-        >
-          Week
-        </Button>
-        <Button
-          variant={view === "day" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setView("day")}
-        >
-          Day
-        </Button>
-      </div>
-      {onBlockSlot && (
-        <Button
-          variant="default"
-          size="sm"
-          onClick={onBlockSlot}
-          className="ml-2 whitespace-nowrap"
-        >
-          {t("adminCalendar.block.button")}
-        </Button>
-      )}
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {selectedDate
+          ? `${t("calendar.selected")}: ${format(selectedDate, "PP HH:mm", options)}`
+          : t("calendar.hint")}
+      </p>
     </div>
   )
 }

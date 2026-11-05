@@ -691,6 +691,30 @@
     "declineNoteReminderTitle": "Add a decline note",
     "declineNoteReminderBody": "Please leave a short note below so everyone knows why this booking was declined."
   },
+  "calendar": {
+    "eyebrow": "Rental schedule",
+    "today": "Today",
+    "jumpToDate": "Jump to date",
+    "viewLabel": "Calendar view",
+    "views": { "agenda": "Agenda", "month": "Month", "week": "Week", "day": "Day" },
+    "previous": { "agenda": "Previous week", "month": "Previous month", "week": "Previous week", "day": "Previous day" },
+    "next": { "agenda": "Next week", "month": "Next month", "week": "Next week", "day": "Next day" },
+    "hint": "Open a booking for details and actions. Choose a time before blocking a slot.",
+    "selected": "Selected time",
+    "legend": "Booking status legend",
+    "loading": "Loading the schedule…",
+    "loadError": "The schedule could not be loaded.",
+    "retry": "Try again",
+    "empty": "A clear week ahead",
+    "emptyHint": "There are no bookings in this week. Choose another date to see more of the schedule.",
+    "freeDay": "No bookings",
+    "booking": "Booking",
+    "timeGrid": "Booking timetable, scroll to explore all times and days",
+    "monthGrid": "Monthly bookings, scroll to explore all days",
+    "time": "Time",
+    "selectTime": "Select time",
+    "more": "+{count} more · view day"
+  },
   "adminCalendar": {
     "block": {
       "button": "Block slot",

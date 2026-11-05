@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils"
 import { format, isSameDay } from "date-fns"
 import { useI18n } from "@/locales/i18n"
 import { getAdminBlockReason, isAdminBlockBooking } from "@/utils/adminBlock"
+import { calendarLocale } from "./calendar-utils"
 
-const statusClasses: Record<BookingStatus, string> = {
+export const statusClasses: Record<BookingStatus, string> = {
   REQUESTED: "bg-status-requested text-status-requested-foreground",
   ACCEPTED: "bg-status-accepted text-status-accepted-foreground",
   BORROWED: "bg-status-borrowed text-status-borrowed-foreground",
@@ -20,38 +21,72 @@ const statusClasses: Record<BookingStatus, string> = {
 export function BookingEvent({
   booking,
   compact,
+  agenda,
 }: {
   booking: CalendarBooking
   compact?: boolean
+  agenda?: boolean
 }) {
-  const { setSelectedBooking } = useCalendar()
-  const { t } = useI18n()
+  const { setSelectedBooking, setSelectedDate } = useCalendar()
+  const { t, locale } = useI18n()
   const isAdminBlock = isAdminBlockBooking(booking)
+  const itemTitle = (locale === "de" ? booking.item?.titleDe : null) || booking.item?.titleEn
   const title = isAdminBlock
     ? t("adminCalendar.block.eventTitle", {
-        item: booking.item?.titleEn ?? t("adminCalendar.block.genericItem"),
+        item: itemTitle ?? t("adminCalendar.block.genericItem"),
       })
-    : booking.item?.titleEn || "Booking"
+    : itemTitle || t("calendar.booking")
   const start = new Date(booking.startDate)
   const end = new Date(booking.endDate)
-  const timeLabel = `${format(start, "HH:mm")} - ${format(end, "HH:mm")}${!isSameDay(start, end) ? " +1d" : ""}`
+  const options = { locale: calendarLocale(locale) }
+  const timeLabel = isSameDay(start, end)
+    ? `${format(start, "HH:mm")} – ${format(end, "HH:mm")}`
+    : `${format(start, "d MMM HH:mm", options)} – ${format(end, "d MMM HH:mm", options)}`
+  const status = isAdminBlock
+    ? t("adminCalendar.block.badge")
+    : t(`myBookings.tabs.${booking.status.toLowerCase()}`)
   return (
-    <div
+    <button
+      type="button"
+      aria-label={`${title}, ${timeLabel}, ${status}`}
+      title={`${title} · ${timeLabel} · ${status}`}
       className={cn(
-        "rounded-md px-1.5 py-0.5 text-xs mb-0.5 cursor-pointer shadow-sm hover:opacity-90 h-full flex flex-col justify-between border",
+        "flex w-full min-w-0 flex-col gap-1 overflow-hidden rounded-md border px-2 py-1 text-left text-xs shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        agenda ? "gap-2 rounded-xl px-3 py-3 sm:px-4" : "h-full",
         isAdminBlock
           ? "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-500/40"
           : statusClasses[booking.status],
       )}
-      onClick={() => setSelectedBooking(booking)}
+      onClick={(event) => {
+        event.stopPropagation()
+        setSelectedDate(start)
+        setSelectedBooking(booking)
+      }}
     >
-      <div>{compact ? title.substring(0, 10) : title}</div>
-      <div className="text-[10px]">{timeLabel}</div>
-      {isAdminBlock && (
-        <div className="text-[10px] mt-0.5 line-clamp-2 opacity-80">
-          {getAdminBlockReason(booking.notes) ?? t("adminCalendar.block.defaultReason")}
-        </div>
+      <span
+        className={cn(
+          "flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1",
+          agenda && "text-sm",
+        )}
+      >
+        <span className={cn("min-w-0 font-semibold", compact ? "truncate" : "line-clamp-2")}>
+          {title}
+        </span>
+        {!compact && (
+          <span className="rounded-full border border-current/15 px-1.5 py-0.5 text-[10px] font-medium">
+            {status}
+          </span>
+        )}
+      </span>
+      <span className={cn("text-[10px] tabular-nums", agenda && "text-xs")}>{timeLabel}</span>
+      {agenda && !isAdminBlock && booking.user?.name && (
+        <span className="text-xs opacity-80">{booking.user.name}</span>
       )}
-    </div>
+      {isAdminBlock && (
+        <span className="text-[10px] line-clamp-2 opacity-80">
+          {getAdminBlockReason(booking.notes) ?? t("adminCalendar.block.defaultReason")}
+        </span>
+      )}
+    </button>
   )
 }

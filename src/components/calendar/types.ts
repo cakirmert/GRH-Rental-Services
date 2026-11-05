@@ -2,8 +2,8 @@ import type { BookingStatus, ItemType } from "@prisma/client"
 
 export interface CalendarBooking {
   id: string
-  startDate: string
-  endDate: string
+  startDate: Date | string
+  endDate: Date | string
   status: BookingStatus
   notes: string | null
   item: {

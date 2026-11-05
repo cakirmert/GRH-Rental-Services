@@ -16,7 +16,6 @@ import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
 import MembersTab from "./admin/MembersTab"
 import CancelledByStaffTab from "./admin/CancelledByStaffTab"
-import { CalendarProvider } from "./calendar/calendar-provider"
 import { Calendar } from "./calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
 import NotAuthorized from "./NotAuthorized"
@@ -383,9 +382,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
             >
               {/* Placeholder for calendar content */}
               <div className="p-6">
-                <CalendarProvider>
-                  <Calendar />
-                </CalendarProvider>
+                <Calendar />
               </div>
             </TabsContent>
           )}

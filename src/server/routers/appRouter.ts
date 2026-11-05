@@ -7,6 +7,7 @@ import { userRouter } from "./userRouter"
 import { notificationsRouter } from "./notificationRouter"
 import { webauthnRouter } from "./webauthnRouter"
 import { authRouter } from "./authRouter"
+import { releaseFeedbackRouter } from "./releaseFeedbackRouter"
 
 export const appRouter = router({
   items: itemsRouter,
@@ -18,6 +19,7 @@ export const appRouter = router({
   notifications: notificationsRouter,
   webauthn: webauthnRouter,
   auth: authRouter,
+  releaseFeedback: releaseFeedbackRouter,
 })
 
 export type AppRouter = typeof appRouter

@@ -47,6 +47,11 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
   const { selectedDate, setSelectedDate } = useCalendar()
   const utils = trpc.useUtils()
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) setSelectedDate(null)
+    onOpenChange(nextOpen)
+  }
+
   const { data: items = [], isLoading: itemsLoading } = trpc.items.all.useQuery(undefined, {
     enabled: open,
   })
@@ -74,7 +79,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
           item: result.title ?? "",
         }),
       })
-      onOpenChange(false)
+      handleOpenChange(false)
     },
     onError: (error) => {
       setFormError(error.message)
@@ -94,10 +99,8 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
       setRecurrence("NONE")
       setRepeatUntil("")
       setFormError(null)
-    } else {
-      setSelectedDate(null)
     }
-  }, [open, selectedDate, setSelectedDate])
+  }, [open, selectedDate])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -172,7 +175,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("adminCalendar.block.title")}</DialogTitle>
@@ -285,7 +288,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={blockSlots.isPending}
             >
               {t("common.cancel")}

@@ -57,7 +57,6 @@ import { Label } from "@/components/ui/label"
 import { useDebounce } from "@/hooks/useDebounce"
 import { useSession } from "next-auth/react"
 
-import { CalendarProvider } from "@/components/calendar/calendar-provider"
 import { Calendar } from "@/components/calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
 import NotAuthorized from "./NotAuthorized"
@@ -717,9 +716,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
       )}
 
       {viewMode === "calendar" && (
-        <CalendarProvider>
-          <Calendar />
-        </CalendarProvider>
+        <Calendar />
       )}
       {viewMode === "list" && hasNextPage && (
         <div className="mt-6 text-center print:hidden">

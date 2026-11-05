@@ -1,6 +1,5 @@
 "use client"
 
-import { useMemo } from "react"
 import { useCalendar } from "../calendar-provider"
 import { trpc } from "@/utils/trpc"
 import {
@@ -9,102 +8,109 @@ import {
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
+  isToday,
   startOfWeek,
   endOfWeek,
+  isSameDay,
 } from "date-fns"
 import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
-import type { CalendarBooking } from "../types"
+import { bookingsForDay, calendarLocale } from "../calendar-utils"
+import { CalendarQueryState } from "../calendar-query-state"
+import { useI18n } from "@/locales/i18n"
 
-/**
- * Calendar month view component displaying bookings in a traditional calendar grid
- * @returns Month view calendar component
- */
 export function MonthView() {
-  const { currentDate, setSelectedDate } = useCalendar()
-  const { data: bookings = [] } = trpc.bookings.getBookings.useQuery({
-    start: startOfMonth(currentDate),
-    end: endOfMonth(currentDate),
-  }) as { data: CalendarBooking[] }
-
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = endOfWeek(monthEnd)
-
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-
-  /**
-   * Group bookings by date for efficient lookup
-   */
-  const groupedBookings = useMemo(() => {
-    const groups: Record<string, CalendarBooking[]> = {}
-    bookings.forEach((booking) => {
-      const dateKey = format(new Date(booking.startDate), "yyyy-MM-dd")
-      if (!groups[dateKey]) {
-        groups[dateKey] = []
-      }
-      groups[dateKey].push(booking)
-    })
-    return groups
-  }, [bookings])
-
-  /**
-   * Get all bookings for a specific day
-   * @param day - The date to get bookings for
-   * @returns Array of bookings for the specified day
-   */
-  const getBookingsForDay = (day: Date) => {
-    return groupedBookings[format(day, "yyyy-MM-dd")] || []
-  }
+  const { currentDate, selectedDate, setSelectedDate, setCurrentDate, setView } = useCalendar()
+  const { t, locale } = useI18n()
+  const start = startOfWeek(startOfMonth(currentDate))
+  const end = endOfWeek(endOfMonth(currentDate))
+  const {
+    data: bookings = [],
+    isPending,
+    isError,
+    refetch,
+  } = trpc.bookings.getBookings.useQuery({ start, end })
+  const days = eachDayOfInterval({ start, end })
+  const options = { locale: calendarLocale(locale) }
+  if (isPending || isError)
+    return (
+      <CalendarQueryState
+        loading={isPending}
+        error={isError}
+        retry={() => {
+          void refetch()
+        }}
+      />
+    )
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="grid grid-cols-7 border-b px-2">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className="p-2 text-sm font-medium text-center border-r last:border-r-0">
-            {day}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 flex-1 p-2 bg-background rounded-b-md">
-        {days.map((day) => {
-          const dayBookings = getBookingsForDay(day)
-          const isCurrentMonth = isSameMonth(day, currentDate)
-          const isToday = isSameDay(day, new Date())
-
-          return (
+    <div
+      className="overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label={t("calendar.monthGrid")}
+    >
+      <div className="min-w-[700px]">
+        <div className="grid grid-cols-7 border-b bg-muted/20">
+          {days.slice(0, 7).map((day) => (
             <div
               key={day.toISOString()}
-              className={cn(
-                "border-r border-b last:border-r-0 p-1 min-h-[120px] cursor-pointer hover:bg-muted/50 aspect-square",
-                !isCurrentMonth && "bg-muted/20 text-muted-foreground",
-              )}
-              onClick={() => setSelectedDate(day)}
+              className="py-3 text-center text-xs font-medium text-muted-foreground"
             >
+              {format(day, "EEE", options)}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {days.map((day) => {
+            const entries = bookingsForDay(bookings, day)
+            return (
               <div
+                key={day.toISOString()}
                 className={cn(
-                  "text-sm font-medium mb-1",
-                  isToday &&
-                    "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center",
+                  "min-h-40 min-w-0 space-y-1 border-b border-r p-2 [&:nth-child(7n)]:border-r-0",
+                  !isSameMonth(day, currentDate) && "bg-muted/30",
+                  selectedDate && isSameDay(day, selectedDate) && "bg-muted/50",
                 )}
               >
-                {format(day, "d")}
-              </div>
-              <div className="space-y-1">
-                {dayBookings.slice(0, 3).map((booking) => (
-                  <BookingEvent key={booking.id} booking={booking} compact />
-                ))}
-                {dayBookings.length > 3 && (
-                  <div className="text-xs text-muted-foreground">
-                    +{dayBookings.length - 3} more
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(day)
+                    setCurrentDate(day)
+                    setView("day")
+                  }}
+                  aria-label={format(day, "PPPP", options)}
+                  aria-current={isToday(day) ? "date" : undefined}
+                  className={cn(
+                    "mb-1 flex size-8 items-center justify-center rounded-full text-sm font-medium tabular-nums hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isToday(day) && "bg-primary text-primary-foreground hover:bg-primary/90",
+                    !isSameMonth(day, currentDate) && "text-muted-foreground",
+                  )}
+                >
+                  {format(day, "d")}
+                </button>
+                {entries.slice(0, 3).map((booking) => (
+                  <div key={booking.id}>
+                    <BookingEvent booking={booking} compact />
                   </div>
+                ))}
+                {entries.length > 3 && (
+                  <button
+                    type="button"
+                    className="min-h-8 w-full rounded px-1 text-left text-xs font-medium text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      setCurrentDate(day)
+                      setView("day")
+                    }}
+                  >
+                    {t("calendar.more", { count: entries.length - 3 })}
+                  </button>
                 )}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )

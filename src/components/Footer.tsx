@@ -13,6 +13,7 @@ import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
 import { useView, View } from "@/contexts/ViewContext"
 import { Button } from "@/components/ui/button"
+import ReleaseControls from "@/components/release/ReleaseControls"
 
 export default function Footer() {
   const { t } = useI18n()
@@ -123,10 +124,19 @@ export default function Footer() {
             </ul>
           </div>
         </div>
+        <ReleaseControls />
         {/* Bottom section */}
         <div className="mt-8 pt-8 border-t border-border">
           <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4 text-sm text-muted-foreground text-center sm:text-left">
-            <p className="w-full sm:w-auto">{t("footer.broughtToYou")}</p>
+            <div className="w-full sm:w-auto space-y-1.5">
+              <p>{t("footer.broughtToYou")}</p>
+              {process.env.NEXT_PUBLIC_APP_VERSION && (
+                <p className="text-xs tracking-wide" aria-label={`Version ${process.env.NEXT_PUBLIC_APP_VERSION}`}>
+                  GRH Rentals <span aria-hidden="true">·</span>{" "}
+                  <span className="font-mono tabular-nums">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+                </p>
+              )}
+            </div>
 
             <div className="flex w-full sm:w-auto justify-center sm:justify-end">
               <address className="not-italic max-w-xs sm:max-w-none text-center sm:text-right leading-relaxed">

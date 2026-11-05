@@ -690,6 +690,30 @@
     "declineNoteReminderTitle": "Bitte Notiz zur Ablehnung hinzufügen",
     "declineNoteReminderBody": "Bitte trag den Grund unten ein, damit das Rental-Team den Kontext hat."
   },
+  "calendar": {
+    "eyebrow": "Verleihplan",
+    "today": "Heute",
+    "jumpToDate": "Datum auswählen",
+    "viewLabel": "Kalenderansicht",
+    "views": { "agenda": "Agenda", "month": "Monat", "week": "Woche", "day": "Tag" },
+    "previous": { "agenda": "Vorherige Woche", "month": "Vorheriger Monat", "week": "Vorherige Woche", "day": "Vorheriger Tag" },
+    "next": { "agenda": "Nächste Woche", "month": "Nächster Monat", "week": "Nächste Woche", "day": "Nächster Tag" },
+    "hint": "Buchung für Details und Aktionen öffnen. Vor dem Sperren einen Zeitpunkt auswählen.",
+    "selected": "Ausgewählter Zeitpunkt",
+    "legend": "Legende zum Buchungsstatus",
+    "loading": "Verleihplan wird geladen…",
+    "loadError": "Der Verleihplan konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Diese Woche ist noch frei",
+    "emptyHint": "In dieser Woche gibt es keine Buchungen. Wähle ein anderes Datum, um weitere Buchungen zu sehen.",
+    "freeDay": "Keine Buchungen",
+    "booking": "Buchung",
+    "timeGrid": "Buchungszeitplan, für weitere Zeiten und Tage scrollen",
+    "monthGrid": "Monatsbuchungen, für weitere Tage scrollen",
+    "time": "Uhrzeit",
+    "selectTime": "Zeitpunkt auswählen",
+    "more": "+{count} weitere · Tag ansehen"
+  },
   "adminCalendar": {
     "block": {
       "button": "Slot blockieren",

@@ -2,15 +2,17 @@
 
 import { useI18n } from "@/locales/i18n"
 import { Container } from "@/components/ui/container"
+import { releaseCopy } from "@/locales/release"
 
 export default function PrivacyPage() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   return (
     <Container className="max-w-3xl py-8 md:py-12 space-y-6">
       <h1 className="text-3xl font-bold text-center">{t("privacy.title")}</h1>
       <p>{t("privacy.intro")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.collectionTitle")}</h2>
       <p>{t("privacy.collectionDesc")}</p>
+      <p>{releaseCopy[locale].privacyPage}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.storageTitle")}</h2>
       <p>{t("privacy.storageDesc")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.disclaimerTitle")}</h2>

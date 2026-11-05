@@ -65,6 +65,7 @@ model User {
   isSuperAdmin  Boolean  @default(false)
   passkeys      Json[]   @default([])
   passkeyCredentials PasskeyCredential[]
+  releaseFeedback ReleaseFeedback[]
   emailBookingNotifications Boolean @default(true)
 
   /* relations */
@@ -298,6 +299,21 @@ model PasskeyCredentialAlias {
   credential   PasskeyCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
 
   @@index([credentialId])
+}
+
+model ReleaseFeedback {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  releaseId     String   @db.VarChar(64)
+  interfaceMode String   @db.VarChar(7)
+  sentiment     String   @db.VarChar(7)
+  message       String   @default("") @db.VarChar(2000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, releaseId])
+  @@index([releaseId, updatedAt])
 }
 
 model Log {
