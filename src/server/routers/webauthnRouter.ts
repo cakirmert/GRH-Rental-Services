@@ -14,30 +14,28 @@ import type { Prisma } from "@prisma/client"
 import type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
-  AuthenticatorTransportFuture,
-} from "@simplewebauthn/types"
+  AuthenticatorTransport,
+} from "@simplewebauthn/server-v14"
 import type { UserPasskey } from "@/types/auth"
 
 const registrationChallenges = new Map<string, string>()
 const authenticationChallenges = new Map<string, string>()
 const rateLimit = new Map<string, { count: number; ts: number }>()
-const VALID_TRANSPORTS: ReadonlySet<AuthenticatorTransportFuture> = new Set([
+const VALID_TRANSPORTS: ReadonlySet<AuthenticatorTransport> = new Set([
   "ble",
-  "cable",
   "hybrid",
   "internal",
   "nfc",
-  "smart-card",
   "usb",
 ])
 
-function normalizeTransports(transports?: unknown): AuthenticatorTransportFuture[] | undefined {
+function normalizeTransports(transports?: unknown): AuthenticatorTransport[] | undefined {
   if (!Array.isArray(transports)) return undefined
   const normalized = transports
     .map((value) => (typeof value === "string" ? value.toLowerCase() : null))
-    .filter((value): value is AuthenticatorTransportFuture => {
+    .filter((value): value is AuthenticatorTransport => {
       if (!value) return false
-      return VALID_TRANSPORTS.has(value as AuthenticatorTransportFuture)
+      return VALID_TRANSPORTS.has(value as AuthenticatorTransport)
     })
   return normalized.length ? normalized : undefined
 }
@@ -136,7 +134,7 @@ export const webauthnRouter = router({
 
       let allowCredentials: Array<{
         id: string
-        transports?: AuthenticatorTransportFuture[]
+        transports?: AuthenticatorTransport[]
       }> = []
       let userIds: string[] = []
 

@@ -1,5 +1,5 @@
 import { trpc } from "@/utils/trpc"
-import { startAuthentication } from "@simplewebauthn/browser"
+import { startAuthentication } from "@simplewebauthn/browser-v14"
 
 /**
  * Converts ArrayBuffer to base64 URL-safe string

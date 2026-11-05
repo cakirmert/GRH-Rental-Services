@@ -1,6 +1,6 @@
 "use client"
 
-import { Github } from "lucide-react"
+import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
 import { Container } from "@/components/ui/container"
 
@@ -25,7 +25,7 @@ export default function DevelopersPage() {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
       >
-        <Github className="h-5 w-5" />
+        <GitHubLogoIcon className="h-5 w-5" />
         {t("devPage.repoLink")}
       </a>
     </Container>

@@ -68,7 +68,7 @@ async function main() {
         for (; quality >= 40; quality -= 10) {
           let tempImage = image
           if (width) tempImage = tempImage.resize({ width })
-          if (metadata.format === "jpeg" || metadata.format === "jpg") {
+          if (metadata.format === "jpeg") {
             finalBuffer = (await tempImage.jpeg({ quality, mozjpeg: true }).toBuffer()) as Buffer
           } else if (metadata.format === "png") {
             finalBuffer = (await tempImage.png({ compressionLevel: 9 }).toBuffer()) as Buffer
@@ -83,7 +83,7 @@ async function main() {
         while (finalBuffer.length >= 1024 * 1024 && metadata.width && metadata.width > 200) {
           width = width ? Math.floor(width * 0.8) : Math.floor((metadata.width || 2000) * 0.8)
           const tempImage = image.resize({ width })
-          if (metadata.format === "jpeg" || metadata.format === "jpg") {
+          if (metadata.format === "jpeg") {
             finalBuffer = (await tempImage
               .jpeg({ quality: 70, mozjpeg: true })
               .toBuffer()) as Buffer

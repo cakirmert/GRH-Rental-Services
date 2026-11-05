@@ -3,21 +3,21 @@ import {
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
-} from "@simplewebauthn/server"
+} from "@simplewebauthn/server-v14"
 import type {
   AuthenticationResponseJSON,
-  AuthenticatorTransportFuture,
+  AuthenticatorTransport,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
   RegistrationResponseJSON,
-} from "@simplewebauthn/types"
+} from "@simplewebauthn/server-v14"
 
 const rpID = process.env.RP_ID!
 const origin = process.env.ORIGIN!
 
 const BASE64URL_PATTERN = /^[A-Za-z0-9\-_]+$/
 const MIN_CREDENTIAL_ID_LENGTH = 16
-const DEFAULT_TRANSPORT_HINTS: AuthenticatorTransportFuture[] = [
+const DEFAULT_TRANSPORT_HINTS: AuthenticatorTransport[] = [
   "internal",
   "hybrid",
   "usb",
@@ -108,7 +108,7 @@ export async function verifyRegistration(
 }
 
 export async function getAuthenticationOptions(
-  allowCredentials: Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>,
+  allowCredentials: Array<{ id: string; transports?: AuthenticatorTransport[] }>,
 ): Promise<PublicKeyCredentialRequestOptionsJSON> {
   const processedCredentials = allowCredentials.flatMap(({ id, transports }) => {
     const candidateIds = getCredentialIdCandidates(id)

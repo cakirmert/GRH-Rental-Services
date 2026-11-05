@@ -5,11 +5,11 @@ import {
   LifeBuoy,
   Users,
   Megaphone,
-  Github,
   Shield,
   FileText,
   HelpCircle,
 } from "lucide-react"
+import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
 import { useView, View } from "@/contexts/ViewContext"
 import { Button } from "@/components/ui/button"
@@ -71,7 +71,7 @@ export default function Footer() {
                 onClick={() => setView(View.DEVELOPERS)}
                 className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
               >
-                <Github className="h-4 w-4" />
+                <GitHubLogoIcon className="h-4 w-4" />
                 {t("footer.devInfoLink")}
               </Button>
               <div className="space-y-2">

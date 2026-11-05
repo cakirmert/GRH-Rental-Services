@@ -855,7 +855,7 @@ export default function MyBookingsComponent({
                       mode="range"
                       selected={editDateRange}
                       onSelect={setEditDateRange}
-                      initialFocus
+                      autoFocus
                       disabled={(date) =>
                         date < startOfDay(new Date()) ||
                         (!!editDateRange?.from &&

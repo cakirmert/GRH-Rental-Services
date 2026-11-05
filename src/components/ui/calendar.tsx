@@ -5,7 +5,8 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker, useNavigation, MonthCaptionProps, ClassNames } from "react-day-picker"
+import { DayPicker, useDayPicker } from "react-day-picker"
+import type { ClassNames, MonthCaptionProps } from "react-day-picker"
 import { format } from "date-fns"
 import type { Locale } from "date-fns"
 
@@ -80,7 +81,7 @@ export function Calendar({
 
   /* ---------- custom caption (nav inside) -------------- */
   function Caption({ calendarMonth }: MonthCaptionProps) {
-    const { previousMonth, nextMonth, goToMonth } = useNavigation()
+    const { previousMonth, nextMonth, goToMonth } = useDayPicker()
     return (
       <div className="flex items-center justify-between h-10 px-2 mb-4">
         <button

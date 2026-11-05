@@ -19,7 +19,13 @@ import {
   startOfDay,
   endOfDay,
 } from "date-fns"
-import { useController, useWatch, type Control } from "react-hook-form"
+import {
+  useController,
+  useWatch,
+  type Control,
+  type FieldPath,
+  type FieldValues,
+} from "react-hook-form"
 import { trpc } from "@/utils/trpc"
 import { Card, CardContent } from "@/components/ui/card"
 import { useI18n } from "@/locales/i18n"
@@ -34,8 +40,13 @@ interface BookingInterval {
   quantity: number
 }
 
-interface Props {
-  control: Control<any>
+interface TimeRangeFieldValues extends FieldValues {
+  startTime: string
+  endTime: string
+}
+
+interface Props<TFieldValues extends TimeRangeFieldValues> {
+  control: Control<TFieldValues>
   itemId: string
   dateRange: { from: Date; to?: Date }
   totalQuantity: number
@@ -64,12 +75,14 @@ const GUTTER_PERCENT = 5
 const BLOCK_PENDING_INTERVALS = false
 /* ───────────────────────────── */
 
-export default function InteractiveTimeRangePicker({
+export default function InteractiveTimeRangePicker<
+  TFieldValues extends TimeRangeFieldValues,
+>({
   control,
   itemId,
   dateRange,
   totalQuantity,
-}: Props) {
+}: Props<TFieldValues>) {
   const { t } = useI18n()
   const fromDate = dateRange.from
   const toDateProp = dateRange.to
@@ -103,10 +116,12 @@ export default function InteractiveTimeRangePicker({
     [intervals],
   )
 
-  const { field: sField } = useController({ control, name: "startTime" })
-  const { field: eField } = useController({ control, name: "endTime" })
-  const watchS = useWatch({ control, name: "startTime" })
-  const watchE = useWatch({ control, name: "endTime" })
+  const startTimeName = "startTime" as FieldPath<TFieldValues>
+  const endTimeName = "endTime" as FieldPath<TFieldValues>
+  const { field: sField } = useController({ control, name: startTimeName })
+  const { field: eField } = useController({ control, name: endTimeName })
+  const watchS = useWatch({ control, name: startTimeName }) as string
+  const watchE = useWatch({ control, name: endTimeName }) as string
 
   const m2s = React.useCallback(
     (m: number) =>
