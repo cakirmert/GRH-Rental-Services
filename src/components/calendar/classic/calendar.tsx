@@ -8,6 +8,7 @@ import { DayView } from "./calendar-views/day-view"
 import { useCalendar } from "../calendar-provider"
 import { BookingDialog } from "../booking-dialog"
 import { BlockSlotDialog } from "../block-slot-dialog"
+import { toBerlinDate } from "@/lib/berlin-time"
 
 /**
  * Main calendar component that renders different views (month, week, day) with header and dialog
@@ -19,7 +20,7 @@ export function ClassicCalendar() {
 
   const handleOpenBlock = () => {
     if (!selectedDate) {
-      setSelectedDate(new Date())
+      setSelectedDate(toBerlinDate())
     }
     setBlockDialogOpen(true)
   }

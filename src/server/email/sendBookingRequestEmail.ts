@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { formatInBerlin } from "@/lib/berlin-time"
 import { transporter, EMAIL_FROM, EMAIL_REPLY_TO, isDev } from "@/lib/mail"
 import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
 
@@ -50,8 +50,8 @@ export async function sendBookingRequestEmail({
 }: SendBookingRequestEmailArgs) {
   const requesterLabel = requester.name?.trim() || requester.email || "A resident"
   const subject = `New booking request: ${booking.itemTitle}`
-  const startLabel = format(booking.startDate, "PPpp")
-  const endLabel = format(booking.endDate, "PPpp")
+  const startLabel = formatInBerlin(booking.startDate, "PPpp")
+  const endLabel = formatInBerlin(booking.endDate, "PPpp")
   const notes = booking.notes?.trim()
   const appUrl = emailAppUrl()
 

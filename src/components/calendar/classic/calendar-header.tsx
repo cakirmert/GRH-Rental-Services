@@ -1,9 +1,10 @@
 "use client"
 
 import { useCalendar } from "../calendar-provider"
-import { format, addMonths, addWeeks, addDays } from "date-fns"
+import { addMonths, addWeeks, addDays } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/i18n"
+import { formatInBerlin as format } from "@/lib/berlin-time"
 
 interface CalendarHeaderProps {
   onBlockSlot?: () => void
@@ -43,7 +44,10 @@ export function CalendarHeader({ onBlockSlot }: CalendarHeaderProps) {
           &gt;
         </Button>
         <div className="ml-4 font-semibold">
-          {format(currentDate, view === "month" ? "MMMM yyyy" : "PP")}
+          <div>{format(currentDate, view === "month" ? "MMMM yyyy" : "PP")}</div>
+          <div className="text-[10px] font-normal text-muted-foreground">
+            {t("calendar.timeZone")}
+          </div>
         </div>
       </div>
       <div className="flex gap-2">

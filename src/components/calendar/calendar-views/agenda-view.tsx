@@ -1,19 +1,25 @@
 "use client"
 
-import { eachDayOfInterval, endOfWeek, format, isToday, startOfWeek } from "date-fns"
+import { eachDayOfInterval, endOfWeek, startOfWeek } from "date-fns"
 import { useCalendar } from "../calendar-provider"
 import { BookingEvent } from "../booking-event"
-import { bookingsForDay, calendarLocale } from "../calendar-utils"
+import {
+  bookingsForDay,
+  calendarLocale,
+  calendarWeekOptions,
+  isCalendarToday,
+} from "../calendar-utils"
 import { CalendarQueryState } from "../calendar-query-state"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { cn } from "@/lib/utils"
+import { formatInBerlin as format } from "@/lib/berlin-time"
 
 export function AgendaView() {
   const { currentDate, setCurrentDate, setView } = useCalendar()
   const { t, locale } = useI18n()
-  const start = startOfWeek(currentDate)
-  const end = endOfWeek(currentDate)
+  const start = startOfWeek(currentDate, calendarWeekOptions)
+  const end = endOfWeek(currentDate, calendarWeekOptions)
   const {
     data: bookings = [],
     isPending,
@@ -54,7 +60,7 @@ export function AgendaView() {
                 <span
                   className={cn(
                     "flex size-11 items-center justify-center rounded-xl text-xl font-semibold tabular-nums",
-                    isToday(day) ? "bg-primary text-primary-foreground" : "bg-muted/60",
+                    isCalendarToday(day) ? "bg-primary text-primary-foreground" : "bg-muted/60",
                   )}
                 >
                   {format(day, "d")}
@@ -64,7 +70,7 @@ export function AgendaView() {
                     {format(day, "EEE", { locale: calendarLocale(locale) })}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {isToday(day)
+                    {isCalendarToday(day)
                       ? t("calendar.today")
                       : format(day, "MMM", { locale: calendarLocale(locale) })}
                   </span>

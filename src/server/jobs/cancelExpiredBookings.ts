@@ -1,6 +1,6 @@
 import prisma from "@/lib/prismadb"
 import { BookingStatus } from "@prisma/client"
-import { format } from "date-fns"
+import { formatInBerlin } from "@/lib/berlin-time"
 import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusNotifier"
 import { bookingTransaction, customerNotes } from "@/server/bookingSecurity"
 
@@ -26,7 +26,7 @@ export async function cancelExpiredBookings() {
   })
 
   for (const booking of expired) {
-    const timestamp = format(now, "yyyy-MM-dd HH:mm")
+    const timestamp = formatInBerlin(now, "yyyy-MM-dd HH:mm")
     const autoNote = `System (${timestamp}):\n${AUTO_CANCEL_REASON}`
 
     const updated = await bookingTransaction(prisma, async (tx) => {

@@ -1,7 +1,15 @@
 "use client"
 
-import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react"
 import type { CalendarBooking } from "./types"
+import { toBerlinDate } from "@/lib/berlin-time"
 
 export type CalendarView = "month" | "week" | "day" | "agenda"
 
@@ -35,7 +43,8 @@ export function CalendarProvider({
   children: ReactNode
   responsive?: boolean
 }) {
-  const [currentDate, setCurrentDate] = useState(() => new Date())
+  const [currentDate, setCurrentDateState] = useState(() => toBerlinDate())
+  const setCurrentDate = useCallback((date: Date) => setCurrentDateState(toBerlinDate(date)), [])
   const [chosenView, setView] = useState<CalendarView | null>(null)
   const compact = useSyncExternalStore(
     responsive ? subscribeToViewport : subscribeToNothing,
@@ -43,7 +52,11 @@ export function CalendarProvider({
     serverCompact,
   )
   const view = chosenView ?? (compact ? "agenda" : "week")
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDateState] = useState<Date | null>(null)
+  const setSelectedDate = useCallback(
+    (date: Date | null) => setSelectedDateState(date ? toBerlinDate(date) : null),
+    [],
+  )
   const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null)
 
   return (

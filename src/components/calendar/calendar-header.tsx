@@ -1,13 +1,14 @@
 "use client"
 
 import { useId } from "react"
-import { addDays, addMonths, addWeeks, format, isValid, parseISO } from "date-fns"
+import { addDays, addMonths, addWeeks } from "date-fns"
 import { ChevronLeft, ChevronRight, LockKeyhole } from "lucide-react"
 import { useCalendar, type CalendarView } from "./calendar-provider"
 import { calendarLocale, weekLabel } from "./calendar-utils"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/i18n"
 import { cn } from "@/lib/utils"
+import { formatInBerlin as format, parseBerlinDateTime, toBerlinDate } from "@/lib/berlin-time"
 
 export function CalendarHeader({ onBlockSlot }: { onBlockSlot?: () => void }) {
   const { currentDate, setCurrentDate, view, setView, selectedDate, setSelectedDate } =
@@ -47,6 +48,7 @@ export function CalendarHeader({ onBlockSlot }: { onBlockSlot?: () => void }) {
           >
             {title}
           </h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t("calendar.timeZone")}</p>
         </div>
         {onBlockSlot && (
           <Button type="button" variant="outline" onClick={onBlockSlot} className="min-h-10">
@@ -71,7 +73,7 @@ export function CalendarHeader({ onBlockSlot }: { onBlockSlot?: () => void }) {
               type="button"
               variant="ghost"
               onClick={() => {
-                setCurrentDate(new Date())
+                setCurrentDate(toBerlinDate())
                 setSelectedDate(null)
               }}
             >
@@ -96,10 +98,11 @@ export function CalendarHeader({ onBlockSlot }: { onBlockSlot?: () => void }) {
             value={format(currentDate, "yyyy-MM-dd")}
             className="min-h-11 min-w-0 max-w-full rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onChange={(event) => {
-              const date = parseISO(event.target.value)
-              if (isValid(date)) {
-                setCurrentDate(date)
+              try {
+                setCurrentDate(toBerlinDate(parseBerlinDateTime(`${event.target.value}T00:00`)))
                 setSelectedDate(null)
+              } catch {
+                // A cleared or incomplete native date input does not change the displayed day.
               }
             }}
           />

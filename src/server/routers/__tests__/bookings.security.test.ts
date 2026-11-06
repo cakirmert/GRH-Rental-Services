@@ -24,6 +24,7 @@ const prisma = {
   item: {
     findUnique: vi.fn(),
   },
+  recurringBlock: { findMany: vi.fn().mockResolvedValue([]) },
   user: {
     findUnique: vi.fn(),
   },
@@ -64,10 +65,14 @@ function bookingFixture(overrides: Record<string, unknown> = {}) {
     endDate: new Date(Date.now() + 2 * 60 * 60 * 1000),
     notes: null,
     item: {
+      active: true,
+      totalQuantity: 1,
       titleEn: "Projector",
       responsibleMembers: [{ id: "other-rental" }],
     },
     user: { id: "resident-1", email: "resident@example.com", name: "Resident" },
+    itemId: "item-1",
+    quantity: 1,
     assignedTo: null,
     ...overrides,
   }

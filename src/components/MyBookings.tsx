@@ -3,7 +3,18 @@
 
 import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef, useMemo } from "react"
-import { format, parseISO, isPast, isSameDay, differenceInCalendarDays, startOfDay } from "date-fns"
+import {
+  isPast,
+  isSameDay as sameCalendarDay,
+  differenceInCalendarDays as calendarDayDifference,
+  startOfDay,
+} from "date-fns"
+import {
+  berlinContext,
+  combineBerlinDateAndTime,
+  formatInBerlin as format,
+  toBerlinDate,
+} from "@/lib/berlin-time"
 import { de as deLocale } from "date-fns/locale"
 import {
   Calendar as CalendarIcon,
@@ -60,6 +71,9 @@ const FINISHED_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.CANCELLED,
   BookingStatus.DECLINED,
 ]
+const isSameDay = (left: Date, right: Date) => sameCalendarDay(left, right, berlinContext)
+const differenceInCalendarDays = (later: Date, earlier: Date) =>
+  calendarDayDifference(later, earlier, berlinContext)
 
 interface ItemFromBooking {
   // Renamed to avoid conflict with Prisma's ItemType
@@ -164,7 +178,7 @@ export default function MyBookingsComponent({
   )
 
   function ensureDateObject(dateInput: Date | string): Date {
-    return dateInput instanceof Date ? dateInput : parseISO(dateInput)
+    return toBerlinDate(dateInput)
   }
 
   useEffect(() => {
@@ -220,10 +234,7 @@ export default function MyBookingsComponent({
 
   const combineDateTime = (d: Date | undefined, timeStr: string): Date => {
     if (!d) throw new Error(t("errors.selectDate"))
-    const [hh, mm] = timeStr.split(":").map(Number)
-    if (isNaN(hh) || isNaN(mm)) throw new Error(t("errors.invalidTimeFormat"))
-    const newDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm) // More robust Date creation
-    return newDate
+    return combineBerlinDateAndTime(d, timeStr)
   }
 
   const bookingsByTime = useMemo(() => {
@@ -296,7 +307,7 @@ export default function MyBookingsComponent({
         setEditError(t("errors.endTimeNotAfterStart"))
         return false
       }
-      if (isPast(s) && !isSameDay(s, new Date())) {
+      if (isPast(s)) {
         setEditError(t("errors.pastTime"))
         return false
       }
@@ -854,10 +865,19 @@ export default function MyBookingsComponent({
                     <Calendar
                       mode="range"
                       selected={editDateRange}
-                      onSelect={setEditDateRange}
+                      onSelect={(range) =>
+                        setEditDateRange(
+                          range
+                            ? {
+                                from: range.from ? toBerlinDate(range.from) : undefined,
+                                to: range.to ? toBerlinDate(range.to) : undefined,
+                              }
+                            : undefined,
+                        )
+                      }
                       autoFocus
                       disabled={(date) =>
-                        date < startOfDay(new Date()) ||
+                        startOfDay(toBerlinDate(date)) < startOfDay(toBerlinDate()) ||
                         (!!editDateRange?.from &&
                           differenceInCalendarDays(date, editDateRange.from) > 1 &&
                           !isSameDay(date, editDateRange.from))

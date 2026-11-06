@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { formatInBerlin } from "@/lib/berlin-time"
 import { BookingStatus } from "@prisma/client"
 import { transporter, EMAIL_FROM, EMAIL_REPLY_TO, isDev } from "@/lib/mail"
 import { automatedEmailNotice, emailAppUrl } from "@/lib/email-content"
@@ -136,8 +136,8 @@ function buildEmailContent({
   const headline = statusHeadlineMap[status] ?? "Booking Update"
   const accent = statusAccentMap[status]
 
-  const startLabel = format(booking.startDate, "PPpp")
-  const endLabel = format(booking.endDate, "PPpp")
+  const startLabel = formatInBerlin(booking.startDate, "PPpp")
+  const endLabel = formatInBerlin(booking.endDate, "PPpp")
   const notesText = notes?.trim()
   const handledByText = handledBy?.trim()
   const appUrl = emailAppUrl()

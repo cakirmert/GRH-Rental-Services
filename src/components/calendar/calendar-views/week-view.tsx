@@ -5,11 +5,12 @@ import { useCalendar } from "../calendar-provider"
 import { CalendarQueryState } from "../calendar-query-state"
 import { TimeGrid } from "./time-grid"
 import { trpc } from "@/utils/trpc"
+import { calendarWeekOptions } from "../calendar-utils"
 
 export function WeekView() {
   const { currentDate } = useCalendar()
-  const start = startOfWeek(currentDate)
-  const end = endOfWeek(currentDate)
+  const start = startOfWeek(currentDate, calendarWeekOptions)
+  const end = endOfWeek(currentDate, calendarWeekOptions)
   const {
     data: bookings = [],
     isPending,

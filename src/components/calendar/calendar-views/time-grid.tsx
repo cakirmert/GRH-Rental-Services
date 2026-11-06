@@ -1,14 +1,29 @@
 "use client"
 
-import { addHours, format, isSameHour, isToday, startOfDay } from "date-fns"
+import { isSameHour } from "date-fns"
 import { useCalendar } from "../calendar-provider"
-import { calendarLocale, HOUR_HEIGHT, hours, positionedBookings } from "../calendar-utils"
+import {
+  calendarHour,
+  calendarLocale,
+  HOUR_HEIGHT,
+  hours,
+  positionedBookings,
+  isCalendarToday,
+} from "../calendar-utils"
 import { BookingEvent } from "../booking-event"
 import type { CalendarBooking } from "../types"
 import { useI18n } from "@/locales/i18n"
 import { cn } from "@/lib/utils"
+import { berlinContext, formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
-export function TimeGrid({ days, bookings }: { days: Date[]; bookings: CalendarBooking[] }) {
+export function TimeGrid({
+  days: inputDays,
+  bookings,
+}: {
+  days: Date[]
+  bookings: CalendarBooking[]
+}) {
+  const days = inputDays.map((day) => toBerlinDate(day))
   const { selectedDate, setSelectedDate, setCurrentDate, setView } = useCalendar()
   const { t, locale } = useI18n()
   const options = { locale: calendarLocale(locale) }
@@ -38,7 +53,7 @@ export function TimeGrid({ days, bookings }: { days: Date[]; bookings: CalendarB
               }}
               className="flex min-h-20 flex-col items-center justify-center gap-1 border-r p-2 last:border-r-0 hover:bg-muted/50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               aria-label={format(day, "PPPP", options)}
-              aria-current={isToday(day) ? "date" : undefined}
+              aria-current={isCalendarToday(day) ? "date" : undefined}
             >
               <span className="text-[11px] font-medium text-muted-foreground">
                 {format(day, "EEE", options)}
@@ -46,7 +61,7 @@ export function TimeGrid({ days, bookings }: { days: Date[]; bookings: CalendarB
               <span
                 className={cn(
                   "flex size-8 items-center justify-center rounded-full text-lg font-semibold tabular-nums",
-                  isToday(day) && "bg-primary text-primary-foreground",
+                  isCalendarToday(day) && "bg-primary text-primary-foreground",
                 )}
               >
                 {format(day, "d")}
@@ -66,25 +81,40 @@ export function TimeGrid({ days, bookings }: { days: Date[]; bookings: CalendarB
           {days.map((day) => (
             <div
               key={day.toISOString()}
-              className={cn("relative border-r last:border-r-0", isToday(day) && "bg-muted/20")}
+              className={cn(
+                "relative border-r last:border-r-0",
+                isCalendarToday(day) && "bg-muted/20",
+              )}
               style={{ height: hours.length * HOUR_HEIGHT }}
             >
               {hours.map((hour) => {
-                const slot = addHours(startOfDay(day), hour)
+                const slot = calendarHour(day, hour)
                 return (
                   <button
                     key={hour}
                     type="button"
-                    onClick={() => setSelectedDate(slot)}
-                    aria-label={`${t("calendar.selectTime")}: ${format(slot, "PP HH:mm", options)}`}
-                    aria-pressed={!!selectedDate && isSameHour(selectedDate, slot)}
+                    disabled={!slot}
+                    onClick={() => {
+                      if (slot) setSelectedDate(slot)
+                    }}
+                    aria-label={`${t(slot ? "calendar.selectTime" : "calendar.unavailableTime")}: ${format(day, "PP", options)} ${hour.toString().padStart(2, "0")}:00`}
+                    aria-pressed={
+                      !!slot && !!selectedDate && isSameHour(selectedDate, slot, berlinContext)
+                    }
                     className={cn(
-                      "block h-16 w-full border-b text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      selectedDate &&
-                        isSameHour(selectedDate, slot) &&
+                      "block h-16 w-full border-b text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted/50",
+                      slot &&
+                        selectedDate &&
+                        isSameHour(selectedDate, slot, berlinContext) &&
                         "bg-muted ring-1 ring-inset ring-ring",
                     )}
-                  />
+                  >
+                    {!slot && (
+                      <span className="px-1 text-[10px] text-muted-foreground">
+                        {t("calendar.clockChange")}
+                      </span>
+                    )}
+                  </button>
                 )
               })}
               {positionedBookings(bookings, day).map(({ booking, start, end, column, columns }) => (

@@ -31,6 +31,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { isPasskeySupported } from "@/lib/webauthnUtils"
 import type { NamePromptSection } from "@/types/view"
+import { BERLIN_TIME_ZONE } from "@/lib/berlin-time"
 
 export default function NamePrompt({
   open,
@@ -274,6 +275,7 @@ export default function NamePrompt({
   })
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en", {
+      timeZone: BERLIN_TIME_ZONE,
       year: "numeric",
       month: "short",
       day: "numeric",

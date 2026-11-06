@@ -6,6 +6,10 @@ export interface CalendarBooking {
   endDate: Date | string
   status: BookingStatus
   notes: string | null
+  recurringBlockId?: string
+  occurrenceStart?: Date | string
+  frequency?: string
+  until?: Date | string | null
   item: {
     id: string
     titleEn: string

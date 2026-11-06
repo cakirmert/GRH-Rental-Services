@@ -4,9 +4,10 @@ import { useCalendar } from "../calendar-provider"
 import type { CalendarBooking } from "../types"
 import { BookingStatus } from "@prisma/client"
 import { cn } from "@/lib/utils"
-import { format, isSameDay } from "date-fns"
+import { isSameDay } from "date-fns"
 import { useI18n } from "@/locales/i18n"
 import { getAdminBlockReason, isAdminBlockBooking } from "@/utils/adminBlock"
+import { formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
 const statusClasses: Record<BookingStatus, string> = {
   REQUESTED: "bg-status-requested text-status-requested-foreground",
@@ -26,14 +27,14 @@ export function BookingEvent({
 }) {
   const { setSelectedBooking } = useCalendar()
   const { t } = useI18n()
-  const isAdminBlock = isAdminBlockBooking(booking)
+  const isAdminBlock = !!booking.recurringBlockId || isAdminBlockBooking(booking)
   const title = isAdminBlock
     ? t("adminCalendar.block.eventTitle", {
         item: booking.item?.titleEn ?? t("adminCalendar.block.genericItem"),
       })
     : booking.item?.titleEn || "Booking"
-  const start = new Date(booking.startDate)
-  const end = new Date(booking.endDate)
+  const start = toBerlinDate(booking.startDate)
+  const end = toBerlinDate(booking.endDate)
   const timeLabel = `${format(start, "HH:mm")} - ${format(end, "HH:mm")}${!isSameDay(start, end) ? " +1d" : ""}`
   return (
     <div

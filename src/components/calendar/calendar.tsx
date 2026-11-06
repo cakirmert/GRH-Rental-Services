@@ -14,7 +14,7 @@ import { useRelease } from "@/contexts/ReleaseContext"
 import { BookingDialog } from "./booking-dialog"
 import { BlockSlotDialog } from "./block-slot-dialog"
 
-/** Keep the familiar interface available while the new calendar is an opt-in preview. */
+/** Show the new calendar by default and keep classic available as a staff fallback. */
 export function Calendar() {
   const { mode } = useRelease()
   return (

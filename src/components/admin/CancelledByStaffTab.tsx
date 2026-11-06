@@ -12,7 +12,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { Loader2, AlertCircle } from "lucide-react"
-import { format } from "date-fns"
+import { formatInBerlin } from "@/lib/berlin-time"
 
 export default function CancelledByStaffTab() {
   const { t, locale } = useI18n()
@@ -71,7 +71,7 @@ export default function CancelledByStaffTab() {
                         b.cancelledBy?.email ||
                         t("adminDashboard.cancellations.unknownStaff")}
                     </TableCell>
-                    <TableCell>{format(new Date(b.cancelledAt ?? b.updatedAt), "PP")}</TableCell>
+                    <TableCell>{formatInBerlin(b.cancelledAt ?? b.updatedAt, "PP")}</TableCell>
                     <TableCell className="whitespace-pre-wrap max-w-xs">{b.notes}</TableCell>
                   </TableRow>
                 ))}

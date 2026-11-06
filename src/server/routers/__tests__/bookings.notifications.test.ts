@@ -19,6 +19,7 @@ const prisma = {
     update: vi.fn(),
   },
   notification: { create: vi.fn() },
+  recurringBlock: { findMany: vi.fn().mockResolvedValue([]) },
   log: { create: vi.fn() },
 }
 

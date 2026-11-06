@@ -13,6 +13,13 @@ Browser tests are present but have not yet run: local server startup was denied
 by the execution policy. Hosted preview is also pending isolated credentials.
 Do not promote this release until those checks pass.
 
+On 6 November 2026, the complete candidate passed 500 tests across 68 files with
+the host timezone set to New York, plus TypeScript, lint, and a production build.
+The dependency audit reported zero known vulnerabilities. The restored local
+database still has 82 users, 91 bookings, and 25 unchanged passkeys; its only
+intentional availability change is the confirmed weekly Bar rule. The production
+database and backup fingerprints remain unchanged.
+
 ## Isolated rehearsal
 
 The repository includes a guarded local mode. Copy `.env.test.example` to
@@ -42,7 +49,7 @@ Do not copy the production environment wholesale into a test deployment. Set
 2. On an empty test database, run `npx prisma migrate deploy`. On a restored
    pre-upgrade database, first verify it matches the baseline schema, then mark
    `20261105000000_baseline` applied with `prisma migrate resolve --applied`.
-   Deploy the remaining migration. Never run `migrate reset`, `migrate dev`, or
+   Deploy the remaining migrations. Never run `migrate reset`, `migrate dev`, or
    seed against production or a backup that must be retained.
 3. Run `npx tsx scripts/backfill-passkeys.ts` with the selected `DATABASE_URL`.
    Require unchanged legacy JSON and matching credential/index counts. Run it
@@ -98,6 +105,12 @@ Apply only the additive schema, backfill, compare integrity evidence, promote
 the exact tested deployment, and verify existing passkey login plus OTP recovery
 on the canonical origin before reopening traffic. Preserve all original JSON
 and the backup during the recovery window.
+
+The full candidate also includes durable availability blocks. Follow
+[recurring-blocks.md](recurring-blocks.md) to restore the confirmed Friday 14:00
+to Saturday 14:00 Bar schedule during the frozen cutover. Old server versions
+cannot enforce these rules and must not accept bookings once rules are active.
+The classic calendar on the new server remains available.
 
 If a problem appears after reopening, freeze affected writes again and fix or
 roll forward with code that understands both credential stores. An old UI may

@@ -1,22 +1,20 @@
 "use client"
 
-import { useMemo } from "react"
 import { useCalendar } from "../../calendar-provider"
 import { trpc } from "@/utils/trpc"
 import {
-  format,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   startOfWeek,
   endOfWeek,
 } from "date-fns"
 import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
-import type { CalendarBooking } from "../../types"
 import { CalendarQueryState } from "../../calendar-query-state"
+import { bookingsForDay, calendarWeekOptions, isCalendarToday } from "../../calendar-utils"
+import { berlinContext, formatInBerlin as format } from "@/lib/berlin-time"
 
 /**
  * Calendar month view component displaying bookings in a traditional calendar grid
@@ -24,46 +22,19 @@ import { CalendarQueryState } from "../../calendar-query-state"
  */
 export function MonthView() {
   const { currentDate, setSelectedDate } = useCalendar()
+  const calendarStart = startOfWeek(startOfMonth(currentDate, berlinContext), calendarWeekOptions)
+  const calendarEnd = endOfWeek(endOfMonth(currentDate, berlinContext), calendarWeekOptions)
   const {
     data: bookings = [],
     isPending,
     isError,
     refetch,
   } = trpc.bookings.getBookings.useQuery({
-    start: startOfMonth(currentDate),
-    end: endOfMonth(currentDate),
+    start: calendarStart,
+    end: calendarEnd,
   })
 
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = endOfWeek(monthEnd)
-
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-
-  /**
-   * Group bookings by date for efficient lookup
-   */
-  const groupedBookings = useMemo(() => {
-    const groups: Record<string, CalendarBooking[]> = {}
-    bookings.forEach((booking) => {
-      const dateKey = format(new Date(booking.startDate), "yyyy-MM-dd")
-      if (!groups[dateKey]) {
-        groups[dateKey] = []
-      }
-      groups[dateKey].push(booking)
-    })
-    return groups
-  }, [bookings])
-
-  /**
-   * Get all bookings for a specific day
-   * @param day - The date to get bookings for
-   * @returns Array of bookings for the specified day
-   */
-  const getBookingsForDay = (day: Date) => {
-    return groupedBookings[format(day, "yyyy-MM-dd")] || []
-  }
 
   if (isPending || isError)
     return (
@@ -79,7 +50,7 @@ export function MonthView() {
   return (
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-7 border-b px-2">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
           <div key={day} className="p-2 text-sm font-medium text-center border-r last:border-r-0">
             {day}
           </div>
@@ -87,9 +58,9 @@ export function MonthView() {
       </div>
       <div className="grid grid-cols-7 flex-1 p-2 bg-background rounded-b-md">
         {days.map((day) => {
-          const dayBookings = getBookingsForDay(day)
+          const dayBookings = bookingsForDay(bookings, day)
           const isCurrentMonth = isSameMonth(day, currentDate)
-          const isToday = isSameDay(day, new Date())
+          const isToday = isCalendarToday(day)
 
           return (
             <div

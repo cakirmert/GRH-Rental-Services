@@ -18,6 +18,7 @@ import { useI18n } from "@/locales/i18n"
 import { releaseCopy } from "@/locales/release"
 import { RELEASE_ID, type ReleaseMode } from "@/constants/release"
 import { trpc } from "@/utils/trpc"
+import { BERLIN_TIME_ZONE } from "@/lib/berlin-time"
 
 type Sentiment = "good" | "mixed" | "problem"
 type InitialFeedback = { sentiment: string; interfaceMode: string; message: string | null } | null
@@ -363,9 +364,10 @@ function ReviewPanel() {
                 {copy[feedback.sentiment as Sentiment]}
               </span>
               <time dateTime={new Date(feedback.updatedAt).toISOString()}>
-                {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
-                  new Date(feedback.updatedAt),
-                )}
+                {new Intl.DateTimeFormat(locale, {
+                  dateStyle: "medium",
+                  timeZone: BERLIN_TIME_ZONE,
+                }).format(new Date(feedback.updatedAt))}
               </time>
             </div>
             <p className="whitespace-pre-wrap break-words text-sm">

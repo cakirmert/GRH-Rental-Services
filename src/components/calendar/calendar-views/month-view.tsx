@@ -3,27 +3,31 @@
 import { useCalendar } from "../calendar-provider"
 import { trpc } from "@/utils/trpc"
 import {
-  format,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
-  isToday,
   startOfWeek,
   endOfWeek,
   isSameDay,
 } from "date-fns"
 import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
-import { bookingsForDay, calendarLocale } from "../calendar-utils"
+import {
+  bookingsForDay,
+  calendarLocale,
+  calendarWeekOptions,
+  isCalendarToday,
+} from "../calendar-utils"
 import { CalendarQueryState } from "../calendar-query-state"
 import { useI18n } from "@/locales/i18n"
+import { berlinContext, formatInBerlin as format } from "@/lib/berlin-time"
 
 export function MonthView() {
   const { currentDate, selectedDate, setSelectedDate, setCurrentDate, setView } = useCalendar()
   const { t, locale } = useI18n()
-  const start = startOfWeek(startOfMonth(currentDate))
-  const end = endOfWeek(endOfMonth(currentDate))
+  const start = startOfWeek(startOfMonth(currentDate, berlinContext), calendarWeekOptions)
+  const end = endOfWeek(endOfMonth(currentDate, berlinContext), calendarWeekOptions)
   const {
     data: bookings = [],
     isPending,
@@ -81,10 +85,11 @@ export function MonthView() {
                     setView("day")
                   }}
                   aria-label={format(day, "PPPP", options)}
-                  aria-current={isToday(day) ? "date" : undefined}
+                  aria-current={isCalendarToday(day) ? "date" : undefined}
                   className={cn(
                     "mb-1 flex size-8 items-center justify-center rounded-full text-sm font-medium tabular-nums hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isToday(day) && "bg-primary text-primary-foreground hover:bg-primary/90",
+                    isCalendarToday(day) &&
+                      "bg-primary text-primary-foreground hover:bg-primary/90",
                     !isSameMonth(day, currentDate) && "text-muted-foreground",
                   )}
                 >

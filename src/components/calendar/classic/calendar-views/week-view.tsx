@@ -2,19 +2,19 @@
 
 import { useCalendar } from "../../calendar-provider"
 import { trpc } from "@/utils/trpc"
-import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameDay,
-  addHours,
-  startOfDay,
-  differenceInMinutes,
-} from "date-fns"
+import { startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns"
 import { cn } from "@/lib/utils"
 import { BookingEvent } from "../booking-event"
 import { CalendarQueryState } from "../../calendar-query-state"
+import {
+  bookingMinutesForDay,
+  bookingsForDay,
+  calendarWeekOptions,
+  HOUR_HEIGHT,
+  hours,
+  isCalendarToday,
+} from "../../calendar-utils"
+import { formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
 /**
  * Calendar week view component displaying bookings in a time-based grid
@@ -28,36 +28,13 @@ export function WeekView() {
     isError,
     refetch,
   } = trpc.bookings.getBookings.useQuery({
-    start: startOfWeek(currentDate),
-    end: endOfWeek(currentDate),
+    start: startOfWeek(currentDate, calendarWeekOptions),
+    end: endOfWeek(currentDate, calendarWeekOptions),
   })
 
-  const weekStart = startOfWeek(currentDate)
-  const weekEnd = endOfWeek(currentDate)
+  const weekStart = startOfWeek(currentDate, calendarWeekOptions)
+  const weekEnd = endOfWeek(currentDate, calendarWeekOptions)
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd })
-
-  const START_HOUR = 6
-  const END_HOUR = 24
-  const HOUR_HEIGHT = 64
-  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR)
-
-  const dayStart = (day: Date) => addHours(startOfDay(day), START_HOUR)
-  const dayEnd = (day: Date) => addHours(startOfDay(day), END_HOUR)
-
-  /**
-   * Get all bookings for a specific day within the week view time range
-   * @param day - The date to get bookings for
-   * @returns Array of bookings for the specified day, sorted by start time
-   */
-  const getBookingsForDay = (day: Date) => {
-    return bookings
-      .filter((booking) => {
-        const start = new Date(booking.startDate)
-        const end = new Date(booking.endDate)
-        return start < dayEnd(day) && end > dayStart(day)
-      })
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-  }
 
   if (isPending || isError)
     return (
@@ -80,7 +57,7 @@ export function WeekView() {
             <div
               className={cn(
                 "text-lg font-semibold",
-                isSameDay(day, new Date()) &&
+                isCalendarToday(day) &&
                   "bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center mx-auto",
               )}
             >
@@ -94,7 +71,7 @@ export function WeekView() {
           <div className="border-r w-[80px]">
             {hours.map((hour) => (
               <div key={hour} className="h-16 border-b p-2 text-xs text-muted-foreground">
-                {format(addHours(startOfDay(new Date()), hour), "h a")}
+                {`${hour.toString().padStart(2, "0")}:00`}
               </div>
             ))}
           </div>
@@ -107,16 +84,12 @@ export function WeekView() {
               {hours.map((hour) => (
                 <div key={hour} className="h-16 border-b" />
               ))}
-              {getBookingsForDay(day).map((booking) => {
-                const start = new Date(booking.startDate)
-                const end = new Date(booking.endDate)
-                const topMinutes = Math.max(0, differenceInMinutes(start, dayStart(day)))
-                const bottomMinutes = Math.min(
-                  differenceInMinutes(end, dayStart(day)),
-                  (END_HOUR - START_HOUR) * 60,
-                )
-                const top = (topMinutes / 60) * HOUR_HEIGHT
-                const height = ((bottomMinutes - topMinutes) / 60) * HOUR_HEIGHT
+              {bookingsForDay(bookings, day).map((booking) => {
+                const start = toBerlinDate(booking.startDate)
+                const minutes = bookingMinutesForDay(booking, day)
+                if (!minutes) return null
+                const top = (minutes.start / 60) * HOUR_HEIGHT
+                const height = Math.max(24, ((minutes.end - minutes.start) / 60) * HOUR_HEIGHT)
                 return (
                   <div
                     key={booking.id}

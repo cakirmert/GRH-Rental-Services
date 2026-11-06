@@ -11,14 +11,7 @@
 // -----------------------------------------------------------------------------
 
 import * as React from "react"
-import {
-  addMinutes,
-  differenceInMinutes,
-  format,
-  differenceInDays,
-  startOfDay,
-  endOfDay,
-} from "date-fns"
+import { differenceInDays, startOfDay, endOfDay } from "date-fns"
 import {
   useController,
   useWatch,
@@ -30,15 +23,12 @@ import { trpc } from "@/utils/trpc"
 import { Card, CardContent } from "@/components/ui/card"
 import { useI18n } from "@/locales/i18n"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-
-// Define a type for the intervals returned by tRPC for clarity
-interface BookingInterval {
-  id?: string
-  startDate: Date
-  endDate: Date
-  status: "REQUESTED" | "ACCEPTED" | "BORROWED" | string // Adapt to your BookingStatus enum
-  quantity: number
-}
+import {
+  atLocalMinutes,
+  localMinutesFromDay,
+  peakReservedQuantity,
+} from "@/utils/bookingAvailability"
+import { formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
 interface TimeRangeFieldValues extends FieldValues {
   startTime: string
@@ -75,17 +65,18 @@ const GUTTER_PERCENT = 5
 const BLOCK_PENDING_INTERVALS = false
 /* ───────────────────────────── */
 
-export default function InteractiveTimeRangePicker<
-  TFieldValues extends TimeRangeFieldValues,
->({
+export default function InteractiveTimeRangePicker<TFieldValues extends TimeRangeFieldValues>({
   control,
   itemId,
   dateRange,
   totalQuantity,
 }: Props<TFieldValues>) {
   const { t } = useI18n()
-  const fromDate = dateRange.from
-  const toDateProp = dateRange.to
+  const fromDate = React.useMemo(() => toBerlinDate(dateRange.from), [dateRange.from])
+  const toDateProp = React.useMemo(
+    () => (dateRange.to ? toBerlinDate(dateRange.to) : undefined),
+    [dateRange.to],
+  )
 
   const queryEndDate = toDateProp ? endOfDay(toDateProp) : endOfDay(fromDate)
   const queryStartDate = startOfDay(fromDate)
@@ -137,27 +128,15 @@ export default function InteractiveTimeRangePicker<
     return a * MINUTES_PER_HOUR + b
   }, [])
 
-  const checkOverlaps = React.useCallback(
-    (list: BookingInterval[], a: number, b: number, dayOffsetMinutes: number) => {
-      return list.some((iv) => {
-        const intervalStartMinutesFromSelectionStart = differenceInMinutes(iv.startDate, fromDate)
-        const intervalEndMinutesFromSelectionStart = differenceInMinutes(iv.endDate, fromDate)
-        const s = intervalStartMinutesFromSelectionStart - dayOffsetMinutes
-        const e = intervalEndMinutesFromSelectionStart - dayOffsetMinutes
-        return e > MIN_MINUTES && s < MAX_MINUTES && a < e && b > s
-      })
-    },
-    [fromDate],
-  )
-
   const doesBlock = React.useCallback(
     (a: number, b: number, dayOffsetMinutes: number) => {
-      return (
-        checkOverlaps(confirmed, a, b, dayOffsetMinutes) ||
-        (BLOCK_PENDING_INTERVALS && checkOverlaps(pending, a, b, dayOffsetMinutes))
-      )
+      const day = dayOffsetMinutes ? (toDateProp ?? fromDate) : fromDate
+      const start = atLocalMinutes(day, a)
+      const end = a === b ? new Date(start.getTime() + 1) : atLocalMinutes(day, b)
+      const occupied = BLOCK_PENDING_INTERVALS ? [...confirmed, ...pending] : confirmed
+      return peakReservedQuantity(occupied, start, end) >= totalQuantity
     },
-    [checkOverlaps, confirmed, pending],
+    [fromDate, toDateProp, confirmed, pending, totalQuantity],
   )
   const initKey = `${fromDate.toDateString()}-${itemId}`
   React.useEffect(() => {
@@ -238,22 +217,10 @@ export default function InteractiveTimeRangePicker<
   const endM = s2m(watchE)
 
   const reservedForSelection = React.useMemo(() => {
-    const selectionStart = addMinutes(fromDate, startM)
-    const selectionEnd = addMinutes(
-      isRangeSelection ? addMinutes(fromDate, MINUTES_PER_DAY) : fromDate,
-      endM,
-    )
-    return intervals.reduce((sum, iv) => {
-      if (
-        (iv.status === "ACCEPTED" || iv.status === "BORROWED") &&
-        iv.endDate > selectionStart &&
-        iv.startDate < selectionEnd
-      ) {
-        return sum + (iv.quantity ?? 1)
-      }
-      return sum
-    }, 0)
-  }, [intervals, startM, endM, fromDate, isRangeSelection])
+    const selectionStart = atLocalMinutes(fromDate, startM)
+    const selectionEnd = atLocalMinutes(toDateProp ?? fromDate, endM)
+    return peakReservedQuantity(confirmed, selectionStart, selectionEnd)
+  }, [confirmed, startM, endM, fromDate, toDateProp])
   const availableForSelection = Math.max(0, totalQuantity - reservedForSelection)
   const track0Ref = React.useRef<HTMLDivElement>(null)
   const track1Ref = React.useRef<HTMLDivElement>(null)
@@ -356,7 +323,6 @@ export default function InteractiveTimeRangePicker<
 
   const Row = React.useCallback(
     (row: 0 | 1) => {
-      const dayOffsetMinutes = row === 1 ? MINUTES_PER_DAY : 0
       const showStartThumb = row === 0
       const showEndThumb = row === (isRangeSelection ? 1 : 0)
 
@@ -382,13 +348,13 @@ export default function InteractiveTimeRangePicker<
       const highlightLeftStyle = `${GUTTER_PERCENT + hL_pct * trackVisibleWidthScale}%`
       const highlightWidthStyle = `${Math.max(0, hR_pct - hL_pct) * trackVisibleWidthScale}%`
 
-      const currentRowDate = addMinutes(fromDate, dayOffsetMinutes)
+      const currentRowDate = row === 1 ? (toDateProp ?? fromDate) : fromDate
 
       return (
         <div key={row} className="relative h-24 select-none">
           {isRangeSelection && (
             <span className="absolute -left-14 top-[46px] px-2 py-0.5 rounded bg-muted text-[10px]">
-              {`Day ${row + 1}`}
+              {format(currentRowDate, "dd MMM")}
             </span>
           )}
           <div
@@ -401,13 +367,8 @@ export default function InteractiveTimeRangePicker<
             style={{ left: highlightLeftStyle, width: highlightWidthStyle }}
           />
           {intervals.map((iv, i) => {
-            const intervalStartMinutesFromSelectionStart = differenceInMinutes(
-              iv.startDate,
-              fromDate,
-            )
-            const intervalEndMinutesFromSelectionStart = differenceInMinutes(iv.endDate, fromDate)
-            const s_relativeToRowDay = intervalStartMinutesFromSelectionStart - dayOffsetMinutes
-            const e_relativeToRowDay = intervalEndMinutesFromSelectionStart - dayOffsetMinutes
+            const s_relativeToRowDay = localMinutesFromDay(iv.startDate, currentRowDate)
+            const e_relativeToRowDay = localMinutesFromDay(iv.endDate, currentRowDate)
 
             if (e_relativeToRowDay <= MIN_MINUTES || s_relativeToRowDay >= MAX_MINUTES) {
               return null
@@ -427,17 +388,17 @@ export default function InteractiveTimeRangePicker<
 
             if (w_pct <= 0) return null
 
-            const isConf = iv.status === "ACCEPTED"
+            const isConf = iv.status === "ACCEPTED" || iv.status === "BORROWED"
 
             const formatIntervalDates = (startDate: Date, endDate: Date) => {
               const pickerIsSingleDayAndIntervalIsOnSameDay =
                 !isRangeSelection &&
-                differenceInDays(startDate, fromDate) === 0 &&
-                differenceInDays(endDate, fromDate) === 0
+                differenceInDays(toBerlinDate(startDate), fromDate) === 0 &&
+                differenceInDays(toBerlinDate(endDate), fromDate) === 0
               const startFmt = pickerIsSingleDayAndIntervalIsOnSameDay ? "p" : "PP p"
               const endFmt =
                 pickerIsSingleDayAndIntervalIsOnSameDay ||
-                  differenceInDays(endDate, startDate) === 0
+                differenceInDays(toBerlinDate(endDate), toBerlinDate(startDate)) === 0
                   ? "p"
                   : "PP p"
               return `${format(startDate, startFmt)} – ${format(endDate, endFmt)}`
@@ -474,7 +435,7 @@ export default function InteractiveTimeRangePicker<
             <Thumb
               row={row}
               minutes={rStartForThumb}
-              label={format(addMinutes(currentRowDate, rStartForThumb), "HH:mm")}
+              label={format(atLocalMinutes(currentRowDate, rStartForThumb), "HH:mm")}
               onDrag={() => setDrag({ row, which: "start" })}
             />
           )}
@@ -482,7 +443,7 @@ export default function InteractiveTimeRangePicker<
             <Thumb
               row={row}
               minutes={rEndForThumb}
-              label={format(addMinutes(currentRowDate, rEndForThumb), "HH:mm")}
+              label={format(atLocalMinutes(currentRowDate, rEndForThumb), "HH:mm")}
               onDrag={() => setDrag({ row, which: "end" })}
             />
           )}
@@ -492,6 +453,7 @@ export default function InteractiveTimeRangePicker<
     [
       intervals,
       fromDate,
+      toDateProp,
       isRangeSelection,
       startM,
       endM,

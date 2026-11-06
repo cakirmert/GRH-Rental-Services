@@ -1,9 +1,10 @@
 # Calendar update and feedback
 
-The backend-only branch remains available for a staged rollout of the verified
-security/dependency upgrade. The complete release also contains the calendar
-update and its feedback storage. Calendar choices never select an older backend
-or database.
+The earlier backend-only checkpoint remains available for review of the initial
+security/dependency upgrade. It does not contain the later availability-block
+and Berlin-time changes and must not serve bookings after recurring rules become
+active. The complete release contains those changes, the calendar update, and
+feedback storage. Calendar choices never select an older backend or database.
 
 The new calendar is the default. Only rental team members and administrators see
 the calendar feedback and view controls. Regular users retain the familiar interface.
@@ -16,6 +17,10 @@ authorization rules, and updated dependencies. Classic preserves the earlier
 calendar layout; the new calendar adds localized navigation, date jump, a mobile
 agenda, clearer status labels, and overlapping booking layout. The choice is
 stored locally for this release, not used as an authorization decision.
+
+Both layouts now use Monday-first weeks and Berlin time. Responsible rental staff
+can manage blocks for their assigned items, including indefinite weekly repeats;
+admins can manage all items. See [recurring-blocks.md](recurring-blocks.md).
 
 Rental team members and administrators can submit or update one feedback response for version
 `0.2.0-rc.1`: interface choice, experience rating, and an optional comment. The

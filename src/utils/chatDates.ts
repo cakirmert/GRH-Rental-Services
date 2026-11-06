@@ -1,3 +1,5 @@
+import { BERLIN_TIME_ZONE, toBerlinDate } from "@/lib/berlin-time"
+
 export type ChatDateLabels = {
   today: string
   yesterday: string
@@ -24,7 +26,7 @@ export function shouldShowChatDateDivider(
   if (!currentDate) return false
 
   const previousDate = parseChatMessageDate(previousCreatedAt)
-  return !previousDate || !isSameLocalDay(currentDate, previousDate)
+  return !previousDate || !isSameBerlinDay(currentDate, previousDate)
 }
 
 export function formatChatMessageDate(
@@ -36,12 +38,16 @@ export function formatChatMessageDate(
   const date = parseChatMessageDate(value)
   if (!date) return null
 
-  if (isSameLocalDay(date, now)) return labels.today
+  if (isSameBerlinDay(date, now)) return labels.today
 
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
-  if (isSameLocalDay(date, yesterday)) return labels.yesterday
+  const yesterday = toBerlinDate(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (isSameBerlinDay(date, yesterday)) return labels.yesterday
 
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeZone: BERLIN_TIME_ZONE,
+  }).format(date)
 }
 
 export function formatChatMessageTime(value: unknown, locale: string): string | null {
@@ -49,15 +55,18 @@ export function formatChatMessageTime(value: unknown, locale: string): string | 
   if (!date) return null
 
   return new Intl.DateTimeFormat(locale, {
+    timeZone: BERLIN_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   }).format(date)
 }
 
-function isSameLocalDay(a: Date, b: Date): boolean {
+function isSameBerlinDay(a: Date, b: Date): boolean {
+  const berlinA = toBerlinDate(a)
+  const berlinB = toBerlinDate(b)
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    berlinA.getFullYear() === berlinB.getFullYear() &&
+    berlinA.getMonth() === berlinB.getMonth() &&
+    berlinA.getDate() === berlinB.getDate()
   )
 }

@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { FormField, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { parse, isBefore } from "date-fns"
 import { useI18n } from "@/locales/i18n"
 
 interface TimeSelectPropsStandalone {
@@ -65,18 +64,22 @@ const TimeSelect = <TFieldValues extends FieldValues = FieldValues>(
 
   const timeOptions = React.useMemo(() => {
     const options: string[] = []
-    const otherTimeDate = otherSelectedTime ? parse(otherSelectedTime, "HH:mm", new Date()) : null
+    const otherClock =
+      otherSelectedTime && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(otherSelectedTime)
+        ? otherSelectedTime.split(":").map(Number)
+        : null
+    const otherMinutes = otherClock ? otherClock[0] * 60 + otherClock[1] : null
     for (let h = startHour; h < endHour; h++) {
       for (let m = 0; m < 60; m += intervalMinutes) {
         const timeString = `${h}`.padStart(2, "0") + ":" + `${m}`.padStart(2, "0")
-        const currentTimeDate = parse(timeString, "HH:mm", new Date())
-        if (otherTimeDate && shouldFilterTimes) {
+        const currentMinutes = h * 60 + m
+        if (otherMinutes !== null && shouldFilterTimes) {
           if (isEndTimeSelector) {
-            if (isBefore(otherTimeDate, currentTimeDate)) {
+            if (otherMinutes < currentMinutes) {
               options.push(timeString)
             }
           } else {
-            if (isBefore(currentTimeDate, otherTimeDate)) {
+            if (currentMinutes < otherMinutes) {
               options.push(timeString)
             }
           }
@@ -88,8 +91,7 @@ const TimeSelect = <TFieldValues extends FieldValues = FieldValues>(
     if (isEndTimeSelector && endHour <= 24) {
       const endBoundaryTime = `${endHour}`.padStart(2, "0") + ":00"
       if (endHour !== 24) {
-        const endBoundaryDate = parse(endBoundaryTime, "HH:mm", new Date())
-        if (!otherTimeDate || isBefore(otherTimeDate, endBoundaryDate)) {
+        if (!shouldFilterTimes || otherMinutes === null || otherMinutes < endHour * 60) {
           if (!options.includes(endBoundaryTime)) {
             options.push(endBoundaryTime)
           }

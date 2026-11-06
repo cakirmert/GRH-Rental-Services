@@ -28,7 +28,8 @@ import {
 import { trpc } from "@/utils/trpc"
 import { type BookingForRentalTeam } from "@/types/booking"
 import { BookingStatus, ItemType } from "@prisma/client"
-import { format, parseISO, isSameDay } from "date-fns"
+import { isSameDay } from "date-fns"
+import { berlinContext, formatInBerlin } from "@/lib/berlin-time"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -251,11 +252,6 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
   // Show not authorized page if user is not part of rental team
   if (!isRentalTeamMember) {
     return <NotAuthorized onGoBack={onGoBack} requiredRole="RENTAL" />
-  }
-
-  const ensureDateRental = (dateInput: Date | string): Date => {
-    // Renamed to avoid conflict
-    return dateInput instanceof Date ? dateInput : parseISO(dateInput)
   }
 
   const openNotesDialog = (booking: BookingForRentalTeam) => {
@@ -644,7 +640,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                         <div className="flex items-center text-muted-foreground">
                           <CalendarDays className="h-4 w-4 mr-2 shrink-0" />
                           <span>
-                            {format(ensureDateRental(booking.startDate), "PPp", {
+                            {formatInBerlin(booking.startDate, "PPp", {
                               locale: dateFnsLocale,
                             })}
                           </span>
@@ -653,11 +649,12 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                           <Clock className="h-3.5 w-3.5 mr-2 shrink-0" />
                           <span>
                             {t("rentalDashboard.to", { defaultValue: "to" })}{" "}
-                            {format(
-                              ensureDateRental(booking.endDate),
+                            {formatInBerlin(
+                              booking.endDate,
                               isSameDay(
-                                ensureDateRental(booking.startDate),
-                                ensureDateRental(booking.endDate),
+                                booking.startDate,
+                                booking.endDate,
+                                berlinContext,
                               )
                                 ? "p"
                                 : "PPp",

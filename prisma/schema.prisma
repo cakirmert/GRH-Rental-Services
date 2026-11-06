@@ -66,6 +66,7 @@ model User {
   passkeys      Json[]   @default([])
   passkeyCredentials PasskeyCredential[]
   releaseFeedback ReleaseFeedback[]
+  createdBlocks RecurringBlock[]
   emailBookingNotifications Boolean @default(true)
 
   /* relations */
@@ -156,6 +157,7 @@ model Item {
 
   /* relations */
   bookings        Booking[]
+  recurringBlocks RecurringBlock[]
   responsibleMembers User[] @relation("ResponsibleMembers")
 
   createdAt DateTime @default(now())
@@ -314,6 +316,37 @@ model ReleaseFeedback {
 
   @@unique([userId, releaseId])
   @@index([releaseId, updatedAt])
+}
+
+// Availability rules are evaluated for each requested date range, without a generated horizon.
+model RecurringBlock {
+  id          String   @id @default(cuid())
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  startDate   DateTime
+  endDate     DateTime
+  frequency   String   @db.VarChar(8)
+  timeZone    String   @default("Europe/Berlin") @db.VarChar(64)
+  until       DateTime?
+  stoppedFrom DateTime?
+  quantity    Int      @default(1)
+  reason      String?  @db.VarChar(500)
+  exceptions  RecurringBlockException[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([itemId, startDate])
+}
+
+model RecurringBlockException {
+  blockId         String
+  block           RecurringBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  occurrenceStart DateTime
+  createdAt       DateTime @default(now())
+
+  @@id([blockId, occurrenceStart])
 }
 
 model Log {

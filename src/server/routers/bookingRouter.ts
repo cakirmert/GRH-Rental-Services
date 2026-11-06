@@ -3,7 +3,8 @@ import type { Context } from "@/server/context"
 import { z } from "zod"
 import { BookingStatus, Prisma, ItemType, LogType, NotificationType } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
-import { format, parseISO, differenceInCalendarDays, addDays, addWeeks, addMonths } from "date-fns" // format for notes
+import { parseISO, differenceInCalendarDays } from "date-fns"
+import { berlinContext, formatInBerlin } from "@/lib/berlin-time"
 import { logAction } from "@/lib/logger"
 import { notifyBookingStatusChange } from "@/server/notifications/bookingStatusNotifier"
 import { notificationEmitter } from "@/lib/notifications"
@@ -17,10 +18,18 @@ import {
   customerNotes,
   legacyStaffNotes,
   ownerBooking,
-  peakQuantity,
   staffBooking,
 } from "@/server/bookingSecurity"
 import { consumeBudget } from "@/lib/auth/state"
+import { BLOCK_TIME_ZONE, isBlockOccurrence, validateBlockRecurrence } from "@/lib/recurring-blocks"
+import {
+  assertBlockPreservesBookings,
+  assertBookingCapacity,
+  blockOccurrences,
+  MAX_BLOCK_RULES_PER_ITEM,
+  requireBlockItem,
+  requireBlockStaff,
+} from "@/server/recurringBlocks"
 
 const isRentalTeamMember = (ctx: Context) => {
   const role = ctx.session?.user?.role
@@ -170,7 +179,7 @@ export const bookingsRouter = router({
       const maxRangeDays = isRentalTeamMember(ctx) ? RENTAL_MAX_RANGE_DAYS : DEFAULT_MAX_RANGE_DAYS
       if (
         Number.isFinite(maxRangeDays) &&
-        differenceInCalendarDays(endDate, startDate) > maxRangeDays
+        differenceInCalendarDays(endDate, startDate, berlinContext) > maxRangeDays
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -236,23 +245,17 @@ export const bookingsRouter = router({
           })
         }
 
-        const used = await tx.booking.findMany({
-          where: {
+        await assertBookingCapacity(
+          tx,
+          {
             itemId: input.itemId,
-            status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
-            startDate: { lt: endDate },
-            endDate: { gt: startDate },
+            startDate,
+            endDate,
+            quantity: input.quantity,
+            totalQuantity: item.totalQuantity,
           },
-          select: { startDate: true, endDate: true, quantity: true },
-        })
-
-        const alreadyUsed = peakQuantity(used)
-        if (alreadyUsed + input.quantity > item.totalQuantity) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Not enough units available for that time.",
-          })
-        }
+          "BAD_REQUEST",
+        )
 
         const booking = await tx.booking.create({
           data: {
@@ -357,7 +360,7 @@ export const bookingsRouter = router({
       const maxRangeDays = isRentalTeamMember(ctx) ? RENTAL_MAX_RANGE_DAYS : DEFAULT_MAX_RANGE_DAYS
       if (
         Number.isFinite(maxRangeDays) &&
-        differenceInCalendarDays(endDate, startDate) > maxRangeDays
+        differenceInCalendarDays(endDate, startDate, berlinContext) > maxRangeDays
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -368,7 +371,15 @@ export const bookingsRouter = router({
       return bookingTransaction(ctx.prisma, async (tx) => {
         const booking = await tx.booking.findUnique({
           where: { id: input.id },
-          select: { userId: true, status: true, notes: true, staffNotes: true },
+          select: {
+            userId: true,
+            itemId: true,
+            quantity: true,
+            status: true,
+            notes: true,
+            staffNotes: true,
+            item: { select: { active: true, totalQuantity: true } },
+          },
         })
 
         if (!booking) {
@@ -392,6 +403,27 @@ export const bookingsRouter = router({
             message: `Bookings with status "${booking.status}" cannot be updated by user.`,
           })
         }
+
+        if (usesAdminBlockPrefix(booking.notes)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Availability blocks cannot be edited as bookings.",
+          })
+        }
+        if (!booking.item.active)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Item is inactive." })
+        await assertBookingCapacity(
+          tx,
+          {
+            itemId: booking.itemId,
+            startDate,
+            endDate,
+            quantity: booking.quantity,
+            totalQuantity: booking.item.totalQuantity,
+            excludeBookingId: input.id,
+          },
+          "BAD_REQUEST",
+        )
 
         const newStatus = BookingStatus.REQUESTED // Always revert to REQUESTED on user update
 
@@ -431,7 +463,9 @@ export const bookingsRouter = router({
           },
         })
         if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
-        if (booking.userId !== ctx.session.user.id) {
+        if (usesAdminBlockPrefix(booking.notes)) {
+          await requireBlockItem(tx, ctx.session.user.id, booking.itemId)
+        } else if (booking.userId !== ctx.session.user.id) {
           assertCanManageScopedBooking(ctx, booking)
         }
         if (
@@ -601,7 +635,7 @@ export const bookingsRouter = router({
         assertCanManageScopedBooking(ctx, booking)
 
         const noteEntry = [
-          `Rental Team (${format(new Date(), "yyyy-MM-dd HH:mm")}):`,
+          `Rental Team (${formatInBerlin(new Date(), "yyyy-MM-dd HH:mm")}):`,
           trimmedNote,
         ].join("\n")
         const updatedNotes = booking.staffNotes
@@ -652,6 +686,8 @@ export const bookingsRouter = router({
         })
         if (!booking) throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found." })
         assertCanManageScopedBooking(ctx, booking)
+        if (usesAdminBlockPrefix(booking.notes))
+          await requireBlockItem(tx, ctx.session.user.id, booking.itemId)
 
         const now = new Date()
         if (!canTeamTransitionStatus(booking.status, input.newStatus, booking.startDate, now)) {
@@ -664,22 +700,14 @@ export const bookingsRouter = router({
         if (input.newStatus === BookingStatus.ACCEPTED) {
           if (!booking.item.active)
             throw new TRPCError({ code: "BAD_REQUEST", message: "Item is inactive." })
-          const used = await tx.booking.findMany({
-            where: {
-              id: { not: booking.id },
-              itemId: booking.itemId,
-              status: { in: [BookingStatus.ACCEPTED, BookingStatus.BORROWED] },
-              startDate: { lt: booking.endDate },
-              endDate: { gt: booking.startDate },
-            },
-            select: { startDate: true, endDate: true, quantity: true },
+          await assertBookingCapacity(tx, {
+            itemId: booking.itemId,
+            startDate: booking.startDate,
+            endDate: booking.endDate,
+            quantity: booking.quantity,
+            totalQuantity: booking.item.totalQuantity,
+            excludeBookingId: booking.id,
           })
-          if (peakQuantity(used) + booking.quantity > booking.item.totalQuantity) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "Not enough units available for that time.",
-            })
-          }
         }
 
         // Add any specific business logic for status transitions by team
@@ -735,46 +763,71 @@ export const bookingsRouter = router({
       return staffBooking(updated)
     }),
 
+  blockableItems: protectedProcedure.query(async ({ ctx }) => {
+    const role = await requireBlockStaff(ctx.prisma, ctx.session.user.id)
+    return ctx.prisma.item.findMany({
+      where: {
+        active: true,
+        ...(role === "ADMIN" ? {} : { responsibleMembers: { some: { id: ctx.session.user.id } } }),
+      },
+      select: { id: true, titleEn: true, titleDe: true, totalQuantity: true },
+      orderBy: { titleEn: "asc" },
+    })
+  }),
+
   blockSlots: protectedProcedure
     .input(
       z.object({
-        itemId: z.string(),
-        start: z.string(),
-        end: z.string(),
+        itemId: z.string().min(1).max(200),
+        start: z.string().datetime(),
+        end: z.string().datetime(),
         quantity: z.number().int().min(1).optional(),
         reason: z.string().max(500).optional(),
         recurrence: z
           .object({
             frequency: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).default("NONE"),
-            until: z.string().optional(),
+            until: z.string().datetime().optional(),
           })
           .optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.session.user.role !== "ADMIN") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can block slots." })
-      }
-
       const startDate = parseISO(input.start)
       const endDate = parseISO(input.end)
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid start or end date." })
+      const frequency = input.recurrence?.frequency ?? "NONE"
+      const until = input.recurrence?.until ? parseISO(input.recurrence.until) : null
+      const spec = {
+        startDate,
+        endDate,
+        frequency,
+        timeZone: BLOCK_TIME_ZONE,
+        until,
+        stoppedFrom: null,
+        quantity: input.quantity ?? 1,
+        exceptions: [],
       }
-      if (endDate <= startDate) {
+      try {
+        validateBlockRecurrence(spec)
+      } catch {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "End date must be after start date.",
+          message:
+            "Invalid block dates or recurrence. Use a positive duration within the recurrence period.",
         })
       }
 
       const result = await bookingTransaction(ctx.prisma, async (tx) => {
-        const item = await tx.item.findUnique({
-          where: { id: input.itemId },
-          select: { id: true, totalQuantity: true, titleEn: true },
-        })
-        if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Item not found." })
-
+        const item = await requireBlockItem(tx, ctx.session.user.id, input.itemId)
+        if (!item.active) throw new TRPCError({ code: "BAD_REQUEST", message: "Item is inactive." })
+        if (
+          !(await consumeBudget("block-create-global", "all", 500, 86400000, tx)) ||
+          !(await consumeBudget("block-create-user", ctx.session.user.id, 100, 86400000, tx))
+        ) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Block creation limit reached. Try again later.",
+          })
+        }
         const quantity = input.quantity ?? item.totalQuantity
         if (quantity > item.totalQuantity) {
           throw new TRPCError({
@@ -783,112 +836,119 @@ export const bookingsRouter = router({
           })
         }
 
-        const recurrence = input.recurrence ?? { frequency: "NONE" as const }
-        const recurrenceUntil = recurrence.until ? parseISO(recurrence.until) : startDate
-        if (recurrence.until && Number.isNaN(recurrenceUntil.getTime())) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid recurrence end date." })
-        }
-
-        const maxOccurrences = 52
-        const occurrences: Array<{ start: Date; end: Date }> = []
-        const durationMs = endDate.getTime() - startDate.getTime()
-
-        const advance = (date: Date) => {
-          switch (recurrence.frequency) {
-            case "DAILY":
-              return addDays(date, 1)
-            case "WEEKLY":
-              return addWeeks(date, 1)
-            case "BIWEEKLY":
-              return addWeeks(date, 2)
-            case "MONTHLY":
-              return addMonths(date, 1)
-            default:
-              return date
-          }
-        }
-
-        let currentStart = startDate
-        while (occurrences.length < maxOccurrences) {
-          const currentEnd = new Date(currentStart.getTime() + durationMs)
-          occurrences.push({ start: currentStart, end: currentEnd })
-          if (recurrence.frequency === "NONE") break
-          currentStart = advance(currentStart)
-          if (currentStart > recurrenceUntil) break
-        }
-
-        const conflictStatuses = [
-          BookingStatus.REQUESTED,
-          BookingStatus.ACCEPTED,
-          BookingStatus.BORROWED,
-        ]
-
-        const createdBlocks: string[] = []
-        const skipped: Array<{ start: Date; end: Date; conflictingBookingId: string }> = []
-
-        for (const occurrence of occurrences) {
-          const conflict = await tx.booking.findFirst({
-            where: {
-              itemId: input.itemId,
-              status: { in: conflictStatuses },
-              startDate: { lt: occurrence.end },
-              endDate: { gt: occurrence.start },
-            },
+        const now = new Date()
+        const activeRules = await tx.recurringBlock.count({
+          where: {
+            itemId: input.itemId,
+            AND: [
+              { OR: [{ frequency: { not: "NONE" } }, { endDate: { gt: now } }] },
+              {
+                OR: [{ until: null }, { until: { gte: new Date(now.getTime() - 32 * 86400000) } }],
+              },
+              { OR: [{ stoppedFrom: null }, { stoppedFrom: { gt: now } }] },
+            ],
+          },
+        })
+        if (activeRules >= MAX_BLOCK_RULES_PER_ITEM)
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "This item has too many active block rules. Stop an existing series first.",
           })
-
-          if (conflict) {
-            skipped.push({
-              start: occurrence.start,
-              end: occurrence.end,
-              conflictingBookingId: conflict.id,
-            })
-            continue
-          }
-
-          const reasonNote = input.reason?.trim()
-            ? `${ADMIN_BLOCK_PREFIX} ${input.reason.trim()}`
-            : ADMIN_BLOCK_PREFIX
-
-          const block = await tx.booking.create({
-            data: {
-              userId: ctx.session.user.id,
-              itemId: input.itemId,
-              quantity,
-              startDate: occurrence.start,
-              endDate: occurrence.end,
-              status: BookingStatus.ACCEPTED,
-              notes: reasonNote,
-              assignedToId: ctx.session.user.id,
-            },
-          })
-
-          createdBlocks.push(block.id)
-        }
-
+        await assertBlockPreservesBookings(tx, input.itemId, item.totalQuantity, {
+          ...spec,
+          quantity,
+        })
+        const block = await tx.recurringBlock.create({
+          data: {
+            itemId: input.itemId,
+            createdById: ctx.session.user.id,
+            startDate,
+            endDate,
+            frequency,
+            timeZone: BLOCK_TIME_ZONE,
+            until,
+            quantity,
+            reason: input.reason?.trim() || null,
+          },
+        })
         return {
-          createdBlocks,
-          createdCount: createdBlocks.length,
-          skippedCount: skipped.length,
-          skipped: skipped.map((entry) => ({
-            start: entry.start.toISOString(),
-            end: entry.end.toISOString(),
-            conflictingBookingId: entry.conflictingBookingId,
-          })),
+          id: block.id,
           title: item.titleEn,
+          frequency,
+          until,
+          indefinite: frequency !== "NONE" && !until,
         }
       })
-      await Promise.all(
-        result.createdBlocks.map((bookingId) =>
-          logAction({
-            type: LogType.BOOKING,
-            userId: ctx.session.user.id,
-            bookingId,
-            message: "blocked:create",
-          }),
-        ),
-      )
-      const { createdBlocks: _createdBlocks, ...response } = result
-      return response
+      await logAction({
+        type: LogType.BOOKING,
+        userId: ctx.session.user.id,
+        message: `blocked:create:${result.id}`,
+      })
+      return result
+    }),
+
+  cancelBlockOccurrence: protectedProcedure
+    .input(
+      z.object({
+        recurringBlockId: z.string().min(1).max(200),
+        occurrenceStart: z.string().datetime(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await bookingTransaction(ctx.prisma, async (tx) => {
+        const block = await tx.recurringBlock.findUnique({ where: { id: input.recurringBlockId } })
+        if (!block) throw new TRPCError({ code: "NOT_FOUND", message: "Block not found." })
+        await requireBlockItem(tx, ctx.session.user.id, block.itemId)
+        const occurrenceStart = parseISO(input.occurrenceStart)
+        if (!isBlockOccurrence(block, occurrenceStart))
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This occurrence is no longer active.",
+          })
+        await tx.recurringBlockException.upsert({
+          where: { blockId_occurrenceStart: { blockId: block.id, occurrenceStart } },
+          create: { blockId: block.id, occurrenceStart },
+          update: {},
+        })
+      })
+      await logAction({
+        type: LogType.BOOKING,
+        userId: ctx.session.user.id,
+        message: `blocked:cancel:${input.recurringBlockId}:${input.occurrenceStart}`,
+      })
+      return { success: true }
+    }),
+
+  stopBlockSeries: protectedProcedure
+    .input(
+      z.object({
+        recurringBlockId: z.string().min(1).max(200),
+        occurrenceStart: z.string().datetime(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await bookingTransaction(ctx.prisma, async (tx) => {
+        const block = await tx.recurringBlock.findUnique({ where: { id: input.recurringBlockId } })
+        if (!block) throw new TRPCError({ code: "NOT_FOUND", message: "Block not found." })
+        await requireBlockItem(tx, ctx.session.user.id, block.itemId)
+        const occurrenceStart = parseISO(input.occurrenceStart)
+        if (!isBlockOccurrence(block, occurrenceStart))
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This occurrence is no longer active.",
+          })
+        const stoppedFrom =
+          block.stoppedFrom && block.stoppedFrom < occurrenceStart
+            ? block.stoppedFrom
+            : occurrenceStart
+        await tx.recurringBlock.update({ where: { id: block.id }, data: { stoppedFrom } })
+      })
+      await logAction({
+        type: LogType.BOOKING,
+        userId: ctx.session.user.id,
+        message: `blocked:stop:${input.recurringBlockId}:${input.occurrenceStart}`,
+      })
+      return { success: true }
     }),
 
   listForRentalCalendar: protectedProcedure
@@ -899,15 +959,18 @@ export const bookingsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      if (!isRentalTeamMember(ctx)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." })
-      }
+      const role = await requireBlockStaff(ctx.prisma, ctx.session.user.id)
       const from = parseISO(input.from)
       const to = parseISO(input.to)
+      assertDateRange(from, to, 400)
+      const scope =
+        role === "ADMIN"
+          ? {}
+          : { item: { responsibleMembers: { some: { id: ctx.session.user.id } } } }
       const bookings = await ctx.prisma.booking.findMany({
         where: {
-          item: { responsibleMembers: { some: { id: ctx.session.user.id } } },
-          AND: [{ startDate: { lte: to } }, { endDate: { gte: from } }],
+          ...scope,
+          AND: [{ startDate: { lt: to } }, { endDate: { gt: from } }],
         },
         include: {
           item: {
@@ -918,7 +981,10 @@ export const bookingsRouter = router({
         },
         orderBy: { startDate: "asc" },
       })
-      return bookings.map(staffBooking)
+      const blocks = await blockOccurrences(ctx.prisma, from, to, scope)
+      return [...bookings.map(staffBooking), ...blocks].sort(
+        (a, b) => a.startDate.getTime() - b.startDate.getTime(),
+      )
     }),
 
   getBookings: protectedProcedure
@@ -929,14 +995,17 @@ export const bookingsRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      const role = ctx.session.user.role
+      assertDateRange(input.start, input.end, 400)
+      const role = isRentalTeamMember(ctx)
+        ? await requireBlockStaff(ctx.prisma, ctx.session.user.id)
+        : ctx.session.user.role
 
       if (role === "ADMIN" || role === "RENTAL") {
         await markUpcomingBookingsBorrowed()
       }
 
       const where: Prisma.BookingWhereInput = {
-        AND: [{ startDate: { lte: input.end } }, { endDate: { gte: input.start } }],
+        AND: [{ startDate: { lt: input.end } }, { endDate: { gt: input.start } }],
       }
 
       if (role === "ADMIN") {
@@ -956,7 +1025,21 @@ export const bookingsRouter = router({
         },
         orderBy: { startDate: "asc" },
       })
-      return bookings.map(isRentalTeamMember(ctx) ? staffBooking : ownerBooking)
+      const blocks =
+        role === "ADMIN" || role === "RENTAL"
+          ? await blockOccurrences(
+              ctx.prisma,
+              input.start,
+              input.end,
+              role === "ADMIN"
+                ? {}
+                : { item: { responsibleMembers: { some: { id: ctx.session.user.id } } } },
+            )
+          : []
+      return [
+        ...bookings.map(isRentalTeamMember(ctx) ? staffBooking : ownerBooking),
+        ...blocks,
+      ].sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
     }),
 
   availability: publicProcedure /* Unchanged from previous correct version */
@@ -987,7 +1070,7 @@ export const bookingsRouter = router({
           status: {
             in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED],
           },
-          AND: [{ startDate: { lte: queryEndBoundary } }, { endDate: { gte: queryStartBoundary } }],
+          AND: [{ startDate: { lt: queryEndBoundary } }, { endDate: { gt: queryStartBoundary } }],
         },
         select: { id: true, startDate: true, endDate: true, status: true, quantity: true },
         take: 1001,
@@ -995,7 +1078,19 @@ export const bookingsRouter = router({
       })
       if (bookings.length > 1000)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Select a smaller date range." })
-      return bookings
+      const blocks = await blockOccurrences(ctx.prisma, queryStartBoundary, queryEndBoundary, {
+        itemId: input.itemId,
+      })
+      return [
+        ...bookings,
+        ...blocks.map(({ id, startDate, endDate, status, quantity }) => ({
+          id,
+          startDate,
+          endDate,
+          status,
+          quantity,
+        })),
+      ].sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
     }),
 })
 

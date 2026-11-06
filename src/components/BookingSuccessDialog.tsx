@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { formatInBerlin as format } from "@/lib/berlin-time"
 import { CheckCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"

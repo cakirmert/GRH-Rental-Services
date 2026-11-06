@@ -1,10 +1,11 @@
 "use client"
 
-import { addHours, startOfDay } from "date-fns"
+import { addDays, startOfDay } from "date-fns"
 import { useCalendar } from "../calendar-provider"
 import { CalendarQueryState } from "../calendar-query-state"
 import { TimeGrid } from "./time-grid"
 import { trpc } from "@/utils/trpc"
+import { berlinContext } from "@/lib/berlin-time"
 
 export function DayView() {
   const { currentDate } = useCalendar()
@@ -14,8 +15,8 @@ export function DayView() {
     isError,
     refetch,
   } = trpc.bookings.getBookings.useQuery({
-    start: startOfDay(currentDate),
-    end: addHours(startOfDay(currentDate), 48),
+    start: startOfDay(currentDate, berlinContext),
+    end: addDays(startOfDay(currentDate, berlinContext), 1, berlinContext),
   })
   if (isPending || isError)
     return (

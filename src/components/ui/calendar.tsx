@@ -7,8 +7,8 @@ import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, useDayPicker } from "react-day-picker"
 import type { ClassNames, MonthCaptionProps } from "react-day-picker"
-import { format } from "date-fns"
 import type { Locale } from "date-fns"
+import { BERLIN_TIME_ZONE, formatInBerlin as format } from "@/lib/berlin-time"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -21,6 +21,7 @@ const BP = { sm: 420, md: 720 } as const
 export function Calendar({
   className,
   showOutsideDays = true,
+  weekStartsOn = 1,
   numberOfMonths: numProp,
   classNames: userCls,
   ...props
@@ -122,10 +123,15 @@ export function Calendar({
 
   /* ---------- render ----------------------------------- */
   return (
-    <div ref={host} className={cn("p-3 rounded-md border bg-background/50 glass inline-block", className)}>
+    <div
+      ref={host}
+      className={cn("p-3 rounded-md border bg-background/50 glass inline-block", className)}
+    >
       <DayPicker
         key={months} /* force full remount when layout changes   */
         {...props}
+        timeZone={BERLIN_TIME_ZONE}
+        weekStartsOn={weekStartsOn}
         showOutsideDays={showOutsideDays}
         numberOfMonths={months}
         classNames={cls}

@@ -27,14 +27,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import {
-  format,
   isBefore,
   startOfDay,
-  isToday,
-  isSameDay,
+  isSameDay as sameCalendarDay,
   addDays, // For max range
-  differenceInCalendarDays, // For max range
+  differenceInCalendarDays as calendarDayDifference, // For max range
 } from "date-fns"
+import {
+  berlinContext,
+  combineBerlinDateAndTime,
+  formatInBerlin as format,
+  toBerlinDate,
+} from "@/lib/berlin-time"
 import type { Locale } from "date-fns"
 import { useI18n } from "@/locales/i18n"
 import { toast } from "@/components/ui/use-toast"
@@ -47,6 +51,12 @@ import { Spinner } from "@/components/ui/spinner"
 import { useAuthModal } from "@/contexts/AuthModalContext"
 
 import { useView, View } from "@/contexts/ViewContext" // Import View type
+// Form libraries may clone TZDate values into ordinary Dates. Keep calendar
+// comparisons explicitly in Berlin even after that cloning or draft rehydration.
+const isSameDay = (left: Date, right: Date) => sameCalendarDay(left, right, berlinContext)
+const differenceInCalendarDays = (later: Date, earlier: Date) =>
+  calendarDayDifference(later, earlier, berlinContext)
+const isToday = (date: Date) => sameCalendarDay(date, Date.now(), berlinContext)
 // ... (interfaces and schema remain the same) ...
 /* ---------- types ---------- */
 interface Item {
@@ -224,10 +234,10 @@ function getStoredFormData(itemId: string): Partial<BookingFormValues> {
         const parsed = JSON.parse(stored)
         // Convert date strings back to Date objects
         if (parsed.dateRange?.from) {
-          parsed.dateRange.from = new Date(parsed.dateRange.from)
+          parsed.dateRange.from = toBerlinDate(parsed.dateRange.from)
         }
         if (parsed.dateRange?.to) {
-          parsed.dateRange.to = new Date(parsed.dateRange.to)
+          parsed.dateRange.to = toBerlinDate(parsed.dateRange.to)
         }
         globalFormState.set(itemId, parsed)
         return parsed
@@ -461,11 +471,11 @@ function BookingFormView(props: BookingFormViewProps) {
     }
   }, [currentImage])
 
-  const minSelectableDateOverall = startOfDay(new Date())
+  const minSelectableDateOverall = startOfDay(toBerlinDate())
 
   // Dynamic date disabling logic for the calendar
   const disableDate = (day: Date, selectedFromDate?: Date): boolean => {
-    if (isBefore(day, minSelectableDateOverall)) {
+    if (isBefore(startOfDay(toBerlinDate(day)), minSelectableDateOverall)) {
       return true // Disable past dates
     }
     if (selectedFromDate) {
@@ -484,11 +494,7 @@ function BookingFormView(props: BookingFormViewProps) {
     (d: Date | undefined, tStr: string) => {
       if (!d) throw new Error(t("errors.selectDate"))
       if (!tStr) throw new Error(t("errors.selectTime"))
-      const [h, m] = tStr.split(":").map(Number)
-      if (isNaN(h) || isNaN(m)) throw new Error(t("errors.invalidTimeFormat"))
-      const dt = new Date(d)
-      dt.setHours(h, m, 0, 0)
-      return dt
+      return combineBerlinDateAndTime(d, tStr)
     },
     [t],
   )
@@ -555,10 +561,9 @@ function BookingFormView(props: BookingFormViewProps) {
         )
         return false
       }
-      const now = new Date()
+      const now = toBerlinDate()
       if (isToday(dateRange.from)) {
-        const limit = new Date()
-        limit.setHours(now.getHours() + 12, now.getMinutes(), 0, 0)
+        const limit = new Date(now.getTime() + 12 * 60 * 60 * 1000)
         if (isBefore(startDT, limit)) {
           setFormError(t("errors.startTimeTooSoon", { hours: 12 }))
           return false
@@ -567,11 +572,9 @@ function BookingFormView(props: BookingFormViewProps) {
         setFormError(t("errors.pastTime"))
         return false
       }
-      if (format(startDT, "yyyy-MM-dd") === format(endDT, "yyyy-MM-dd")) {
-        if (!isBefore(startDT, endDT)) {
-          setFormError(t("errors.endTimeNotAfterStart"))
-          return false
-        }
+      if (!isBefore(startDT, endDT)) {
+        setFormError(t("errors.endTimeNotAfterStart"))
+        return false
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -656,10 +659,7 @@ function BookingFormView(props: BookingFormViewProps) {
         return null
       }
 
-      if (
-        format(startDT, "yyyy-MM-dd") === format(endDT, "yyyy-MM-dd") &&
-        !isBefore(startDT, endDT)
-      ) {
+      if (!isBefore(startDT, endDT)) {
         return null
       }
 
@@ -709,6 +709,19 @@ function BookingFormView(props: BookingFormViewProps) {
     maxSelectableRangeDays,
     rangeErrorMessage,
   ])
+  const invalidTimeOrder = useMemo(() => {
+    if (!dateRange?.from || !startTime || !endTime) return false
+    try {
+      return !isBefore(
+        combineDateTime(dateRange.from, startTime),
+        combineDateTime(dateRange.to || dateRange.from, endTime),
+      )
+    } catch {
+      // Invalid/nonexistent Berlin times are reported during validation, without
+      // throwing while rendering the summary.
+      return false
+    }
+  }, [dateRange, startTime, endTime, combineDateTime])
   const SELECTED_ITEM_KEY = "grh-selected-item-id"
 
   const { setView } = useView()
@@ -874,10 +887,11 @@ function BookingFormView(props: BookingFormViewProps) {
                           type="button"
                           onClick={() => goToImage(idx)}
                           aria-label={t("common.viewImageN", { n: idx + 1 })}
-                          className={`relative h-16 w-16 my-2 flex-shrink-0 rounded-md overflow-hidden cursor-pointer transition-all duration-200 ${idx === currentImage
-                            ? "ring-2 ring-primary shadow-md"
-                            : "hover:ring-1 hover:ring-border"
-                            }`}
+                          className={`relative h-16 w-16 my-2 flex-shrink-0 rounded-md overflow-hidden cursor-pointer transition-all duration-200 ${
+                            idx === currentImage
+                              ? "ring-2 ring-primary shadow-md"
+                              : "hover:ring-1 hover:ring-border"
+                          }`}
                         >
                           {thumbnailLoadingStates.has(idx) && idx !== currentImage && (
                             <div className="absolute inset-0 flex items-center justify-center bg-card rounded-md">
@@ -1011,8 +1025,10 @@ function BookingFormView(props: BookingFormViewProps) {
                               } else if (currentSelectedRange?.from) {
                                 // Scenario 3: A new valid range or single day is formed by RDP.
                                 // Respect RDP's new range, but cap 'to' if it exceeds max duration.
-                                const from = currentSelectedRange.from
+                                const from = toBerlinDate(currentSelectedRange.from)
                                 let to = currentSelectedRange.to
+                                  ? toBerlinDate(currentSelectedRange.to)
+                                  : undefined
 
                                 if (
                                   from &&
@@ -1114,7 +1130,11 @@ function BookingFormView(props: BookingFormViewProps) {
                   name="notes"
                   render={({ field }) => (
                     <FormItem className="floating-form-item">
-                      <FormLabel>{item.type === "ROOM" ? t("bookingForm.notesLabelRequired") : t("bookingForm.notesLabel")}</FormLabel>
+                      <FormLabel>
+                        {item.type === "ROOM"
+                          ? t("bookingForm.notesLabelRequired")
+                          : t("bookingForm.notesLabel")}
+                      </FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder=" "
@@ -1124,7 +1144,9 @@ function BookingFormView(props: BookingFormViewProps) {
                         />
                       </FormControl>
                       <FormDescription className="text-xs text-muted-foreground mt-1">
-                        {item.type === "ROOM" ? t("bookingForm.notesGuidanceRequired") : t("bookingForm.notesGuidance")}
+                        {item.type === "ROOM"
+                          ? t("bookingForm.notesGuidanceRequired")
+                          : t("bookingForm.notesGuidance")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -1183,18 +1205,7 @@ function BookingFormView(props: BookingFormViewProps) {
                     <div className="text-destructive text-sm font-medium">
                       {formHookErrors.dateRange.to.message}
                     </div>
-                  ) : dateRange?.from &&
-                    startTime &&
-                    endTime &&
-                    format(combineDateTime(dateRange.from, startTime), "yyyy-MM-dd") ===
-                    format(
-                      combineDateTime(dateRange.to || dateRange.from, endTime),
-                      "yyyy-MM-dd",
-                    ) &&
-                    !isBefore(
-                      combineDateTime(dateRange.from, startTime),
-                      combineDateTime(dateRange.to || dateRange.from, endTime),
-                    ) ? (
+                  ) : invalidTimeOrder ? (
                     <div className="text-destructive text-sm font-medium">
                       {t("errors.endTimeNotAfterStart")}
                     </div>

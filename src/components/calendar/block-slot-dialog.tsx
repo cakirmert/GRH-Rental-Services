@@ -6,12 +6,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectTrigger,
@@ -19,12 +21,13 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select"
-import { addHours, format } from "date-fns"
+import { addHours } from "date-fns"
 import { trpc } from "@/utils/trpc"
 import { useToast } from "@/components/ui/use-toast"
 import { useI18n } from "@/locales/i18n"
 import { useCalendar } from "./calendar-provider"
 import type { BlockRecurrenceFrequency } from "@/types"
+import { formatBerlinDateTime, parseBerlinDateTime, toBerlinDate } from "@/lib/berlin-time"
 
 const recurrenceOptions: Array<{ value: BlockRecurrenceFrequency; labelKey: string }> = [
   { value: "NONE", labelKey: "adminCalendar.block.none" },
@@ -34,15 +37,13 @@ const recurrenceOptions: Array<{ value: BlockRecurrenceFrequency; labelKey: stri
   { value: "MONTHLY", labelKey: "adminCalendar.block.monthly" },
 ]
 
-const formatInputValue = (date: Date) => format(date, "yyyy-MM-dd'T'HH:mm")
-
 interface BlockSlotDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { toast } = useToast()
   const { selectedDate, setSelectedDate } = useCalendar()
   const utils = trpc.useUtils()
@@ -52,8 +53,14 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
     onOpenChange(nextOpen)
   }
 
-  const { data: items = [], isLoading: itemsLoading } = trpc.items.all.useQuery(undefined, {
+  const {
+    data: items = [],
+    isLoading: itemsLoading,
+    isError: itemsError,
+    refetch: retryItems,
+  } = trpc.bookings.blockableItems.useQuery(undefined, {
     enabled: open,
+    staleTime: 0,
   })
 
   const [itemId, setItemId] = useState<string>("")
@@ -63,6 +70,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
   const [reason, setReason] = useState<string>("")
   const [recurrence, setRecurrence] = useState<BlockRecurrenceFrequency>("NONE")
   const [repeatUntil, setRepeatUntil] = useState<string>("")
+  const [noEndDate, setNoEndDate] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
 
   const selectedItem = useMemo(() => items.find((item) => item.id === itemId), [items, itemId])
@@ -71,13 +79,17 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
     onSuccess: (result) => {
       utils.bookings.getBookings.invalidate()
       utils.bookings.listForRentalTeam.invalidate()
+      utils.bookings.availability.invalidate()
       toast({
         title: t("adminCalendar.block.successTitle"),
-        description: t("adminCalendar.block.successDescription", {
-          created: result.createdCount,
-          skipped: result.skippedCount,
-          item: result.title ?? "",
-        }),
+        description: t(
+          result.indefinite
+            ? "adminCalendar.block.indefiniteSuccess"
+            : "adminCalendar.block.successDescription",
+          {
+            item: result.title ?? "",
+          },
+        ),
       })
       handleOpenChange(false)
     },
@@ -88,9 +100,9 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
 
   useEffect(() => {
     if (open) {
-      const base = selectedDate ?? new Date()
-      const defaultStart = formatInputValue(base)
-      const defaultEnd = formatInputValue(addHours(base, 1))
+      const base = selectedDate ?? toBerlinDate()
+      const defaultStart = formatBerlinDateTime(base)
+      const defaultEnd = formatBerlinDateTime(addHours(base, 1))
       setItemId("")
       setStartValue(defaultStart)
       setEndValue(defaultEnd)
@@ -98,6 +110,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
       setReason("")
       setRecurrence("NONE")
       setRepeatUntil("")
+      setNoEndDate(true)
       setFormError(null)
     }
   }, [open, selectedDate])
@@ -106,7 +119,7 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
     event.preventDefault()
     setFormError(null)
 
-    if (!itemId) {
+    if (!selectedItem || itemsError) {
       setFormError(t("adminCalendar.block.errors.itemRequired"))
       return
     }
@@ -115,9 +128,12 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
       return
     }
 
-    const startDate = new Date(startValue)
-    const endDate = new Date(endValue)
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    let startDate: Date
+    let endDate: Date
+    try {
+      startDate = parseBerlinDateTime(startValue)
+      endDate = parseBerlinDateTime(endValue)
+    } catch {
       setFormError(t("adminCalendar.block.errors.invalidDate"))
       return
     }
@@ -129,11 +145,11 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
     let quantityNumber: number | undefined
     if (quantity.trim().length > 0) {
       const parsed = Number(quantity)
-      if (!Number.isFinite(parsed) || parsed <= 0) {
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > selectedItem.totalQuantity) {
         setFormError(t("adminCalendar.block.errors.invalidQuantity"))
         return
       }
-      quantityNumber = Math.floor(parsed)
+      quantityNumber = parsed
     }
 
     let recurrencePayload:
@@ -144,23 +160,24 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
       | undefined
 
     if (recurrence !== "NONE") {
-      if (!repeatUntil) {
-        setFormError(t("adminCalendar.block.errors.untilRequired"))
-        return
-      }
-      const timePortion = startValue.slice(11)
-      const untilDate = new Date(`${repeatUntil}T${timePortion}`)
-      if (Number.isNaN(untilDate.getTime())) {
-        setFormError(t("adminCalendar.block.errors.invalidUntil"))
-        return
-      }
-      if (untilDate < startDate) {
-        setFormError(t("adminCalendar.block.errors.untilBeforeStart"))
-        return
-      }
-      recurrencePayload = {
-        frequency: recurrence,
-        until: untilDate.toISOString(),
+      recurrencePayload = { frequency: recurrence }
+      if (!noEndDate) {
+        if (!repeatUntil) {
+          setFormError(t("adminCalendar.block.errors.untilRequired"))
+          return
+        }
+        let untilDate: Date
+        try {
+          untilDate = parseBerlinDateTime(`${repeatUntil}T23:59`)
+        } catch {
+          setFormError(t("adminCalendar.block.errors.invalidUntil"))
+          return
+        }
+        if (untilDate < startDate) {
+          setFormError(t("adminCalendar.block.errors.untilBeforeStart"))
+          return
+        }
+        recurrencePayload.until = untilDate.toISOString()
       }
     }
 
@@ -176,14 +193,19 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("adminCalendar.block.title")}</DialogTitle>
+          <DialogDescription>{t("adminCalendar.block.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="block-item">{t("adminCalendar.block.itemLabel")}</Label>
-            <Select value={itemId} onValueChange={setItemId} disabled={itemsLoading}>
+            <Select
+              value={itemId}
+              onValueChange={setItemId}
+              disabled={itemsLoading || itemsError || !items.length || blockSlots.isPending}
+            >
               <SelectTrigger id="block-item">
                 <SelectValue
                   placeholder={
@@ -194,11 +216,21 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
               <SelectContent>
                 {items.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.titleEn}
+                    {(locale === "de" && item.titleDe) || item.titleEn}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {itemsError ? (
+              <div role="alert" className="space-y-1 text-sm text-destructive">
+                <p>{t("adminCalendar.block.itemsError")}</p>
+                <Button type="button" variant="outline" size="sm" onClick={() => void retryItems()}>
+                  {t("calendar.retry")}
+                </Button>
+              </div>
+            ) : !itemsLoading && !items.length ? (
+              <p className="text-sm text-muted-foreground">{t("adminCalendar.block.noItems")}</p>
+            ) : null}
             {selectedItem && (
               <p className="text-xs text-muted-foreground">
                 {t("adminCalendar.block.itemQuantity", { count: selectedItem.totalQuantity })}
@@ -206,6 +238,9 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
             )}
           </div>
 
+          <p className="text-xs font-medium text-muted-foreground">
+            {t("adminCalendar.block.timeZone")}
+          </p>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="block-start">{t("adminCalendar.block.startLabel")}</Label>
@@ -235,6 +270,8 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
                 id="block-quantity"
                 type="number"
                 min={1}
+                max={selectedItem?.totalQuantity}
+                step={1}
                 value={quantity}
                 placeholder={t("adminCalendar.block.quantityPlaceholder")}
                 onChange={(event) => setQuantity(event.target.value)}
@@ -261,14 +298,31 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
           </div>
 
           {recurrence !== "NONE" && (
-            <div className="space-y-2">
-              <Label htmlFor="block-until">{t("adminCalendar.block.untilLabel")}</Label>
-              <Input
-                id="block-until"
-                type="date"
-                value={repeatUntil}
-                onChange={(event) => setRepeatUntil(event.target.value)}
-              />
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="block-no-end"
+                  checked={noEndDate}
+                  onCheckedChange={(checked) => setNoEndDate(checked === true)}
+                />
+                <Label htmlFor="block-no-end">{t("adminCalendar.block.noEndDate")}</Label>
+              </div>
+              {noEndDate ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("adminCalendar.block.noEndHint")}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="block-until">{t("adminCalendar.block.untilLabel")}</Label>
+                  <Input
+                    id="block-until"
+                    type="date"
+                    value={repeatUntil}
+                    min={startValue.slice(0, 10)}
+                    onChange={(event) => setRepeatUntil(event.target.value)}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -282,7 +336,11 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
             />
           </div>
 
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          {formError && (
+            <p role="alert" className="text-sm text-destructive">
+              {formError}
+            </p>
+          )}
 
           <DialogFooter>
             <Button
@@ -293,7 +351,10 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
             >
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={blockSlots.isPending}>
+            <Button
+              type="submit"
+              disabled={blockSlots.isPending || itemsLoading || itemsError || !items.length}
+            >
               {blockSlots.isPending ? t("common.saving") : t("adminCalendar.block.submit")}
             </Button>
           </DialogFooter>

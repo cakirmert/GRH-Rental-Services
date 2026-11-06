@@ -12,6 +12,7 @@ const prisma = {
     update: vi.fn(),
   },
   notification: { create: vi.fn() },
+  recurringBlock: { findMany: vi.fn().mockResolvedValue([]) },
   log: { create: vi.fn() },
 }
 
@@ -30,7 +31,7 @@ async function createCaller() {
     user: { id: "u1", email: "test@example.com", name: "Test User" },
     assignedTo: null,
     startDate: new Date(),
-    endDate: new Date(),
+    endDate: new Date(Date.now() + 3600000),
   }
   prisma.booking.findUnique.mockResolvedValue(booking)
   prisma.booking.update.mockResolvedValue({ ...booking, status: BookingStatus.ACCEPTED })

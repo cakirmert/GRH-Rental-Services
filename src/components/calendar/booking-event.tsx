@@ -4,10 +4,11 @@ import { useCalendar } from "./calendar-provider"
 import type { CalendarBooking } from "./types"
 import { BookingStatus } from "@prisma/client"
 import { cn } from "@/lib/utils"
-import { format, isSameDay } from "date-fns"
+import { isSameDay } from "date-fns"
 import { useI18n } from "@/locales/i18n"
 import { getAdminBlockReason, isAdminBlockBooking } from "@/utils/adminBlock"
 import { calendarLocale } from "./calendar-utils"
+import { formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
 export const statusClasses: Record<BookingStatus, string> = {
   REQUESTED: "bg-status-requested text-status-requested-foreground",
@@ -29,15 +30,15 @@ export function BookingEvent({
 }) {
   const { setSelectedBooking, setSelectedDate } = useCalendar()
   const { t, locale } = useI18n()
-  const isAdminBlock = isAdminBlockBooking(booking)
+  const isAdminBlock = !!booking.recurringBlockId || isAdminBlockBooking(booking)
   const itemTitle = (locale === "de" ? booking.item?.titleDe : null) || booking.item?.titleEn
   const title = isAdminBlock
     ? t("adminCalendar.block.eventTitle", {
         item: itemTitle ?? t("adminCalendar.block.genericItem"),
       })
     : itemTitle || t("calendar.booking")
-  const start = new Date(booking.startDate)
-  const end = new Date(booking.endDate)
+  const start = toBerlinDate(booking.startDate)
+  const end = toBerlinDate(booking.endDate)
   const options = { locale: calendarLocale(locale) }
   const timeLabel = isSameDay(start, end)
     ? `${format(start, "HH:mm")} – ${format(end, "HH:mm")}`
