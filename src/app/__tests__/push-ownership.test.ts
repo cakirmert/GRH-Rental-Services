@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
-  findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), deleteMany: vi.fn(),
+  findUnique: vi.fn(),
+  update: vi.fn(),
+  create: vi.fn(),
+  deleteMany: vi.fn(),
 }))
 vi.mock("../../../auth", () => ({ auth: vi.fn(async () => ({ user: { id: "owner" } })) }))
 vi.mock("@/lib/prismadb", () => ({
@@ -11,8 +14,12 @@ vi.mock("@/lib/prismadb", () => ({
   },
 }))
 vi.mock("@/lib/pushSubscription", () => ({ assertValidPushSubscription: vi.fn() }))
-import { subscribeUser } from "../actions"
-const sub = { endpoint: "https://fcm.googleapis.com/fcm/send/opaque", keys: { p256dh: "key", auth: "auth" }, expirationTime: null } as unknown as PushSubscription & { keys: { p256dh: string; auth: string } }
+import { isCurrentUserPushSubscription, subscribeUser } from "../actions"
+const sub = {
+  endpoint: "https://fcm.googleapis.com/fcm/send/opaque",
+  keys: { p256dh: "key", auth: "auth" },
+  expirationTime: null,
+} as unknown as PushSubscription & { keys: { p256dh: string; auth: string } }
 beforeEach(() => vi.resetAllMocks())
 describe("push endpoint ownership", () => {
   it("rejects reassignment without changing the stored owner or keys", async () => {
@@ -24,8 +31,17 @@ describe("push endpoint ownership", () => {
   it("allows the owner to refresh keys", async () => {
     mocks.findUnique.mockResolvedValue({ userId: "owner" })
     await expect(subscribeUser(sub)).resolves.toEqual({ success: true })
-    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { endpoint: sub.endpoint, userId: "owner" },
-    }))
+    expect(mocks.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { endpoint: sub.endpoint, userId: "owner" },
+      }),
+    )
+  })
+  it("reports ownership only for the signed-in account", async () => {
+    mocks.findUnique
+      .mockResolvedValueOnce({ userId: "victim" })
+      .mockResolvedValueOnce({ userId: "owner" })
+    await expect(isCurrentUserPushSubscription(sub.endpoint)).resolves.toBe(false)
+    await expect(isCurrentUserPushSubscription(sub.endpoint)).resolves.toBe(true)
   })
 })

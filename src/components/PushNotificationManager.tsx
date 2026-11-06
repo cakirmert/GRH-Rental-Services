@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef, useSyncExternalStore } from "react"
-import { subscribeUser, unsubscribeUser } from "@/app/actions"
+import { isCurrentUserPushSubscription, subscribeUser, unsubscribeUser } from "@/app/actions"
 import { useI18n } from "@/locales/i18n"
 import { useSession } from "next-auth/react"
 import { toast } from "@/components/ui/use-toast"
@@ -154,6 +154,16 @@ function AccountPushManager({ accountId }: { accountId?: string }) {
         .then(async (reg) => {
           const sub = await reg.pushManager.getSubscription()
           if (!current) return
+          if (sub && accountId) {
+            // A browser subscription can survive an earlier account's logout.
+            // Never present it as enabled for the newly signed-in account.
+            if (!(await isCurrentUserPushSubscription(sub.endpoint))) {
+              await sub.unsubscribe()
+              if (!current) return
+              setSubscription(null)
+              return
+            }
+          }
           setSubscription(sub)
           // Auto-prompt for notifications immediately if user is authenticated and hasn't been prompted
           if (accountId && !sub && !hasPrompted) {

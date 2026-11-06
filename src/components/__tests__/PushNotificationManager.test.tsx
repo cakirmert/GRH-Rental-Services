@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   status: "authenticated",
   subscribeUser: vi.fn(),
   unsubscribeUser: vi.fn(),
+  isCurrentUserPushSubscription: vi.fn(),
   toast: vi.fn(),
   translate: (key: string) => key,
 }))
@@ -17,6 +18,7 @@ vi.mock("next-auth/react", () => ({
 vi.mock("@/app/actions", () => ({
   subscribeUser: mocks.subscribeUser,
   unsubscribeUser: mocks.unsubscribeUser,
+  isCurrentUserPushSubscription: mocks.isCurrentUserPushSubscription,
 }))
 vi.mock("@/locales/i18n", () => ({ useI18n: () => ({ t: mocks.translate }) }))
 vi.mock("@/components/ui/use-toast", () => ({ toast: mocks.toast }))
@@ -63,6 +65,7 @@ beforeEach(() => {
   mocks.status = "authenticated"
   mocks.subscribeUser.mockResolvedValue({ success: true })
   mocks.unsubscribeUser.mockResolvedValue({ success: true })
+  mocks.isCurrentUserPushSubscription.mockResolvedValue(true)
   localStorage.clear()
   vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "AQID")
 })
@@ -106,6 +109,17 @@ describe("push manager browser and account lifecycle", () => {
     })
     expect(subscription.unsubscribe).toHaveBeenCalledOnce()
     expect(mocks.unsubscribeUser).toHaveBeenCalledWith(subscription.endpoint)
+    expect(controls().isSubscribed).toBe(false)
+  })
+
+  it("removes a browser subscription linked to a different account", async () => {
+    const { subscription, pushManager } = browser()
+    pushManager.getSubscription.mockResolvedValue(subscription)
+    mocks.isCurrentUserPushSubscription.mockResolvedValue(false)
+    render(<PushNotificationManager />)
+    await act(async () => {})
+    expect(mocks.isCurrentUserPushSubscription).toHaveBeenCalledWith(subscription.endpoint)
+    expect(subscription.unsubscribe).toHaveBeenCalledOnce()
     expect(controls().isSubscribed).toBe(false)
   })
 

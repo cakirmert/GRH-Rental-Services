@@ -1,6 +1,7 @@
 import { router, protectedProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
+import { Prisma } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
 import { sendChatMessageEmail } from "@/server/email/sendChatMessageEmail"
 
@@ -44,71 +45,84 @@ export const chatRouter = router({
   send: protectedProcedure
     .input(z.object({ bookingId: z.string(), body: z.string().min(1).max(10_000) }))
     .mutation(async ({ input, ctx }) => {
-      await assertCanAccessBooking(ctx, input.bookingId)
+      const message = await ctx.prisma.$transaction(
+        async (tx) => {
+          // Serialize all senders for this booking before checking either send limit.
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`chat-send:${input.bookingId}`}, 0))`
+          await assertCanAccessBooking(ctx, input.bookingId, tx)
+          const now = new Date()
+          const booking = await tx.booking.findUnique({
+            where: { id: input.bookingId },
+            select: {
+              endDate: true,
+              chatThread: { select: { id: true, closedAt: true } },
+            },
+          })
+          if (!booking) throw new TRPCError({ code: "NOT_FOUND" })
 
-      const now = new Date()
+          const thread =
+            booking.chatThread ??
+            (await tx.bookingChatThread.upsert({
+              where: { bookingId: input.bookingId },
+              update: {},
+              create: { bookingId: input.bookingId },
+            }))
 
-      const booking = await ctx.prisma.booking.findUnique({
-        where: { id: input.bookingId },
-        select: {
-          endDate: true,
-          chatThread: { select: { id: true, closedAt: true } },
+          if (thread.closedAt && thread.closedAt <= now) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Chat is closed." })
+          }
+
+          const graceEnd = new Date(booking.endDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+          if (now > graceEnd) {
+            await tx.bookingChatThread.update({
+              where: { id: thread.id },
+              data: { closedAt: graceEnd },
+            })
+            return null
+          }
+
+          const last = await tx.bookingChatMessage.findFirst({
+            where: { threadId: thread.id, senderId: ctx.session.user.id },
+            orderBy: { createdAt: "desc" },
+          })
+          const recent = await tx.bookingChatMessage.findMany({
+            where: { threadId: thread.id },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            select: { senderId: true },
+          })
+          // Record the same post-lock instant used for the one-second check.
+          const sentAt = new Date()
+          if (last && sentAt.getTime() - last.createdAt.getTime() < 1000) {
+            throw new TRPCError({
+              code: "TOO_MANY_REQUESTS",
+              message: "Too many messages. Please slow down.",
+            })
+          }
+          if (recent.length === 10 && recent.every((m) => m.senderId === ctx.session.user.id)) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Please wait for a response." })
+          }
+          return tx.bookingChatMessage.create({
+            data: {
+              thread: { connect: { id: thread.id } },
+              sender: { connect: { id: ctx.session.user.id } },
+              body: input.body.trim(),
+              createdAt: sentAt,
+            },
+            include: {
+              sender: { select: { id: true, name: true, role: true } },
+              reads: { where: { userId: ctx.session.user.id }, select: { userId: true } },
+            },
+          })
         },
-      })
-      if (!booking) throw new TRPCError({ code: "NOT_FOUND" })
-
-      let thread = booking.chatThread
-      if (!thread) {
-        thread = await ctx.prisma.bookingChatThread.create({
-          data: { bookingId: input.bookingId },
-        })
-      }
-
-      if (thread.closedAt && thread.closedAt <= now) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Chat is closed." })
-      }
-
-      const graceEnd = new Date(booking.endDate.getTime() + 7 * 24 * 60 * 60 * 1000)
-      if (now > graceEnd) {
-        await ctx.prisma.bookingChatThread.update({
-          where: { id: thread.id },
-          data: { closedAt: graceEnd },
-        })
-        throw new TRPCError({ code: "FORBIDDEN", message: "Chat is closed." })
-      }
-
-      const last = await ctx.prisma.bookingChatMessage.findFirst({
-        where: { threadId: thread.id, senderId: ctx.session.user.id },
-        orderBy: { createdAt: "desc" },
-      })
-      if (last && now.getTime() - last.createdAt.getTime() < 1000) {
-        throw new TRPCError({
-          code: "TOO_MANY_REQUESTS",
-          message: "Too many messages. Please slow down.",
-        })
-      }
-
-      const recent = await ctx.prisma.bookingChatMessage.findMany({
-        where: { threadId: thread.id },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        select: { senderId: true },
-      })
-      if (recent.length === 10 && recent.every((m) => m.senderId === ctx.session.user.id)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Please wait for a response." })
-      }
-      const message = await ctx.prisma.bookingChatMessage.create({
-        data: {
-          thread: { connect: { id: thread.id } },
-          sender: { connect: { id: ctx.session.user.id } },
-          body: input.body.trim(),
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+          maxWait: 5000,
+          timeout: 10000,
         },
-        include: {
-          sender: { select: { id: true, name: true, role: true } },
-          reads: { where: { userId: ctx.session.user.id }, select: { userId: true } },
-        },
-      })
+      )
 
+      if (!message) throw new TRPCError({ code: "FORBIDDEN", message: "Chat is closed." })
       await createMessageNotifications(ctx, message)
       return message
     }),
@@ -165,8 +179,12 @@ async function createNotifications(ctx: Context, data: NotificationCreateData[])
   return Promise.all(data.map((entry) => notificationDelegate.create({ data: entry })))
 }
 
-async function assertCanAccessBooking(ctx: Context, bookingId: string) {
-  const b = await ctx.prisma.booking.findUnique({
+async function assertCanAccessBooking(
+  ctx: Context,
+  bookingId: string,
+  db: Pick<Prisma.TransactionClient, "booking"> = ctx.prisma,
+) {
+  const b = await db.booking.findUnique({
     where: { id: bookingId },
     select: {
       userId: true,

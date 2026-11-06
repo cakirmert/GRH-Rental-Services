@@ -5,6 +5,8 @@ import { notificationEmitter } from "@/lib/notifications"
 
 // Mock Prisma
 const prisma = {
+  $executeRaw: vi.fn(),
+  $transaction: vi.fn(),
   booking: {
     findUnique: vi.fn(),
   },
@@ -44,6 +46,7 @@ const ctx = {
 describe("chatRouter.send optimization", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    prisma.$transaction.mockImplementation((operation) => operation(prisma))
   })
 
   it("uses createManyAndReturn for batch notification creation", async () => {

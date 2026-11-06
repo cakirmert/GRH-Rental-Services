@@ -68,57 +68,30 @@ export function setupNotificationListener() {
 
   notificationEmitter.on("new", async (n) => {
     try {
-      // Parse the message to make it more readable
-      let body = n.message
-      let title = "GRH Booking"
+      // A browser push endpoint can outlive its owner's login. Keep its payload
+      // free of sender, item and message details in every case. The opaque
+      // booking ID is used only for the existing authenticated destination.
       let url = "/"
-      let notificationType = "general"
-
       try {
-        const parsed = JSON.parse(n.message)
-        if (parsed.key) {
-          // Handle different notification types
-          if (parsed.key === "notifications.newChatMessage") {
-            // For chat messages, use sender and message content
-            title = `New message - ${parsed.vars?.item || "Booking"}`
-            body = `${parsed.vars?.sender || "Someone"}: ${parsed.vars?.message || "New message"}`
-            notificationType = "chat"
-            url = n.bookingId ? `/messages/${encodeURIComponent(n.bookingId)}` : "/bookings"
-          } else if (parsed.key === "notifications.newChat") {
-            // Fallback for old chat notifications
-            title = `New message - ${parsed.vars?.item || "Booking"}`
-            body = `You have a new chat message`
-            notificationType = "chat"
-            url = n.bookingId ? `/messages/${encodeURIComponent(n.bookingId)}` : "/bookings"
-          } else if (parsed.key === "notifications.bookingRequest") {
-            title = "New booking request"
-            body = `New request for ${parsed.vars?.item || "a rental item"}`
-            notificationType = "booking-request"
-            url = "/staff"
-          } else {
-            // Other notification types (booking status changes)
-            body = `New update for your booking`
-            if (parsed.vars?.item) {
-              body = `New update for ${parsed.vars.item}`
-            }
-            notificationType = "booking"
-            url = n.bookingId ? `/bookings/${encodeURIComponent(n.bookingId)}` : "/bookings"
-          }
+        const key = JSON.parse(n.message)?.key
+        if (key === "notifications.newChatMessage" || key === "notifications.newChat") {
+          url = n.bookingId ? `/messages/${encodeURIComponent(n.bookingId)}` : "/bookings"
+        } else if (key === "notifications.bookingRequest") {
+          url = "/staff"
+        } else if (key && n.bookingId) {
+          url = `/bookings/${encodeURIComponent(n.bookingId)}`
+        } else if (key) {
+          url = "/bookings"
         }
       } catch {
-        // Use raw message if JSON parsing fails
+        // Unstructured legacy notifications still open the app without exposing text.
       }
-
       await sendNotification(n.userId, {
-        title: title,
-        body: body,
-        url: url,
+        title: "GRH Booking",
+        body: "You have a new update. Open the app to view it.",
+        url,
         icon: "/icon-192x192.png",
         badge: "/icon-192x192.png",
-        data: {
-          bookingId: n.bookingId,
-          type: notificationType,
-        },
       })
     } catch (err) {
       console.error("[Push] Error in notification event handler:", err)

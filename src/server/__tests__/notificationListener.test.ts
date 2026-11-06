@@ -46,32 +46,44 @@ describe("push initialization in isolated environments", () => {
   })
 
   it.each([
-    ["notifications.newChatMessage", "chat", "/messages/booking%2Fwith%3Fquery%23fragment"],
-    ["notifications.newChat", "chat", "/messages/booking%2Fwith%3Fquery%23fragment"],
-    ["notifications.status.accepted", "booking", "/bookings/booking%2Fwith%3Fquery%23fragment"],
-    ["notifications.bookingRequest", "booking-request", "/staff"],
-  ])("uses a native route for %s", async (key, type, url) => {
+    ["notifications.newChatMessage", "/messages/booking%2Fwith%3Fquery%23fragment"],
+    ["notifications.newChat", "/messages/booking%2Fwith%3Fquery%23fragment"],
+    ["notifications.status.accepted", "/bookings/booking%2Fwith%3Fquery%23fragment"],
+    ["notifications.bookingRequest", "/staff"],
+  ])("keeps %s private outside the app and preserves its destination", async (key, url) => {
     const { setupNotificationListener } = await import("../notificationListener")
     setupNotificationListener()
     const handler = on.mock.calls[0][1]
     await handler({
       userId: "synthetic",
       bookingId: "booking/with?query#fragment",
-      message: JSON.stringify({ key, vars: { item: "Test room", sender: "Test sender" } }),
+      message: JSON.stringify({
+        key,
+        vars: { item: "Test room", sender: "Test sender", message: "Secret text" },
+      }),
     })
     expect(sendNotification).toHaveBeenCalledOnce()
-    expect(JSON.parse(sendNotification.mock.calls[0][1])).toMatchObject({ url, data: { type } })
+    expect(JSON.parse(sendNotification.mock.calls[0][1])).toMatchObject({
+      title: "GRH Booking",
+      body: "You have a new update. Open the app to view it.",
+      url,
+    })
+    expect(sendNotification.mock.calls[0][1]).not.toContain("Test room")
+    expect(sendNotification.mock.calls[0][1]).not.toContain("Test sender")
+    expect(sendNotification.mock.calls[0][1]).not.toContain("Secret text")
+    expect(sendNotification.mock.calls[0][1]).not.toContain("booking/with?query#fragment")
   })
 
-  it("uses the booking list when an old notification has no booking ID", async () => {
+  it("never forwards unstructured private text as a push payload", async () => {
     const { setupNotificationListener } = await import("../notificationListener")
     setupNotificationListener()
     await on.mock.calls[0][1]({
       userId: "synthetic",
       bookingId: null,
-      message: JSON.stringify({ key: "notifications.newChat" }),
+      message: "Private booking and message content",
     })
-    expect(JSON.parse(sendNotification.mock.calls[0][1])).toMatchObject({ url: "/bookings" })
+    expect(JSON.parse(sendNotification.mock.calls[0][1])).toMatchObject({ url: "/" })
+    expect(sendNotification.mock.calls[0][1]).not.toContain("Private booking")
   })
 
   it.each(["preview", "local"])("suppresses push delivery in %s", async (mode) => {

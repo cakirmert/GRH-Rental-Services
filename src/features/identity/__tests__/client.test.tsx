@@ -6,21 +6,38 @@ import type { IdentitySession, IdentityStatus } from "../types"
 const mocks = vi.hoisted(() => ({
   session: null as IdentitySession | null,
   status: "unauthenticated" as IdentityStatus,
-  update: vi.fn(), signOut: vi.fn(), provider: vi.fn(),
+  update: vi.fn(),
+  signOut: vi.fn(),
+  provider: vi.fn(),
+  unsubscribeUser: vi.fn(),
 }))
+vi.mock("@/app/actions", () => ({ unsubscribeUser: mocks.unsubscribeUser }))
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: mocks.session, status: mocks.status, update: mocks.update }),
   signOut: mocks.signOut,
-  SessionProvider: ({ children, session }: { children: ReactNode; session?: IdentitySession | null }) => {
+  SessionProvider: ({
+    children,
+    session,
+  }: {
+    children: ReactNode
+    session?: IdentitySession | null
+  }) => {
     mocks.provider(session)
     return <>{children}</>
   },
 }))
 
 import { IdentityProvider, useCurrentAccount } from "../client"
+const originalWorker = Object.getOwnPropertyDescriptor(navigator, "serviceWorker")
 
 const session: IdentitySession = {
-  user: { id: "existing-account", name: "Sample Resident", email: "sample@example.test", role: "ADMIN", isSuperAdmin: true },
+  user: {
+    id: "existing-account",
+    name: "Sample Resident",
+    email: "sample@example.test",
+    role: "ADMIN",
+    isSuperAdmin: true,
+  },
   expires: "2026-11-07T10:00:00.000Z",
 }
 
@@ -33,9 +50,17 @@ describe("client identity provider compatibility", () => {
     mocks.signOut.mockResolvedValue(undefined)
   })
   afterEach(cleanup)
+  afterEach(() => {
+    if (originalWorker) Object.defineProperty(navigator, "serviceWorker", originalWorker)
+    else Reflect.deleteProperty(navigator, "serviceWorker")
+  })
 
   it("passes the existing SSR/test session through without changing its contents", () => {
-    render(<IdentityProvider session={session}><span>Account UI</span></IdentityProvider>)
+    render(
+      <IdentityProvider session={session}>
+        <span>Account UI</span>
+      </IdentityProvider>,
+    )
     expect(screen.getByText("Account UI")).toBeDefined()
     expect(mocks.provider).toHaveBeenCalledWith(session)
     expect(mocks.provider.mock.calls[0][0]).toEqual(session)
@@ -43,13 +68,24 @@ describe("client identity provider compatibility", () => {
 
   it("normalizes a nullable application email for the existing provider without changing identity", () => {
     const initial = { ...session, user: { ...session.user, email: null } }
-    render(<IdentityProvider session={initial}><span>Account UI</span></IdentityProvider>)
-    expect(mocks.provider).toHaveBeenCalledWith({ ...initial, user: { ...initial.user, email: "" } })
+    render(
+      <IdentityProvider session={initial}>
+        <span>Account UI</span>
+      </IdentityProvider>,
+    )
+    expect(mocks.provider).toHaveBeenCalledWith({
+      ...initial,
+      user: { ...initial.user, email: "" },
+    })
     expect(initial.user.email).toBeNull()
   })
 
   it("lets the existing provider load a session when no initial value was supplied", () => {
-    render(<IdentityProvider><span>Account UI</span></IdentityProvider>)
+    render(
+      <IdentityProvider>
+        <span>Account UI</span>
+      </IdentityProvider>,
+    )
     expect(mocks.provider).toHaveBeenCalledWith(undefined)
   })
 
@@ -62,26 +98,40 @@ describe("client identity provider compatibility", () => {
     expect(result.current.user).toMatchObject({ role: "USER", isSuperAdmin: false })
   })
 
-  it.each(["loading", "unauthenticated"] as const)("does not expose a retained account while %s", status => {
-    mocks.status = status
-    const { result } = renderHook(useCurrentAccount)
-    expect(result.current).toMatchObject({ user: null, status })
-  })
+  it.each(["loading", "unauthenticated"] as const)(
+    "does not expose a retained account while %s",
+    (status) => {
+      mocks.status = status
+      const { result } = renderHook(useCurrentAccount)
+      expect(result.current).toMatchObject({ user: null, status })
+    },
+  )
 
   it("treats the provider's deleted-account sentinel as signed out", () => {
     mocks.session = { ...session, user: { ...session.user, id: "" } }
-    expect(renderHook(useCurrentAccount).result.current).toMatchObject({ user: null, status: "unauthenticated" })
+    expect(renderHook(useCurrentAccount).result.current).toMatchObject({
+      user: null,
+      status: "unauthenticated",
+    })
   })
 
   it("does not elevate missing or unfamiliar session roles", () => {
     mocks.session = { ...session, user: { id: session.user.id, email: null, role: "OWNER" } }
     expect(renderHook(useCurrentAccount).result.current.user).toEqual({
-      id: session.user.id, name: null, email: "", image: null, role: "USER", isSuperAdmin: false,
+      id: session.user.id,
+      name: null,
+      email: "",
+      image: null,
+      role: "USER",
+      isSuperAdmin: false,
     })
   })
 
   it("refreshes through the provider without accepting caller-supplied claims", async () => {
-    mocks.update.mockResolvedValue({ ...session, user: { ...session.user, role: "RENTAL", isSuperAdmin: false } })
+    mocks.update.mockResolvedValue({
+      ...session,
+      user: { ...session.user, role: "RENTAL", isSuperAdmin: false },
+    })
     const { result } = renderHook(useCurrentAccount)
     await act(async () => {
       expect(await result.current.refresh()).toMatchObject({ role: "RENTAL", isSuperAdmin: false })
@@ -95,6 +145,50 @@ describe("client identity provider compatibility", () => {
   })
 
   it("delegates sign-out to the existing provider and returns to the public root", async () => {
+    await renderHook(useCurrentAccount).result.current.signOut()
+    expect(mocks.signOut).toHaveBeenCalledWith({ redirectTo: "/" })
+  })
+
+  it("unlinks and unsubscribes this browser before ending the session", async () => {
+    const unsubscribe = vi.fn().mockResolvedValue(true)
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        getRegistration: vi.fn().mockResolvedValue({
+          pushManager: {
+            getSubscription: vi.fn().mockResolvedValue({
+              endpoint: "https://fcm.googleapis.com/fcm/send/synthetic",
+              unsubscribe,
+            }),
+          },
+        }),
+      },
+    })
+    mocks.unsubscribeUser.mockResolvedValue({ success: true })
+    mocks.signOut.mockImplementation(async () => {
+      expect(mocks.unsubscribeUser).toHaveBeenCalledWith(
+        "https://fcm.googleapis.com/fcm/send/synthetic",
+      )
+      expect(unsubscribe).toHaveBeenCalledOnce()
+    })
+
+    await renderHook(useCurrentAccount).result.current.signOut()
+    expect(mocks.signOut).toHaveBeenCalledWith({ redirectTo: "/" })
+  })
+
+  it("still ends the session if push cleanup fails", async () => {
+    const unsubscribe = vi.fn().mockRejectedValue(new Error("Browser unavailable"))
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        getRegistration: vi.fn().mockResolvedValue({
+          pushManager: {
+            getSubscription: vi.fn().mockResolvedValue({ endpoint: "old", unsubscribe }),
+          },
+        }),
+      },
+    })
+    mocks.unsubscribeUser.mockRejectedValue(new Error("Network unavailable"))
     await renderHook(useCurrentAccount).result.current.signOut()
     expect(mocks.signOut).toHaveBeenCalledWith({ redirectTo: "/" })
   })
