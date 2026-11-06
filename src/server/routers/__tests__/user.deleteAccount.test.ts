@@ -11,12 +11,28 @@ function createCaller(status?: BookingStatus) {
     booking: {
       findFirst: vi.fn().mockResolvedValue(status ? { id: "b1", status } : null),
       deleteMany: vi.fn().mockResolvedValue({}),
+      findMany: vi.fn().mockResolvedValue([]),
     },
     user: {
       delete: vi.fn().mockResolvedValue({}),
-      findUnique: vi.fn().mockResolvedValue({ role: "USER", isSuperAdmin: false }),
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({
+          id: "u1",
+          email: "user@example.com",
+          role: "USER",
+          isSuperAdmin: false,
+        }),
       count: vi.fn().mockResolvedValue(2),
+      update: vi.fn(),
     },
+    item: { findFirst: vi.fn().mockResolvedValue(null) },
+    bookingChatMessage: { findMany: vi.fn().mockResolvedValue([]) },
+    notification: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    log: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    verificationToken: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    authState: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    releaseFeedback: { updateMany: vi.fn() },
     $transaction: vi.fn(),
   }
   prisma.$transaction.mockImplementation((operation) => operation(prisma))
@@ -52,4 +68,34 @@ describe("user deleteAccount", () => {
       expect(prisma.user.delete).not.toHaveBeenCalled()
     },
   )
+
+  it("requires item handover before deletion, even for legacy USER responsibility", async () => {
+    const { caller, prisma } = createCaller()
+    prisma.item.findFirst.mockResolvedValue({ id: "item" } as never)
+    await expect(caller.deleteAccount()).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(prisma.user.delete).not.toHaveBeenCalled()
+    expect(prisma.log.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("requires pending assignment handover before deletion", async () => {
+    const { caller, prisma } = createCaller()
+    prisma.booking.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "pending" } as never)
+    await expect(caller.deleteAccount()).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(prisma.user.delete).not.toHaveBeenCalled()
+  })
+
+  it("requires handover before a staff member steps down", async () => {
+    const { caller, prisma } = createCaller()
+    prisma.user.findUnique.mockResolvedValue({
+      id: "u1",
+      email: "user@example.com",
+      role: "RENTAL",
+      isSuperAdmin: false,
+    })
+    prisma.item.findFirst.mockResolvedValue({ id: "item" } as never)
+    await expect(caller.selfDemote()).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
 })

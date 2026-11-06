@@ -2,11 +2,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { randomUUID } from "node:crypto"
 import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
+import { localDatabaseUrl } from "../../../../scripts/local-database.mjs"
 
 const testUrl = process.env.GRH_TEST_DATABASE_URL
-if (testUrl && !["127.0.0.1", "localhost"].includes(new URL(testUrl).hostname)) {
-  throw new Error("Cleanup tests require a disposable local database")
-}
+  ? localDatabaseUrl(process.env.GRH_TEST_DATABASE_URL)
+  : undefined
 const prefix = `cleanup-security-${randomUUID()}`
 let db: PrismaClient
 
@@ -55,6 +55,7 @@ describe.skipIf(!testUrl)("PostgreSQL inactive-user cleanup", () => {
           id,
           email: `${id}@example.test`,
           lastLoginAt: inactiveSince,
+          lastActiveAt: inactiveSince,
         })),
         { id: ownerId, email: `${ownerId}@example.test`, lastLoginAt: new Date() },
       ],

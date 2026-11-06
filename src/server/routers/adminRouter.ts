@@ -1,5 +1,7 @@
 // src/server/routers/admin.ts
 import { router, protectedProcedure } from "@/lib/trpcServer"
+import { retentionProcedures } from "@/server/routers/retentionProcedures"
+import { isInactiveStaff } from "@/server/retentionPolicy"
 import { z } from "zod"
 import { ItemType, Role, BookingStatus } from "@prisma/client"
 import path from "path"
@@ -84,6 +86,7 @@ function decodeImageUpload(base64: string, fileExtension: string) {
 }
 
 export const adminRouter = router({
+  ...retentionProcedures,
   // Dashboard statistics
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
     ensureAdmin(ctx)
@@ -246,11 +249,21 @@ export const adminRouter = router({
   memberManagement: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       ensureAdmin(ctx)
-      return ctx.prisma.user.findMany({
+      const members = await ctx.prisma.user.findMany({
         where: { role: { in: [Role.ADMIN, Role.RENTAL] } },
-        select: { id: true, email: true, name: true, role: true, isSuperAdmin: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isSuperAdmin: true,
+          lastLoginAt: true,
+          lastActiveAt: true,
+        },
         orderBy: { createdAt: "desc" },
       })
+      const now = new Date()
+      return members.map((member) => ({ ...member, isInactiveStaff: isInactiveStaff(member, now) }))
     }),
     getDetails: protectedProcedure
       .input(z.object({ userId: z.string() }))

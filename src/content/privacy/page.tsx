@@ -15,6 +15,10 @@ export default function PrivacyPage() {
       <p>{releaseCopy[locale].privacyPage}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.storageTitle")}</h2>
       <p>{t("privacy.storageDesc")}</p>
+      <p>{t("privacy.accountStorageDesc")}</p>
+      <p>{t("privacy.staffStorageDesc")}</p>
+      <p>{t("privacy.deletionDesc")}</p>
+      <p>{t("privacy.otherStorageDesc")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.disclaimerTitle")}</h2>
       <p>{t("privacy.disclaimerDesc")}</p>
       <h2 className="text-2xl font-semibold">{t("privacy.contactTitle")}</h2>

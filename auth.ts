@@ -7,6 +7,7 @@ import { browserBinding } from "@/lib/auth/ceremony"
 import { consumeBoundSecretState, consumeBudget, requestAddress } from "@/lib/auth/state"
 import { authConfig } from "./auth.config"
 import prisma from "./src/lib/prismadb"
+import { recordAccountActivity } from "@/lib/auth/activity"
 
 function getAuthSecret() {
   return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
@@ -65,16 +66,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials, request) {
         // Every exchange path, including Auth.js's public callback, crosses this budget.
-        if (!(await consumeBudget("passkey-exchange-global", "all", 600, 60_000)) ||
-            !(await consumeBudget("passkey-exchange-address", requestAddress(request), 30, 60_000))) return null
+        if (
+          !(await consumeBudget("passkey-exchange-global", "all", 600, 60_000)) ||
+          !(await consumeBudget("passkey-exchange-address", requestAddress(request), 30, 60_000))
+        )
+          return null
         const token = credentials?.token
         if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null
         const binding = await browserBinding()
         if (!binding) return null
         const entry = await consumeBoundSecretState("passkey-session", token, binding)
-        if (!entry || entry.binding !== binding || typeof entry.userId !== "string" ||
-            typeof entry.credentialId !== "string") return null
-        const credential = await prisma.passkeyCredential.findUnique({ where: { id: entry.credentialId } })
+        if (
+          !entry ||
+          entry.binding !== binding ||
+          typeof entry.userId !== "string" ||
+          typeof entry.credentialId !== "string"
+        )
+          return null
+        const credential = await prisma.passkeyCredential.findUnique({
+          where: { id: entry.credentialId },
+        })
         if (!credential || credential.revokedAt || credential.userId !== entry.userId) return null
 
         return prisma.user.findUnique({
@@ -112,7 +123,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: { name: true, email: true, role: true, isSuperAdmin: true },
+          select: { name: true, email: true, role: true, isSuperAdmin: true, lastActiveAt: true },
         })
 
         if (!dbUser) {
@@ -128,6 +139,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = dbUser.email
         session.user.role = dbUser.role
         session.user.isSuperAdmin = dbUser.isSuperAdmin
+        await recordAccountActivity(prisma, token.sub, dbUser.lastActiveAt)
       }
       return session
     },
@@ -135,9 +147,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   events: {
     async signIn({ user, account }) {
       try {
+        const now = new Date()
         await prisma.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          data: { lastLoginAt: now, lastActiveAt: now },
         })
       } catch (err) {
         console.error("Error updating lastLoginAt", err)

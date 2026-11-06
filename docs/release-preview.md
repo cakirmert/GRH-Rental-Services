@@ -34,7 +34,7 @@ which the server checks, and a freshly opened form waits for current server data
 
 The third, additive migration creates `ReleaseFeedback`. It does not change
 bookings or credentials. Deleting an account removes the account link from its
-feedback while retaining the response for aggregate review. Submitted comments
+feedback and erases its free-text comment while retaining the rating for aggregate review. Submitted comments
 may themselves contain personal details, so the form asks users not to include
 private information; the privacy page describes this storage.
 

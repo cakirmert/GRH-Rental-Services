@@ -293,6 +293,7 @@ export const bookingsRouter = router({
               const notification = await ctx.prisma.notification.create({
                 data: {
                   userId: member.id,
+                  actorId: ctx.session.user.id,
                   bookingId: booking.id,
                   type: NotificationType.BOOKING_REQUEST,
                   message: notificationPayload,
@@ -508,6 +509,7 @@ export const bookingsRouter = router({
             : null,
         ]),
         performedBy: {
+          id: ctx.session.user.id,
           name: ctx.session.user.name ?? null,
           email: ctx.session.user.email ?? null,
         },
@@ -750,6 +752,7 @@ export const bookingsRouter = router({
             : null,
         ]),
         performedBy: {
+          id: ctx.session.user.id,
           name: ctx.session.user.name ?? null,
           email: ctx.session.user.email ?? null,
         },

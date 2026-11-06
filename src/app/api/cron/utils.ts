@@ -27,16 +27,57 @@ export function authorizeCronRequest(req: NextRequest): Response | null {
 }
 
 export async function runCronTasks(tasks: CronTask[]) {
-  const results: Array<{ name: string; status: "ok" | "error"; error?: string }> = []
+  const results: Array<{
+    name: string
+    status: "ok" | "error"
+    durationMs: number
+    counts?: Record<string, number>
+    error?: string
+  }> = []
 
   for (const task of tasks) {
+    const startedAt = Date.now()
     try {
-      await task.execute()
-      results.push({ name: task.name, status: "ok" })
+      const value = await task.execute()
+      // Keep operational evidence without copying account IDs, messages, or
+      // arbitrary task return values into hosting logs.
+      const counts =
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (Object.fromEntries(
+              Object.entries(value).filter(
+                ([key, count]) =>
+                  /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(key) &&
+                  typeof count === "number" &&
+                  Number.isSafeInteger(count) &&
+                  count >= 0,
+              ),
+            ) as Record<string, number>)
+          : undefined
+      const result = {
+        name: task.name,
+        status: "ok" as const,
+        durationMs: Date.now() - startedAt,
+        ...(counts && Object.keys(counts).length ? { counts } : {}),
+      }
+      results.push(result)
+      console.info("[cron]", JSON.stringify({ ...result, finishedAt: new Date().toISOString() }))
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`[cron] Task "${task.name}" failed:`, error)
-      results.push({ name: task.name, status: "error", error: message })
+      const code =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string" &&
+        /^[A-Z0-9_]{1,32}$/.test(error.code)
+          ? error.code
+          : "TASK_FAILED"
+      const result = {
+        name: task.name,
+        status: "error" as const,
+        durationMs: Date.now() - startedAt,
+        error: code,
+      }
+      console.error("[cron]", JSON.stringify({ ...result, finishedAt: new Date().toISOString() }))
+      results.push(result)
     }
   }
 
@@ -44,6 +85,7 @@ export async function runCronTasks(tasks: CronTask[]) {
 
   return {
     ok: !hasErrors,
+    finishedAt: new Date().toISOString(),
     results,
   }
 }

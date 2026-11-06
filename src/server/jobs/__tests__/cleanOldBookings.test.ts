@@ -2,12 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { deleteOldBookings } from "../cleanOldBookings"
 
 vi.mock("@/lib/prismadb", () => {
+  const db = {
+    booking: {
+      findMany: vi.fn().mockResolvedValue([{ id: "old-booking" }]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
+    log: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
+  }
   return {
     __esModule: true,
     default: {
-      booking: {
-        deleteMany: vi.fn().mockResolvedValue({ count: 5 }),
-      },
+      ...db,
+      $transaction: vi.fn(async (operation: (tx: unknown) => Promise<unknown>) => operation(db)),
     },
   }
 })
@@ -37,7 +43,11 @@ describe("deleteOldBookings", () => {
       where: {
         endDate: { lt: expectedThreshold },
         status: { in: ["COMPLETED", "CANCELLED", "DECLINED"] },
+        id: { in: ["old-booking"] },
       },
+    })
+    expect(prisma.log.deleteMany).toHaveBeenCalledWith({
+      where: { bookingId: { in: ["old-booking"] } },
     })
   })
 })

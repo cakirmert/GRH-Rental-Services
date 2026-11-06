@@ -95,6 +95,7 @@ describe("chatRouter.send optimization", () => {
     const callArgs = (prisma.notification.createManyAndReturn as any).mock.calls[0][0]
     expect(callArgs.data).toHaveLength(1)
     expect(callArgs.data.map((d: any) => d.userId)).toContain("staff-1")
+    expect(callArgs.data[0].actorId).toBe("requester-1")
 
     // Should still emit events for each notification
     expect(notificationEmitter.emit).toHaveBeenCalledTimes(1)

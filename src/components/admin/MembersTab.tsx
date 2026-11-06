@@ -5,6 +5,7 @@ import React, { useState } from "react"
 import { Role } from "@prisma/client"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
+import { retentionCopy } from "@/locales/retention"
 import { useSession } from "next-auth/react"
 
 import type { inferRouterOutputs } from "@trpc/server"
@@ -53,6 +54,7 @@ import {
   ShieldPlus,
   ShieldMinus,
   Crown,
+  Clock3,
 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
@@ -60,8 +62,8 @@ type RouterOutput = inferRouterOutputs<AppRouter>
 
 type MemberManagementUserInList = RouterOutput["admin"]["memberManagement"]["list"][number]
 
-export default function MembersTab() {
-  const { t } = useI18n()
+export default function MembersTab({ onReviewInactive }: { onReviewInactive: () => void }) {
+  const { t, locale } = useI18n()
   const { data: session } = useSession()
   const isSuperAdmin = Boolean(session?.user?.isSuperAdmin)
   const currentUserId = session?.user?.id
@@ -177,14 +179,14 @@ export default function MembersTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between py-4">
-          <div className="space-y-1">
+        <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
             <CardTitle className="text-xl">{t("adminDashboard.members.title")}</CardTitle>
             <CardDescription>{t("adminDashboard.members.description")}</CardDescription>
           </div>
           <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="text-sm">
+              <Button size="sm" className="min-h-10 w-full shrink-0 text-sm sm:w-auto">
                 <UserPlus className="mr-2 h-4 w-4" />
                 {t("adminDashboard.members.addMemberButton")}
               </Button>
@@ -234,157 +236,181 @@ export default function MembersTab() {
               {t("adminDashboard.members.noMembersYet")}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-4 pr-2 py-3">{t("common.name")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("common.email")}</TableHead>
-                  <TableHead className="px-4 py-3">{t("common.role")}</TableHead>
-                  <TableHead className="text-right pr-4 pl-2 py-3">{t("common.actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rentalMembers.map((member: MemberManagementUserInList) => (
-                  <TableRow key={member.id} className="text-sm">
-                    <TableCell className="font-medium pl-4 pr-2 py-2.5">
-                      {member.name || (
-                        <span className="italic text-muted-foreground">{t("common.notSet")}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-4 py-2.5">{member.email}</TableCell>
-                    <TableCell className="px-4 py-2.5">
-                      <Badge variant={member.role === Role.ADMIN ? "default" : "secondary"}>
-                        {member.role}
-                      </Badge>
-                      {member.isSuperAdmin && (
-                        <Badge variant="outline" className="ml-1.5 gap-1">
-                          <Crown className="h-3 w-3" />
-                          Super
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-1 pr-4 pl-2 py-2.5">
-                      {isSuperAdmin && member.role === Role.RENTAL && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:bg-primary/10"
-                              title="Promote to admin"
+            <div>
+              <p className="mb-3 text-xs leading-relaxed text-muted-foreground sm:hidden">
+                {retentionCopy[locale].scrollMembers}
+              </p>
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-4 pr-2 py-3">{t("common.name")}</TableHead>
+                    <TableHead className="px-4 py-3">{t("common.email")}</TableHead>
+                    <TableHead className="px-4 py-3">{t("common.role")}</TableHead>
+                    <TableHead className="text-right pr-4 pl-2 py-3">
+                      {t("common.actions")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rentalMembers.map((member: MemberManagementUserInList) => (
+                    <TableRow key={member.id} className="text-sm">
+                      <TableCell className="min-w-[200px] font-medium pl-4 pr-2 py-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {member.name || (
+                            <span className="italic text-muted-foreground">
+                              {t("common.notSet")}
+                            </span>
+                          )}
+                          {member.isInactiveStaff && (
+                            <button
+                              type="button"
+                              onClick={onReviewInactive}
+                              aria-label={`${retentionCopy[locale].review}: ${member.name || member.email}`}
+                              className="inline-flex min-h-8 items-center gap-1 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 text-xs font-medium text-amber-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100"
                             >
-                              <ShieldPlus className="h-4 w-4" />
-                              <span className="sr-only">Promote to admin</span>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Promote to admin?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {member.email} will gain full admin permissions.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => promoteToAdminMutation.mutate({ userId: member.id })}
-                                disabled={promoteToAdminMutation.isPending}
-                              >
-                                {promoteToAdminMutation.isPending && (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                Promote
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                      {isSuperAdmin &&
-                        member.role === Role.ADMIN &&
-                        !member.isSuperAdmin &&
-                        member.id !== currentUserId && (
+                              <Clock3 aria-hidden="true" className="h-3 w-3" />
+                              {retentionCopy[locale].inactive}
+                            </button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">{member.email}</TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        <Badge variant={member.role === Role.ADMIN ? "default" : "secondary"}>
+                          {member.role}
+                        </Badge>
+                        {member.isSuperAdmin && (
+                          <Badge variant="outline" className="ml-1.5 gap-1">
+                            <Crown className="h-3 w-3" />
+                            Super
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1 pr-4 pl-2 py-2.5">
+                        {isSuperAdmin && member.role === Role.RENTAL && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:bg-muted"
-                                title="Demote to rental team"
+                                className="h-8 w-8 text-primary hover:bg-primary/10"
+                                title="Promote to admin"
                               >
-                                <ShieldMinus className="h-4 w-4" />
-                                <span className="sr-only">Demote from admin</span>
+                                <ShieldPlus className="h-4 w-4" />
+                                <span className="sr-only">Promote to admin</span>
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Demote from admin?</AlertDialogTitle>
+                                <AlertDialogTitle>Promote to admin?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {member.email} will move back to the rental team.
+                                  {member.email} will gain full admin permissions.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() =>
-                                    demoteFromAdminMutation.mutate({ userId: member.id })
+                                    promoteToAdminMutation.mutate({ userId: member.id })
                                   }
-                                  disabled={demoteFromAdminMutation.isPending}
+                                  disabled={promoteToAdminMutation.isPending}
                                 >
-                                  {demoteFromAdminMutation.isPending && (
+                                  {promoteToAdminMutation.isPending && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                   )}
-                                  Demote
+                                  Promote
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
-                      {member.role !== Role.ADMIN && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            {/* Ensure Button is the single child for TooltipTrigger */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">
-                                {t("adminDashboard.members.removeButton")}
-                              </span>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {t("adminDashboard.members.confirmRemoveTitle")}
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {t("adminDashboard.members.confirmRemoveDescription", {
-                                  email: member.email,
-                                })}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => removeMemberMutation.mutate({ userId: member.id })}
-                                disabled={removeMemberMutation.isPending}
+                        {isSuperAdmin &&
+                          member.role === Role.ADMIN &&
+                          !member.isSuperAdmin &&
+                          member.id !== currentUserId && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                                  title="Demote to rental team"
+                                >
+                                  <ShieldMinus className="h-4 w-4" />
+                                  <span className="sr-only">Demote from admin</span>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Demote from admin?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {member.email} will move back to the rental team.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      demoteFromAdminMutation.mutate({ userId: member.id })
+                                    }
+                                    disabled={demoteFromAdminMutation.isPending}
+                                  >
+                                    {demoteFromAdminMutation.isPending && (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Demote
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        {member.role !== Role.ADMIN && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              {/* Ensure Button is the single child for TooltipTrigger */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                               >
-                                {removeMemberMutation.isPending && (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {t("adminDashboard.members.confirmRemoveAction")}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">
+                                  {t("adminDashboard.members.removeButton")}
+                                </span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  {t("adminDashboard.members.confirmRemoveTitle")}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("adminDashboard.members.confirmRemoveDescription", {
+                                    email: member.email,
+                                  })}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => removeMemberMutation.mutate({ userId: member.id })}
+                                  disabled={removeMemberMutation.isPending}
+                                >
+                                  {removeMemberMutation.isPending && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  )}
+                                  {t("adminDashboard.members.confirmRemoveAction")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -19,6 +19,7 @@ interface NotifyBookingStatusChangeArgs {
   notes?: string | null
   recipients: Recipient[]
   performedBy?: {
+    id: string
     name?: string | null
     email?: string | null
   }
@@ -108,6 +109,7 @@ export async function notifyBookingStatusChange({
 
   const notificationData = Array.from(dedupedRecipients.values()).map((recipient) => ({
     userId: recipient.id,
+    actorId: performedBy?.id ?? null,
     bookingId,
     type: NotificationType.BOOKING_RESPONSE,
     message: JSON.stringify({

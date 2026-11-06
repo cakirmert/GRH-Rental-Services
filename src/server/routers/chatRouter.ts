@@ -227,6 +227,7 @@ async function createMessageNotifications(
     ctx,
     recips.map((id) => ({
       userId: id,
+      actorId: senderId,
       bookingId: thread.booking.id,
       type: "BOOKING_RESPONSE",
       message: JSON.stringify({

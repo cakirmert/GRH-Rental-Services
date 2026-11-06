@@ -13,12 +13,23 @@ Browser tests are present but have not yet run: local server startup was denied
 by the execution policy. Hosted preview is also pending isolated credentials.
 Do not promote this release until those checks pass.
 
-On 6 November 2026, the complete candidate passed 500 tests across 68 files with
-the host timezone set to New York, plus TypeScript, lint, and a production build.
-The dependency audit reported zero known vulnerabilities. The restored local
+On 6 November 2026, the calendar candidate passed 500 tests across 68 files with
+the host timezone set to New York. The subsequent retention candidate passed
+543 tests across 76 files, plus eight focused PostgreSQL retention cases after
+the final notification cleanup adjustment, TypeScript, lint and a production
+build. The dependency audit reported zero known vulnerabilities. The restored local
 database still has 82 users, 91 bookings, and 25 unchanged passkeys; its only
 intentional availability change is the confirmed weekly Bar rule. The production
 database and backup fingerprints remain unchanged.
+
+The candidate now includes [the reviewed retention policy](data-retention.md):
+365-day automatic cleanup only for eligible regular users, manual inactive-staff
+review, activity-aware eligibility and complete linked-data cleanup. Migrations
+`20261106010000_account_activity` and `20261106020000_notification_actor` are
+additive and were rehearsed only on the restored local database. The former
+backfills activity from existing sign-in timestamps; the latter lets deletion
+remove notification copies associated with their author. The scheduled job no
+longer treats an unreturned borrowed item as completed after 14 days.
 
 ## Isolated rehearsal
 

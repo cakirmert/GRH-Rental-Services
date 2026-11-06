@@ -4,7 +4,7 @@
 import React, { useState } from "react"
 import { useI18n } from "@/locales/i18n"
 import { trpc } from "@/utils/trpc"
-import { CalendarDays, XCircle, Hourglass } from "lucide-react"
+import { CalendarDays, XCircle, Hourglass, Clock3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -15,6 +15,8 @@ import { useSession } from "next-auth/react"
 import ProfilesTab from "./admin/ProfilesTab"
 import ItemsTab from "./admin/ItemsTab"
 import MembersTab from "./admin/MembersTab"
+import InactiveAccountsTab from "./admin/InactiveAccountsTab"
+import { retentionCopy } from "@/locales/retention"
 import CancelledByStaffTab from "./admin/CancelledByStaffTab"
 import { Calendar } from "./calendar/calendar"
 import DashboardHelpSheet from "./DashboardHelpSheet"
@@ -23,7 +25,8 @@ import NotAuthorized from "./NotAuthorized"
 /**
  * Available admin dashboard views/tabs
  */
-export type AdminView = "home" | "assignees" | "items" | "members" | "calendar" | "cancellations"
+export type AdminView =
+  "home" | "assignees" | "items" | "members" | "inactive" | "calendar" | "cancellations"
 
 // Helper component for visually appealing action cards on the homepage
 function ActionCard({
@@ -79,7 +82,7 @@ function ActionCard({
 }
 
 export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { data: session } = useSession()
 
   // Default to 'home' for the new homepage experience
@@ -87,6 +90,15 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
 
   // Check if user has admin role
   const isAdmin = session?.user?.role === "ADMIN"
+
+  const {
+    data: statsData,
+    isLoading: isLoadingStats,
+    error: statsError,
+  } = trpc.admin.dashboardStats.useQuery(undefined, {
+    enabled: isAdmin,
+    refetchOnWindowFocus: false,
+  })
 
   // Show not authorized page if user is not an admin
   if (!isAdmin) {
@@ -100,15 +112,6 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
   const handleBackToAdminHome = () => {
     setCurrentViewOrTab("home")
   }
-  // Fetch real statistics from tRPC
-  const {
-    data: statsData,
-    isLoading: isLoadingStats,
-    error: statsError,
-  } = trpc.admin.dashboardStats.useQuery(undefined, {
-    refetchOnWindowFocus: false, // Optional: prevent refetching when window refocuses
-  })
-
   const stats = {
     activeItemsSuffix: t("adminDashboard.home.activeItemsSuffix"),
     totalItems: statsData?.totalItems ?? 0,
@@ -266,6 +269,13 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               onClick={() => handleNavigateToSection("members")}
             />
             <ActionCard
+              id="admin-quick-inactive"
+              title={retentionCopy[locale].title}
+              description={retentionCopy[locale].shortcut}
+              icon={<Clock3 aria-hidden="true" className="h-7 w-7 text-primary mb-2.5" />}
+              onClick={() => handleNavigateToSection("inactive")}
+            />
+            <ActionCard
               id="admin-quick-assignees"
               title={t("adminDashboard.tabs.defaults")}
               description={t("adminDashboard.home.assigneesDescription")}
@@ -315,7 +325,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
           onValueChange={(value) => setCurrentViewOrTab(value as AdminView)}
           className="w-full"
         >
-          <TabsList className="w-full flex flex-wrap gap-2 overflow-x-auto md:w-auto md:flex-nowrap md:gap-0 md:overflow-visible">
+          <TabsList className="h-auto w-full flex flex-wrap gap-2 md:w-auto md:gap-0">
             <TabsTrigger
               value="assignees"
               className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
@@ -335,6 +345,12 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
             >
               <UsersIcon className="mr-1.5 h-4 w-4" /> {t("adminDashboard.tabs.members")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="inactive"
+              className="flex-1 min-w-[140px] text-sm px-3 py-1.5 h-auto md:flex-none"
+            >
+              <Clock3 aria-hidden="true" className="mr-1.5 h-4 w-4" /> {retentionCopy[locale].title}
             </TabsTrigger>
             <TabsTrigger
               value="calendar"
@@ -372,7 +388,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               value="members"
               className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
             >
-              <MembersTab />
+              <MembersTab onReviewInactive={() => handleNavigateToSection("inactive")} />
             </TabsContent>
           )}
           {currentViewOrTab === "calendar" && (
@@ -384,6 +400,14 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               <div className="p-6">
                 <Calendar />
               </div>
+            </TabsContent>
+          )}
+          {currentViewOrTab === "inactive" && (
+            <TabsContent
+              value="inactive"
+              className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
+            >
+              <InactiveAccountsTab />
             </TabsContent>
           )}
           {currentViewOrTab === "cancellations" && (

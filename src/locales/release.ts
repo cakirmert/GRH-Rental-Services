@@ -31,7 +31,7 @@ export const releaseCopy = {
     privacy:
       "Your answer is saved with your account and is visible only to administrators. You can update it here. Please leave out passwords and other private details.",
     privacyPage:
-      "If you submit release feedback, we store your selected interface, experience rating, comment, and submission dates with your account. Only administrators can review this feedback to improve the service. You can update your answer. When your account is deleted, the account link is removed from retained feedback.",
+      "If you submit release feedback, we store your selected interface, experience rating, comment, and submission dates with your account. Only administrators can review this feedback to improve the service. You can update your answer. When your account is deleted, your comment and account link are removed; the unlinked rating may remain.",
     send: "Save feedback",
     saving: "Saving…",
     saved: "Thank you — your feedback is saved.",
@@ -83,7 +83,7 @@ export const releaseCopy = {
     privacy:
       "Deine Antwort wird mit deinem Konto gespeichert und ist nur für Administratoren sichtbar. Du kannst sie hier ändern. Bitte keine Passwörter oder anderen vertraulichen Angaben eintragen.",
     privacyPage:
-      "Wenn du Versionsfeedback sendest, speichern wir die gewählte Ansicht, deine Bewertung, deinen Kommentar und die Zeitpunkte zusammen mit deinem Konto. Nur Administratoren können dieses Feedback zur Verbesserung des Angebots einsehen. Du kannst deine Antwort ändern. Bei der Löschung deines Kontos wird die Kontoverknüpfung aus dem gespeicherten Feedback entfernt.",
+      "Wenn du Versionsfeedback sendest, speichern wir die gewählte Ansicht, deine Bewertung, deinen Kommentar und die Zeitpunkte zusammen mit deinem Konto. Nur Administratoren können dieses Feedback zur Verbesserung des Angebots einsehen. Du kannst deine Antwort ändern. Bei der Löschung deines Kontos werden dein Kommentar und die Kontoverknüpfung entfernt; die nicht mehr verknüpfte Bewertung kann erhalten bleiben.",
     send: "Feedback speichern",
     saving: "Wird gespeichert…",
     saved: "Danke — dein Feedback ist gespeichert.",

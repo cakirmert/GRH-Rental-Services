@@ -9,12 +9,15 @@ export async function markUpcomingBookingsBorrowed() {
   const now = new Date()
   const soon = new Date(now.getTime() + 15 * 60 * 1000)
 
-  await prisma.booking.updateMany({
+  return prisma.booking.updateMany({
     where: {
       status: BookingStatus.ACCEPTED,
       startDate: {
         lte: soon,
       },
+      // An accepted booking that already ended belongs to expiry cancellation,
+      // not the borrowed queue. Otherwise the next task can no longer cancel it.
+      endDate: { gt: now },
     },
     data: { status: BookingStatus.BORROWED },
   })
