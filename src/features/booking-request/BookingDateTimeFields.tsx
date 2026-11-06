@@ -47,7 +47,6 @@ export function BookingDateTimeFields({
                   locale={currentLocale}
                   // Pass the field.value.from to the disableDate function context
                   disabled={(day: Date) => disableDate(day, field.value?.from)}
-                  autoFocus
                 />
               </div>
             </FormControl>
@@ -58,7 +57,7 @@ export function BookingDateTimeFields({
           </FormItem>
         )}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 pb-8 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <TimeSelect
           control={control}
           name="startTime"
@@ -87,6 +86,7 @@ export function BookingDateTimeFields({
             itemId={item.id}
             dateRange={dateRange}
             totalQuantity={item.totalQuantity ?? 1}
+            onAvailabilityConflict={model.setAvailabilityConflict}
           />
         ) : (
           <div className="h-12 flex items-center justify-center bg-muted rounded text-xs text-muted-foreground">

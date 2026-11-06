@@ -83,6 +83,13 @@ async function capture(page: Page, file: string, entries: Capture[], verify?: ()
   // Radix correctly removes the background header from the accessibility tree
   // while a modal is open; it remains part of the visual page being captured.
   await expect(page.locator("header").first()).toBeVisible()
+  if (page.viewportSize()!.width >= 768) {
+    await expect(page.locator("canvas[data-site-background]")).toBeVisible()
+    await page.waitForFunction(
+      () =>
+        (document.querySelector("canvas[data-site-background]") as HTMLCanvasElement)?.width > 0,
+    )
+  }
   await page.evaluate(async () => {
     await document.fonts.ready
     // Request all real page images before a full-page capture, including those
@@ -187,7 +194,7 @@ for (const locale of ["en", "de"] as const) {
         .addCookies([{ name: "grh-locale", value: locale, url: "http://localhost:3100" }])
       await page.addInitScript((language: Locale) => {
         localStorage.setItem("grh-booking-language", language)
-        localStorage.setItem("theme", "light")
+        localStorage.setItem("grh-booking-theme", "light")
       }, locale)
       const copy = locale === "de" ? de : en
       const feedback = appFeedbackCopy[locale]

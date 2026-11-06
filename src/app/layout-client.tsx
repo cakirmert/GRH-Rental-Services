@@ -15,6 +15,7 @@ const PushNotificationManager = dynamic(() => import("@/components/PushNotificat
   ssr: false,
 })
 const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { ssr: false })
+const SiteBackground = dynamic(() => import("@/components/SiteBackground"), { ssr: false })
 
 export default function AppLayoutClient({
   session,
@@ -30,7 +31,8 @@ export default function AppLayoutClient({
       <ReleaseProvider>
         <AppFeedbackProvider>
           <ChatProvider>
-            <div className="flex min-h-screen flex-col">
+            <div className="relative isolate flex min-h-screen flex-col">
+              <SiteBackground />
               <a
                 href="#main-content"
                 className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-background focus:p-3"

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { enUS } from "date-fns/locale"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { bookingAvailabilityCopy } from "@/locales/booking-availability"
 
 const { availabilityUseQuery } = vi.hoisted(() => ({
   availabilityUseQuery: vi.fn(() => ({
@@ -108,7 +109,7 @@ describe("BookingFormView calendar", () => {
       expect(availabilityUseQuery).toHaveBeenCalled()
       expect(screen.getByRole("button", { name: "Select July 15" })).toBeTruthy()
       expect((screen.getByLabelText("startTime") as HTMLInputElement).disabled).toBe(false)
-      expect(screen.getByText("Error loading availability. Please try again.")).toBeTruthy()
+      expect(screen.getByRole("alert").textContent).toBe(bookingAvailabilityCopy.en.error)
     })
   })
 })

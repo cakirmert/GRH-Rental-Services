@@ -13,7 +13,13 @@ import { ReportProblemButton } from "@/components/feedback/AppFeedback"
 import NotificationBell from "@/components/NotificationBell"
 import { AccountControl, LanguageControl, ThemeControl } from "@/features/shell/HeaderControls"
 
-function Navigation({ onNavigate }: { onNavigate?: () => void }) {
+function Navigation({
+  onNavigate,
+  compact = false,
+}: {
+  onNavigate?: () => void
+  compact?: boolean
+}) {
   const { user } = useCurrentAccount()
   const { t } = useI18n()
   const pathname = usePathname()
@@ -45,7 +51,17 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
       {links
         .filter((link) => link.visible)
         .map(({ href, label, icon: Icon }) => (
-          <Button key={href} asChild variant="ghost" size="sm" className="min-h-10 justify-start">
+          <Button
+            key={href}
+            asChild
+            variant="ghost"
+            size="sm"
+            className={
+              compact
+                ? "min-h-10 justify-start px-2 text-xs 2xl:px-3 2xl:text-sm"
+                : "min-h-10 justify-start"
+            }
+          >
             <Link
               href={href}
               onClick={onNavigate}
@@ -55,8 +71,8 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
                   : undefined
               }
             >
-              <Icon className="size-4" />
-              {t(label)}
+              <Icon aria-hidden="true" className="size-4 shrink-0" />
+              <span>{t(label)}</span>
             </Link>
           </Button>
         ))}
@@ -123,7 +139,7 @@ export default function Header() {
         </Link>
         <div className="hidden items-center justify-end gap-1 xl:ml-auto xl:flex">
           <nav className="flex items-center gap-1">
-            <Navigation />
+            <Navigation compact />
           </nav>
           <Button asChild variant="ghost" size="icon">
             <Link href="/faq" aria-label={t("header.helpButton")}>

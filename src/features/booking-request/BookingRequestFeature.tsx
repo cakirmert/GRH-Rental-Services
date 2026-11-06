@@ -15,8 +15,8 @@ export default function BookingRequestFeature(props: BookingRequestProps) {
 function BookingRequest(props: BookingRequestProps) {
   const model = useBookingRequest(props)
   return (
-    <div className="space-y-8 mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12">
         <BookingItemSummary item={props.item} onGoBack={props.onGoBack} />
         <BookingRequestForm
           model={model}

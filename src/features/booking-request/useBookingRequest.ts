@@ -69,6 +69,7 @@ export function useBookingRequest(props: BookingRequestProps) {
   const [formError, setFormError] = useState<string | null>(null)
   const [submittingBooking, setSubmittingBooking] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const [availabilityConflict, setAvailabilityConflict] = useState(false)
   const [dateRange, startTime, endTime, quantity, formNotes] = useWatch({
     control,
     name: ["dateRange", "startTime", "endTime", "quantity", "notes"],
@@ -305,6 +306,7 @@ export function useBookingRequest(props: BookingRequestProps) {
   }, [dateRange, startTime, endTime, combineDateTime])
 
   const selectDateRange = (range: DateRange | undefined, clicked: Date) => {
+    setAvailabilityConflict(false)
     const next = selectBookingRange(
       form.getValues("dateRange"),
       range,
@@ -324,6 +326,8 @@ export function useBookingRequest(props: BookingRequestProps) {
     submittingBooking,
     showRules,
     setShowRules,
+    availabilityConflict,
+    setAvailabilityConflict,
     dateRange,
     startTime,
     endTime,

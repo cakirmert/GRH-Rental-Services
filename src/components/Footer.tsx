@@ -21,7 +21,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/faq"
-                  className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                  className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <HelpCircle className="h-4 w-4" />
                   {t("footer.faqLink")}
@@ -30,7 +30,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/contact"
-                  className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                  className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <Megaphone className="h-4 w-4" />
                   {t("footer.suggestionsPrompt")}
@@ -53,7 +53,7 @@ export default function Footer() {
             <div className="space-y-3">
               <Link
                 href="/developers"
-                className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
               >
                 <GitHubLogoIcon className="h-4 w-4" />
                 {t("footer.devInfoLink")}
@@ -61,14 +61,14 @@ export default function Footer() {
               <div className="space-y-2">
                 <Link
                   href="/privacy"
-                  className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                  className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <Shield className="h-4 w-4" />
                   {t("footer.privacyLink")}
                 </Link>
                 <Link
                   href="/imprint"
-                  className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                  className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <FileText className="h-4 w-4" />
                   {t("footer.imprintLink")}
@@ -83,7 +83,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/about"
-                  className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
+                  className="flex w-fit items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   <Users className="h-4 w-4" />
                   {t("footer.aboutSvLink")}

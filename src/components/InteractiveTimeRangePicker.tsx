@@ -12,6 +12,8 @@
 
 import * as React from "react"
 import { differenceInDays, startOfDay, endOfDay } from "date-fns"
+import { de, enUS } from "date-fns/locale"
+import * as SliderPrimitive from "@radix-ui/react-slider"
 import {
   useController,
   useWatch,
@@ -20,13 +22,14 @@ import {
   type FieldValues,
 } from "react-hook-form"
 import { trpc } from "@/utils/trpc"
-import { Card, CardContent } from "@/components/ui/card"
 import { useI18n } from "@/locales/i18n"
+import { bookingAvailabilityCopy } from "@/locales/booking-availability"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import {
   atLocalMinutes,
   localMinutesFromDay,
   peakReservedQuantity,
+  availableTimeDefaults,
 } from "@/utils/bookingAvailability"
 import { formatInBerlin as format, toBerlinDate } from "@/lib/berlin-time"
 
@@ -40,12 +43,11 @@ interface Props<TFieldValues extends TimeRangeFieldValues> {
   itemId: string
   dateRange: { from: Date; to?: Date }
   totalQuantity: number
+  onAvailabilityConflict?: (conflict: boolean) => void
 }
 
 /* ───────── constants ───────── */
 const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR
 const PERCENTAGE_BASE = 100
 const TOOLTIP_DELAY = 200
 const TOOLTIP_SIDE_OFFSET = 8
@@ -61,7 +63,6 @@ const MAX_MINUTES = DAY_END_HOUR * MINUTES_PER_HOUR
 const STEP_MINUTES = 15
 const DEF_START_MINUTES = DEFAULT_START_HOUR * MINUTES_PER_HOUR
 const DEF_LEN_MINUTES = DEFAULT_DURATION_MINUTES
-const GUTTER_PERCENT = 5
 const BLOCK_PENDING_INTERVALS = false
 /* ───────────────────────────── */
 
@@ -70,8 +71,11 @@ export default function InteractiveTimeRangePicker<TFieldValues extends TimeRang
   itemId,
   dateRange,
   totalQuantity,
+  onAvailabilityConflict,
 }: Props<TFieldValues>) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const copy = bookingAvailabilityCopy[locale === "de" ? "de" : "en"]
+  const dateLocale = locale === "de" ? de : enUS
   const fromDate = React.useMemo(() => toBerlinDate(dateRange.from), [dateRange.from])
   const toDateProp = React.useMemo(
     () => (dateRange.to ? toBerlinDate(dateRange.to) : undefined),
@@ -109,8 +113,12 @@ export default function InteractiveTimeRangePicker<TFieldValues extends TimeRang
 
   const startTimeName = "startTime" as FieldPath<TFieldValues>
   const endTimeName = "endTime" as FieldPath<TFieldValues>
-  const { field: sField } = useController({ control, name: startTimeName })
-  const { field: eField } = useController({ control, name: endTimeName })
+  const {
+    field: { onChange: changeStart, onBlur: blurStart },
+  } = useController({ control, name: startTimeName })
+  const {
+    field: { onChange: changeEnd, onBlur: blurEnd },
+  } = useController({ control, name: endTimeName })
   const watchS = useWatch({ control, name: startTimeName }) as string
   const watchE = useWatch({ control, name: endTimeName }) as string
 
@@ -128,93 +136,69 @@ export default function InteractiveTimeRangePicker<TFieldValues extends TimeRang
     return a * MINUTES_PER_HOUR + b
   }, [])
 
-  const doesBlock = React.useCallback(
-    (a: number, b: number, dayOffsetMinutes: number) => {
-      const day = dayOffsetMinutes ? (toDateProp ?? fromDate) : fromDate
-      const start = atLocalMinutes(day, a)
-      const end = a === b ? new Date(start.getTime() + 1) : atLocalMinutes(day, b)
-      const occupied = BLOCK_PENDING_INTERVALS ? [...confirmed, ...pending] : confirmed
+  const occupied = React.useMemo(
+    () => (BLOCK_PENDING_INTERVALS ? [...confirmed, ...pending] : confirmed),
+    [confirmed, pending],
+  )
+  const endpointBlocked = React.useCallback(
+    (minutes: number, row: 0 | 1, which: "start" | "end") => {
+      const point = atLocalMinutes(row === 1 ? (toDateProp ?? fromDate) : fromDate, minutes)
+      // The end is exclusive: returning at another booking's start is allowed.
+      const start = which === "start" ? point : new Date(point.getTime() - 1)
+      const end = which === "start" ? new Date(point.getTime() + 1) : point
       return peakReservedQuantity(occupied, start, end) >= totalQuantity
     },
-    [fromDate, toDateProp, confirmed, pending, totalQuantity],
+    [fromDate, toDateProp, occupied, totalQuantity],
   )
-  const initKey = `${fromDate.toDateString()}-${itemId}`
+  const initializedRange = React.useRef<string | null>(null)
+  const initKey = `${itemId}:${fromDate.getTime()}:${toDateProp?.getTime() ?? fromDate.getTime()}:${totalQuantity}`
+
   React.useEffect(() => {
-    if (intervalsLoading) return
-
-    // Check if form already has valid time values - if so, don't override them
-    const currentStartMinutes = s2m(watchS)
-    const currentEndMinutes = s2m(watchE)
-    const hasValidExistingTimes =
-      watchS &&
-      watchE &&
-      currentStartMinutes >= MIN_MINUTES &&
-      currentStartMinutes < MAX_MINUTES &&
-      currentEndMinutes > MIN_MINUTES &&
-      currentEndMinutes <= MAX_MINUTES &&
-      (isRangeSelection || currentEndMinutes > currentStartMinutes)
-
-    if (hasValidExistingTimes) {
-      // Don't override existing valid times
-      return
-    }
-
-    let st = DEF_START_MINUTES,
-      en = st + DEF_LEN_MINUTES
-    if (en > MAX_MINUTES) {
-      st = MIN_MINUTES
-      en = st + DEF_LEN_MINUTES
-    }
-
-    let attempts = 0
-    const maxAttempts = (MAX_MINUTES - MIN_MINUTES) / STEP_MINUTES
-
-    while (doesBlock(st, en, 0) && st < MAX_MINUTES - STEP_MINUTES && attempts < maxAttempts) {
-      st += STEP_MINUTES
-      en += STEP_MINUTES
-      if (en > MAX_MINUTES) {
-        en = Math.min(MAX_MINUTES, st + DEF_LEN_MINUTES)
-        if (en <= st) {
-          st = Math.min(MAX_MINUTES - STEP_MINUTES, st)
-          en = st + STEP_MINUTES
-        }
-      }
-      attempts++
-    }
-
-    if (doesBlock(st, en, 0) || en > MAX_MINUTES || st >= MAX_MINUTES) {
-      st = MIN_MINUTES
-      en = st + STEP_MINUTES
-      attempts = 0
-      while (doesBlock(st, en, 0) && st < MAX_MINUTES - STEP_MINUTES && attempts < maxAttempts) {
-        st += STEP_MINUTES
-        en += STEP_MINUTES
-        attempts++
-      }
-      if (doesBlock(st, en, 0)) {
-        st = MIN_MINUTES
-        en = MIN_MINUTES + STEP_MINUTES
-      }
-    }
-
-    sField.onChange(m2s(st))
-    eField.onChange(m2s(en))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (intervalsLoading || intervalsError) return
+    const currentStart = s2m(watchS)
+    const currentEnd = s2m(watchE)
+    const validStart = !!watchS && currentStart >= MIN_MINUTES && currentStart < MAX_MINUTES
+    const validEnd =
+      !!watchE &&
+      currentEnd >= MIN_MINUTES &&
+      currentEnd <= MAX_MINUTES &&
+      (isRangeSelection || currentEnd > currentStart)
+    // Preserve subsequent explicit time edits. Reconsider defaults when either date changes.
+    if (initializedRange.current === initKey && validStart && validEnd) return
+    initializedRange.current = initKey
+    const next = availableTimeDefaults(occupied, {
+      from: fromDate,
+      to: toDateProp,
+      totalQuantity,
+      preferredStart: validStart ? currentStart : DEF_START_MINUTES,
+      preferredEnd: validEnd ? currentEnd : DEF_START_MINUTES + DEF_LEN_MINUTES,
+      min: MIN_MINUTES,
+      max: MAX_MINUTES,
+      step: STEP_MINUTES,
+    })
+    const start = next.start === null ? "" : m2s(next.start)
+    const end = next.end === null ? "" : m2s(next.end)
+    if (watchS !== start) changeStart(start)
+    if (watchE !== end) changeEnd(end)
   }, [
     initKey,
     intervalsLoading,
-    doesBlock,
-    m2s,
-    sField.onChange,
-    eField.onChange,
+    intervalsError,
+    occupied,
+    fromDate,
+    toDateProp,
+    totalQuantity,
     watchS,
     watchE,
     s2m,
+    m2s,
     isRangeSelection,
-  ]) // sField, eField are stable from useController
-
+    changeStart,
+    changeEnd,
+  ])
   const startM = s2m(watchS)
   const endM = s2m(watchE)
+  const hasClockTimes = !!watchS && !!watchE
 
   const reservedForSelection = React.useMemo(() => {
     const selectionStart = atLocalMinutes(fromDate, startM)
@@ -222,267 +206,229 @@ export default function InteractiveTimeRangePicker<TFieldValues extends TimeRang
     return peakReservedQuantity(confirmed, selectionStart, selectionEnd)
   }, [confirmed, startM, endM, fromDate, toDateProp])
   const availableForSelection = Math.max(0, totalQuantity - reservedForSelection)
-  const track0Ref = React.useRef<HTMLDivElement>(null)
-  const track1Ref = React.useRef<HTMLDivElement>(null)
-  const tracks = React.useMemo(() => [track0Ref, track1Ref], [])
-  const [drag, setDrag] = React.useState<{ row: 0 | 1; which: "start" | "end" } | null>(null)
-
-  const clampMinutes = React.useCallback((px: number, row: 0 | 1) => {
-    const trackRef = row === 0 ? track0Ref : track1Ref
-    if (!trackRef.current) return MIN_MINUTES
-    const rect = trackRef.current!.getBoundingClientRect()
-    const trackActualWidth = rect.width
-    const clickPctInTrack = Math.min(1, Math.max(0, (px - rect.left) / trackActualWidth))
-    return (
-      Math.round((MIN_MINUTES + clickPctInTrack * (MAX_MINUTES - MIN_MINUTES)) / STEP_MINUTES) *
-      STEP_MINUTES
-    )
-  }, [])
-
+  const availabilityConflict =
+    !intervalsLoading && !intervalsError && (!hasClockTimes || availableForSelection === 0)
   React.useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      if (!drag) return
-      const v = clampMinutes(e.pageX, drag.row)
-      const dayOffsetMinutes = drag.row === 1 ? MINUTES_PER_DAY : 0
+    onAvailabilityConflict?.(availabilityConflict)
+    return () => onAvailabilityConflict?.(false)
+  }, [availabilityConflict, onAvailabilityConflict])
+  const pct = (minutes: number) =>
+    Math.max(
+      0,
+      Math.min(
+        PERCENTAGE_BASE,
+        ((minutes - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES)) * PERCENTAGE_BASE,
+      ),
+    )
 
-      if (doesBlock(v, v, dayOffsetMinutes)) return
-
-      if (drag.which === "start") {
-        const limit = isRangeSelection && drag.row === 0 ? MAX_MINUTES : endM - STEP_MINUTES
-        const newStart = Math.min(v, limit)
-        if (newStart >= MIN_MINUTES) {
-          sField.onChange(m2s(newStart))
-        } else {
-          sField.onChange(m2s(MIN_MINUTES))
-        }
-      } else if (drag.which === "end") {
-        const limit = isRangeSelection && drag.row === 1 ? MIN_MINUTES : startM + STEP_MINUTES
-        const newEnd = Math.max(v, limit)
-        if (newEnd <= MAX_MINUTES) {
-          eField.onChange(m2s(newEnd))
-        } else {
-          eField.onChange(m2s(MAX_MINUTES))
-        }
-      }
+  function updateTimes(row: 0 | 1, values: number[]) {
+    if (isRangeSelection) {
+      const minutes = row === 0 ? Math.min(values[0], MAX_MINUTES - STEP_MINUTES) : values[0]
+      if (endpointBlocked(minutes, row, row === 0 ? "start" : "end")) return
+      if (row === 0) changeStart(m2s(minutes))
+      else changeEnd(m2s(minutes))
+      return
     }
-    const handlePointerUp = () => setDrag(null)
-    window.addEventListener("pointermove", handlePointerMove)
-    window.addEventListener("pointerup", handlePointerUp)
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove)
-      window.removeEventListener("pointerup", handlePointerUp)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    drag,
-    clampMinutes,
-    doesBlock,
-    m2s,
-    startM,
-    endM,
-    isRangeSelection,
-    sField.onChange,
-    eField.onChange,
-  ])
+    const [nextStart, nextEnd] = values
+    if (nextStart !== startM && endpointBlocked(nextStart, 0, "start")) return
+    if (nextEnd !== endM && endpointBlocked(nextEnd, 0, "end")) return
+    if (nextStart !== startM) changeStart(m2s(nextStart))
+    if (nextEnd !== endM) changeEnd(m2s(nextEnd))
+  }
 
-  const pct = React.useCallback((m: number) => {
-    const percentage = ((m - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES)) * PERCENTAGE_BASE
-    return Math.max(0, Math.min(PERCENTAGE_BASE, percentage))
-  }, [])
-
-  const trackVisibleWidthScale = (PERCENTAGE_BASE - GUTTER_PERCENT) / PERCENTAGE_BASE
-
-  const Thumb = React.useCallback(
-    ({
-      minutes,
-      label,
-      onDrag,
-    }: {
-      row: 0 | 1
-      minutes: number
-      label: string
-      onDrag: () => void
-    }) => (
-      <Card
-        onPointerDown={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onDrag()
-        }}
-        className="absolute -top-7 w-auto min-w-[6rem] px-3 rounded-2xl shadow-lg border bg-card cursor-grab z-20"
-        style={{
-          left: `calc(${GUTTER_PERCENT}% + ${pct(minutes) * trackVisibleWidthScale}%)`,
-          transform: "translateX(-50%)",
-        }}
-      >
-        <CardContent className="p-2 text-center text-base font-semibold">{label}</CardContent>
-      </Card>
-    ),
-    [pct, trackVisibleWidthScale],
-  )
-
-  const Row = (row: 0 | 1) => {
-    const showStartThumb = row === 0
-    const showEndThumb = row === (isRangeSelection ? 1 : 0)
-
-    const rStartForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, startM))
-    const rEndForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, endM))
-
-    let hL_pct: number, hR_pct: number
-    if (!isRangeSelection) {
-      hL_pct = pct(startM)
-      hR_pct = pct(endM)
-    } else if (row === 0) {
-      hL_pct = pct(startM)
-      hR_pct = pct(MAX_MINUTES)
-    } else {
-      hL_pct = pct(MIN_MINUTES)
-      hR_pct = pct(endM)
-    }
-
-    if (hL_pct > hR_pct && !isRangeSelection) {
-      hL_pct = hR_pct
-    }
-
-    const highlightLeftStyle = `${GUTTER_PERCENT + hL_pct * trackVisibleWidthScale}%`
-    const highlightWidthStyle = `${Math.max(0, hR_pct - hL_pct) * trackVisibleWidthScale}%`
-
+  function Row(row: 0 | 1) {
     const currentRowDate = row === 1 ? (toDateProp ?? fromDate) : fromDate
+    const start = Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, startM))
+    const end = Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, endM))
+    const left = isRangeSelection && row === 1 ? 0 : pct(start)
+    const right = isRangeSelection && row === 0 ? 100 : pct(end)
+    const dateLabel = format(currentRowDate, "dd MMM", { locale: dateLocale })
+    const values = !hasClockTimes ? [] : isRangeSelection ? [row === 0 ? start : end] : [start, end]
 
     return (
-      <div key={row} className="relative h-24 select-none">
-        {isRangeSelection && (
-          <span className="absolute -left-14 top-[46px] px-2 py-0.5 rounded bg-muted text-[10px]">
-            {format(currentRowDate, "dd MMM")}
+      <div key={row} className="min-w-0 space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span className="text-muted-foreground">
+              {format(currentRowDate, "EEE", { locale: dateLocale })}
+            </span>
+            <time dateTime={format(currentRowDate, "yyyy-MM-dd")}>{dateLabel}</time>
+          </div>
+          <span className="font-medium tabular-nums">
+            {!hasClockTimes
+              ? copy.unavailable
+              : isRangeSelection
+                ? `${row === 0 ? copy.start : copy.end} · ${m2s(row === 0 ? start : end)}`
+                : `${m2s(start)} – ${m2s(end)}`}
           </span>
-        )}
-        <div
-          ref={tracks[row]}
-          className="absolute top-11 h-4 bg-muted rounded-lg"
-          style={{ left: `${GUTTER_PERCENT}%`, right: "0px" }}
-        />
-        <div
-          className="absolute top-11 h-4 bg-primary/30 rounded z-0"
-          style={{ left: highlightLeftStyle, width: highlightWidthStyle }}
-        />
-        {intervals.map((iv, i) => {
-          const s_relativeToRowDay = localMinutesFromDay(iv.startDate, currentRowDate)
-          const e_relativeToRowDay = localMinutesFromDay(iv.endDate, currentRowDate)
-
-          if (e_relativeToRowDay <= MIN_MINUTES || s_relativeToRowDay >= MAX_MINUTES) {
-            return null
-          }
-
-          const l_clamped = Math.max(s_relativeToRowDay, MIN_MINUTES)
-          const r_clamped = Math.min(e_relativeToRowDay, MAX_MINUTES)
-
-          const interval_pct_l = pct(l_clamped)
-          const interval_pct_r = pct(r_clamped)
-
-          const minStepPct = pct(MIN_MINUTES + STEP_MINUTES) - pct(MIN_MINUTES)
-          const w_pct = Math.max(
-            minStepPct / MIN_VISUAL_STEP_DIVISOR,
-            interval_pct_r - interval_pct_l,
-          )
-
-          if (w_pct <= 0) return null
-
-          const isConf = iv.status === "ACCEPTED" || iv.status === "BORROWED"
-
-          const formatIntervalDates = (startDate: Date, endDate: Date) => {
-            const pickerIsSingleDayAndIntervalIsOnSameDay =
-              !isRangeSelection &&
-              differenceInDays(toBerlinDate(startDate), fromDate) === 0 &&
-              differenceInDays(toBerlinDate(endDate), fromDate) === 0
-            const startFmt = pickerIsSingleDayAndIntervalIsOnSameDay ? "p" : "PP p"
-            const endFmt =
-              pickerIsSingleDayAndIntervalIsOnSameDay ||
-              differenceInDays(toBerlinDate(endDate), toBerlinDate(startDate)) === 0
-                ? "p"
-                : "PP p"
-            return `${format(startDate, startFmt)} – ${format(endDate, endFmt)}`
-          }
-
-          return (
-            <Tooltip key={`${iv.id || `interval-${i}`}-${row}`}>
-              <TooltipTrigger asChild>
-                <div
-                  className={`absolute top-11 h-4 rounded z-10 ${isConf ? "bg-rose-500/80" : "bg-amber-300/70"}`}
-                  style={{
-                    left: `calc(${GUTTER_PERCENT}% + ${interval_pct_l * trackVisibleWidthScale}%)`,
-                    width: `${w_pct * trackVisibleWidthScale}%`,
-                  }}
+        </div>
+        <div className="px-2.5">
+          <SliderPrimitive.Root
+            min={MIN_MINUTES}
+            max={MAX_MINUTES}
+            step={STEP_MINUTES}
+            disabled={!hasClockTimes}
+            minStepsBetweenThumbs={1}
+            value={values}
+            onValueChange={(next) => updateTimes(row, next)}
+            onValueCommit={() => {
+              blurStart()
+              blurEnd()
+            }}
+            className="relative flex h-11 w-full touch-none select-none items-center"
+          >
+            <SliderPrimitive.Track className="relative h-3 w-full grow overflow-hidden rounded-full bg-muted">
+              {hasClockTimes && (
+                <span
+                  aria-hidden="true"
+                  className="absolute h-full bg-primary/35"
+                  style={{ left: `${left}%`, width: `${Math.max(0, right - left)}%` }}
                 />
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                sideOffset={TOOLTIP_SIDE_OFFSET}
-                className="max-w-xs p-2 text-sm leading-tight"
-              >
-                {isConf ? "Booked" : iv.status === "REQUESTED" ? "Pending" : `Status: ${iv.status}`}
-                <br />
-                {formatIntervalDates(iv.startDate, iv.endDate)}
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-        {showStartThumb && (
-          <Thumb
-            row={row}
-            minutes={rStartForThumb}
-            label={format(atLocalMinutes(currentRowDate, rStartForThumb), "HH:mm")}
-            onDrag={() => setDrag({ row, which: "start" })}
-          />
-        )}
-        {showEndThumb && (
-          <Thumb
-            row={row}
-            minutes={rEndForThumb}
-            label={format(atLocalMinutes(currentRowDate, rEndForThumb), "HH:mm")}
-            onDrag={() => setDrag({ row, which: "end" })}
-          />
-        )}
+              )}
+              {intervals.map((interval, index) => {
+                const startMinutes = localMinutesFromDay(interval.startDate, currentRowDate)
+                const endMinutes = localMinutesFromDay(interval.endDate, currentRowDate)
+                if (endMinutes <= MIN_MINUTES || startMinutes >= MAX_MINUTES) return null
+                const intervalLeft = pct(Math.max(MIN_MINUTES, startMinutes))
+                const intervalRight = pct(Math.min(MAX_MINUTES, endMinutes))
+                const width = Math.min(
+                  100 - intervalLeft,
+                  Math.max(
+                    pct(MIN_MINUTES + STEP_MINUTES) / MIN_VISUAL_STEP_DIVISOR,
+                    intervalRight - intervalLeft,
+                  ),
+                )
+                const booked = interval.status === "ACCEPTED" || interval.status === "BORROWED"
+                const label = booked ? copy.booked : copy.pending
+                const dates = `${format(interval.startDate, "dd MMM, HH:mm", { locale: dateLocale })} – ${format(interval.endDate, "dd MMM, HH:mm", { locale: dateLocale })}`
+                return (
+                  <Tooltip key={`${interval.id || index}-${row}`}>
+                    <TooltipTrigger asChild>
+                      <span
+                        role="img"
+                        tabIndex={0}
+                        aria-label={`${label}: ${dates}`}
+                        className={`absolute z-10 h-full rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${booked ? "bg-rose-500" : "bg-amber-400"}`}
+                        style={{ left: `${intervalLeft}%`, width: `${width}%` }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      sideOffset={TOOLTIP_SIDE_OFFSET}
+                      className="max-w-xs text-xs"
+                    >
+                      <p className="font-medium">{label}</p>
+                      <p>{dates}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </SliderPrimitive.Track>
+            {values.map((value, index) => {
+              const label = isRangeSelection
+                ? row === 0
+                  ? copy.start
+                  : copy.end
+                : index === 0
+                  ? copy.start
+                  : copy.end
+              return (
+                <SliderPrimitive.Thumb
+                  key={label}
+                  aria-label={`${label} · ${dateLabel}`}
+                  aria-valuetext={m2s(value)}
+                  aria-valuemax={
+                    isRangeSelection && row === 0 ? MAX_MINUTES - STEP_MINUTES : undefined
+                  }
+                  className="relative z-20 block size-5 cursor-grab rounded-full border-2 border-primary bg-background shadow-sm after:absolute after:-inset-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:cursor-grabbing"
+                />
+              )
+            })}
+          </SliderPrimitive.Root>
+          <div
+            aria-hidden="true"
+            className="flex justify-between text-[10px] tabular-nums text-muted-foreground"
+          >
+            <span>08:00</span>
+            <span>15:00</span>
+            <span>22:00</span>
+          </div>
+        </div>
       </div>
     )
   }
-
   if (intervalsLoading && !intervals.length) {
     return (
-      <div className="h-48 flex items-center justify-center bg-muted rounded text-sm text-muted-foreground">
-        Loading availability...
+      <div
+        role="status"
+        className="flex min-h-28 items-center justify-center rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground"
+      >
+        {copy.loading}
       </div>
     )
   }
   if (intervalsError) {
     return (
-      <div className="h-48 flex items-center justify-center bg-destructive/10 text-destructive rounded text-sm p-4">
-        Error loading availability. Please try again.
+      <div
+        role="alert"
+        className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-rose-700 dark:text-rose-300"
+      >
+        {copy.error}
       </div>
     )
   }
 
   return (
     <TooltipProvider delayDuration={TOOLTIP_DELAY}>
-      {Row(0)}
-      {isRangeSelection && Row(1)}
-      <div className="flex justify-end gap-6 mt-6 text-xs select-none">
-        <Chip color="bg-rose-500/80" label="Booked" />
-        <Chip color="bg-amber-300/70" label="Pending" />
-      </div>
-      {totalQuantity > 1 && (
-        <p className="text-right text-xs mt-2">
-          {t("bookingForm.availabilityLine", {
-            available: availableForSelection,
-            total: totalQuantity,
-          })}
-        </p>
-      )}
+      <section
+        aria-label={copy.title}
+        className="min-w-0 space-y-4 rounded-lg border bg-muted/20 p-3 sm:p-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">{copy.title}</h3>
+          <span className="text-xs text-muted-foreground">{copy.timeZone}</span>
+        </div>
+        {Row(0)}
+        {isRangeSelection && (
+          <>
+            <p className="text-center text-[11px] text-muted-foreground">{copy.continues}</p>
+            {Row(1)}
+          </>
+        )}
+        <div className="space-y-2 border-t pt-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px]">
+            <Chip color="bg-primary/35" label={copy.selection} />
+            <Chip color="bg-rose-500" label={copy.booked} />
+            <Chip color="bg-amber-400" label={copy.pending} />
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">{copy.hint}</p>
+          {!hasClockTimes ? (
+            <p role="status" className="text-xs leading-relaxed text-rose-700 dark:text-rose-300">
+              {copy.noTimes}
+            </p>
+          ) : (
+            availableForSelection === 0 && (
+              <p role="status" className="text-xs leading-relaxed text-rose-700 dark:text-rose-300">
+                {copy.conflict}
+              </p>
+            )
+          )}
+          {hasClockTimes && totalQuantity > 1 && (
+            <p className="text-xs font-medium">
+              {t("bookingForm.availabilityLine", {
+                available: availableForSelection,
+                total: totalQuantity,
+              })}
+            </p>
+          )}
+        </div>
+      </section>
     </TooltipProvider>
   )
 }
 
 const Chip = ({ color, label }: { color: string; label: string }) => (
-  <div className="flex items-center gap-1">
-    <span className={`inline-block w-3 h-2 rounded ${color}`} /> {label}
-  </div>
+  <span className="inline-flex items-center gap-1.5">
+    <span aria-hidden="true" className={`inline-block size-2 rounded-full ${color}`} /> {label}
+  </span>
 )

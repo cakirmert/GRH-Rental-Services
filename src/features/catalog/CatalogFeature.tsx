@@ -24,11 +24,13 @@ export default function CatalogFeature({ items }: { items: CatalogEquipmentRecor
       )
   }, [items, locale, searchTerm, activeTab])
   const columns =
-    filtered.length === 2
-      ? "sm:grid-cols-2"
-      : filtered.length > 6
-        ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        : "sm:grid-cols-2 lg:grid-cols-3"
+    filtered.length === 1
+      ? "mx-auto max-w-2xl"
+      : filtered.length === 2
+        ? "sm:grid-cols-2"
+        : filtered.length > 6
+          ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          : "sm:grid-cols-2 lg:grid-cols-3"
 
   return (
     <section aria-labelledby="catalog-title">
@@ -54,11 +56,13 @@ export default function CatalogFeature({ items }: { items: CatalogEquipmentRecor
               item={item}
               preloadImage={index < 2}
               imageSizes={
-                filtered.length === 2
-                  ? "(max-width: 640px) 100vw, 50vw"
-                  : filtered.length > 6
-                    ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                    : undefined
+                filtered.length === 1
+                  ? "(max-width: 640px) 100vw, 672px"
+                  : filtered.length === 2
+                    ? "(max-width: 640px) 100vw, 50vw"
+                    : filtered.length > 6
+                      ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                      : undefined
               }
               onSelectItem={() => router.push("/items/" + encodeURIComponent(item.id))}
             />

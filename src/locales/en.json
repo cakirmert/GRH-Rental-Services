@@ -48,7 +48,11 @@
     "noData": "No data available",
     "datePickerPlaceholder": "Select date",
     "unknown": "Unknown",
-    "help": "Help"
+    "help": "Help",
+    "previousImage": "Previous photo",
+    "nextImage": "Next photo",
+    "viewImageN": "View photo {n}",
+    "clearSearch": "Clear search"
   },
   "adminDashboard": {
     "home": {

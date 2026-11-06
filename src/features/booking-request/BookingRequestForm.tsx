@@ -28,8 +28,7 @@ export function BookingRequestForm({
   const { openAuthModal } = useAuthModal()
   const { form, formError, submittingBooking, handleContinueToBooking } = model
   return (
-    <div className="space-y-6 w-full max-w-md ml-auto min-h-[600px]">
-      {/* Added min-h-[600px] for layout stability */}
+    <div className="min-w-0 w-full space-y-6">
       {authStatus === "loading" ? (
         // Skeleton loading state to prevent layout shifts and hydration mismatches
         <Card className="bg-muted/50 shadow-sm">
@@ -57,7 +56,7 @@ export function BookingRequestForm({
         <Form {...form}>
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="space-y-6 p-4 border rounded-lg shadow-sm bg-card"
+            className="space-y-6 rounded-xl border bg-card p-4 shadow-sm sm:p-6"
           >
             <h2 className="text-xl font-semibold text-center border-b pb-2">
               {t("bookingForm.selectDateAndTimeTitle")}
@@ -75,7 +74,9 @@ export function BookingRequestForm({
             <Button
               type="button"
               onClick={handleContinueToBooking}
-              disabled={submittingBooking || authStatus !== "authenticated"}
+              disabled={
+                submittingBooking || authStatus !== "authenticated" || model.availabilityConflict
+              }
               className="w-full"
               size="lg"
             >

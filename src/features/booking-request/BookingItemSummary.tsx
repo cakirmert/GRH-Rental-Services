@@ -23,7 +23,7 @@ export function BookingItemSummary({
     return t("itemCard.noDescriptionAvailable")
   }, [item.longDescriptionKey, item.description, t])
   return (
-    <div className="space-y-6 md:sticky md:top-24 md:self-start">
+    <div className="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start">
       {" "}
       <Button variant="outline" size="sm" onClick={onGoBack} className="flex ml-auto gap-2">
         <ChevronLeft className="h-4 w-4" />

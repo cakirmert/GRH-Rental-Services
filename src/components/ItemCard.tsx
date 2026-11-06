@@ -98,7 +98,7 @@ export function ItemCard({
 
   const translatedDescription = item.description ? t(item.description) : ""
   return (
-    <Card className="rounded-xl border bg-card/40 hover:bg-card/60 hover:shadow-md hover:shadow-black/10 dark:hover:shadow-white/10 transition-all duration-300 flex flex-col h-full group overflow-hidden">
+    <Card className="rounded-xl border bg-card/90 hover:bg-card hover:shadow-md hover:shadow-black/10 dark:hover:shadow-white/10 transition-all duration-300 flex flex-col h-full group overflow-hidden">
       {" "}
       <CardHeader className="p-0">
         <div
@@ -119,8 +119,10 @@ export function ItemCard({
           {images.length > 1 && (
             <>
               <button
+                type="button"
+                aria-label={t("common.previousImage")}
                 onClick={prev}
-                className="absolute left-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-r from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:from-black/30"
+                className="absolute left-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-r from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity duration-300 hover:from-black/30 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring"
                 disabled={isSliding}
               >
                 <div className="bg-white/50  p-2 rounded-full shadow-lg transition-all duration-200">
@@ -128,8 +130,10 @@ export function ItemCard({
                 </div>
               </button>
               <button
+                type="button"
+                aria-label={t("common.nextImage")}
                 onClick={next}
-                className="absolute right-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-l from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 hover:from-black/30"
+                className="absolute right-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-l from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity duration-300 hover:from-black/30 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring"
                 disabled={isSliding}
               >
                 <div className="bg-white/50  p-2 rounded-full shadow-lg transition-all duration-200">
@@ -137,16 +141,22 @@ export function ItemCard({
                 </div>
               </button>
               {/* Image indicator dots */}
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                 {images.map((_, index) => (
                   <button
                     key={index}
+                    type="button"
+                    aria-label={t("common.viewImageN", { n: index + 1 })}
+                    aria-pressed={index === current}
                     onClick={() => !isSliding && setCurrent(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      index === current ? "bg-white shadow-md" : "bg-white/50 hover:bg-white/75"
-                    }`}
+                    className="flex size-6 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-white"
                     disabled={isSliding}
-                  />
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`size-2 rounded-full transition-colors ${index === current ? "bg-white shadow-md" : "bg-white/50 hover:bg-white/75"}`}
+                    />
+                  </button>
                 ))}
               </div>
             </>
