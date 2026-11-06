@@ -1,22 +1,12 @@
 "use client"
 
-import {
-  Mail,
-  LifeBuoy,
-  Users,
-  Megaphone,
-  Shield,
-  FileText,
-  HelpCircle,
-} from "lucide-react"
+import { Mail, LifeBuoy, Users, Megaphone, Shield, FileText, HelpCircle } from "lucide-react"
 import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
-import { useView, View } from "@/contexts/ViewContext"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function Footer() {
   const { t } = useI18n()
-  const { setView } = useView()
   return (
     <footer className="backdrop-blur-md bg-background/20 border-t">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -29,26 +19,22 @@ export default function Footer() {
             </h3>{" "}
             <ul className="space-y-2 text-sm">
               <li>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView(View.FAQ)}
+                <Link
+                  href="/faq"
                   className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
                 >
                   <HelpCircle className="h-4 w-4" />
                   {t("footer.faqLink")}
-                </Button>
+                </Link>
               </li>
               <li>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView(View.CONTACT)}
+                <Link
+                  href="/contact"
                   className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
                 >
                   <Megaphone className="h-4 w-4" />
                   {t("footer.suggestionsPrompt")}
-                </Button>
+                </Link>
               </li>
               <li>
                 <a
@@ -65,34 +51,28 @@ export default function Footer() {
           <div className="flex flex-col w-full max-w-xs h-full">
             <div className="flex-1" />
             <div className="space-y-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setView(View.DEVELOPERS)}
+              <Link
+                href="/developers"
                 className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
               >
                 <GitHubLogoIcon className="h-4 w-4" />
                 {t("footer.devInfoLink")}
-              </Button>
+              </Link>
               <div className="space-y-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView(View.PRIVACY)}
+                <Link
+                  href="/privacy"
                   className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
                 >
                   <Shield className="h-4 w-4" />
                   {t("footer.privacyLink")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView(View.IMPRINT)}
+                </Link>
+                <Link
+                  href="/imprint"
                   className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
                 >
                   <FileText className="h-4 w-4" />
                   {t("footer.imprintLink")}
-                </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -101,15 +81,13 @@ export default function Footer() {
             <div className="flex-1" />
             <ul className="space-y-2 text-sm">
               <li>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setView(View.ABOUT)}
+                <Link
+                  href="/about"
                   className="text-muted-foreground hover:bg-background hover:text-primary transition-colors flex items-center gap-2 h-auto p-0 justify-start text-sm"
                 >
                   <Users className="h-4 w-4" />
                   {t("footer.aboutSvLink")}
-                </Button>
+                </Link>
               </li>
               <li>
                 <a
@@ -129,9 +107,14 @@ export default function Footer() {
             <div className="w-full sm:w-auto space-y-1.5">
               <p>{t("footer.broughtToYou")}</p>
               {process.env.NEXT_PUBLIC_APP_VERSION && (
-                <p className="text-xs tracking-wide" aria-label={`Version ${process.env.NEXT_PUBLIC_APP_VERSION}`}>
+                <p
+                  className="text-xs tracking-wide"
+                  aria-label={`Version ${process.env.NEXT_PUBLIC_APP_VERSION}`}
+                >
                   GRH Rentals <span aria-hidden="true">·</span>{" "}
-                  <span className="font-mono tabular-nums">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+                  <span className="font-mono tabular-nums">
+                    v{process.env.NEXT_PUBLIC_APP_VERSION}
+                  </span>
                 </p>
               )}
             </div>

@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { enUS } from "date-fns/locale"
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { de, enUS } from "date-fns/locale"
+import type { BookingFormViewProps } from "../BookingFormView"
 import type { Control } from "react-hook-form"
 import { useController } from "react-hook-form"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -7,14 +8,28 @@ import type { DateRange } from "react-day-picker"
 
 const state = vi.hoisted(() => ({
   mutate: vi.fn(),
+  mutationHandlers: {} as { onSuccess?: (booking: { id: string }) => void },
+  rulesConfirm: undefined as undefined | (() => void | Promise<void>),
+  locale: "en",
   selectedInstant: "2030-07-14T22:00:00.000Z",
   calendarProps: undefined as
     undefined | { disabled: (date: Date) => boolean; selected?: DateRange },
 }))
 vi.mock("@/utils/trpc", () => ({
-  trpc: { bookings: { create: { useMutation: () => ({ mutate: state.mutate }) } } },
+  trpc: {
+    bookings: {
+      create: {
+        useMutation: (handlers: typeof state.mutationHandlers) => {
+          state.mutationHandlers = handlers
+          return { mutate: state.mutate }
+        },
+      },
+    },
+  },
 }))
-vi.mock("@/locales/i18n", () => ({ useI18n: () => ({ locale: "en", t: (key: string) => key }) }))
+vi.mock("@/locales/i18n", () => ({
+  useI18n: () => ({ locale: state.locale, t: (key: string) => key }),
+}))
 vi.mock("@/contexts/AuthModalContext", () => ({ useAuthModal: () => ({ openAuthModal: vi.fn() }) }))
 vi.mock("@/contexts/ViewContext", () => ({
   View: { LIST: "LIST" },
@@ -36,8 +51,16 @@ vi.mock("@/components/TimeSelect", () => ({
   },
 }))
 vi.mock("@/components/BookingRulesDialog", () => ({
-  BookingRulesDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
-    open ? <button onClick={onConfirm}>Confirm rules</button> : null,
+  BookingRulesDialog: ({
+    open,
+    onConfirm,
+  }: {
+    open: boolean
+    onConfirm: () => void | Promise<void>
+  }) => {
+    if (open) state.rulesConfirm = onConfirm
+    return open ? <button onClick={onConfirm}>Confirm rules</button> : null
+  },
 }))
 vi.mock("@/components/ui/calendar", () => ({
   Calendar: (props: {
@@ -64,16 +87,20 @@ vi.mock("@/components/ui/calendar", () => ({
 import BookingFormView, { setNavigatingBetweenViews } from "../BookingFormView"
 
 let sequence = 0
-function form(id = `berlin-form-${++sequence}`) {
+function form(id = `berlin-form-${++sequence}`, overrides: Partial<BookingFormViewProps> = {}) {
   return (
     <BookingFormView
       item={{ id, name: "Projector", type: "SPORTS", images: [], totalQuantity: 1 }}
-      session={{ user: { id: "user", role: "USER", email: "user@example.test" }, expires: "2099-01-01" }}
+      session={{
+        user: { id: "user", role: "USER", email: "user@example.test" },
+        expires: "2099-01-01",
+      }}
       authStatus="authenticated"
       currentLocale={enUS}
       onGoBack={vi.fn()}
       onBookingSuccess={vi.fn()}
       onLoginRequest={vi.fn()}
+      {...overrides}
     />
   )
 }
@@ -81,6 +108,8 @@ function form(id = `berlin-form-${++sequence}`) {
 describe("booking form Berlin calendar contract", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    state.locale = "en"
+    state.selectedInstant = "2030-07-14T22:00:00.000Z"
     sessionStorage.clear()
     localStorage.clear()
     window.scrollTo = vi.fn()
@@ -113,7 +142,7 @@ describe("booking form Berlin calendar contract", () => {
     )
   })
 
-  it("rehydrates a stored Berlin day without moving it to the device's previous date", async () => {
+  it("ignores legacy browser drafts and submits newly selected Berlin times", async () => {
     const id = `berlin-draft-${++sequence}`
     sessionStorage.setItem(
       `grh-form-${id}`,
@@ -122,12 +151,16 @@ describe("booking form Berlin calendar contract", () => {
         startTime: "14:00",
         endTime: "15:00",
         quantity: 1,
-        notes: "",
+        notes: "Another account's private purpose",
       }),
     )
     setNavigatingBetweenViews(true)
     render(form(id))
-    expect(screen.getByText("July 15th, 2030 bookingForm.at 2:00 PM")).toBeTruthy()
+    expect((screen.getByLabelText("startTime") as HTMLInputElement).value).toBe("")
+    expect(screen.queryByDisplayValue("Another account's private purpose")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    fireEvent.change(screen.getByLabelText("startTime"), { target: { value: "14:00" } })
+    fireEvent.change(screen.getByLabelText("endTime"), { target: { value: "15:00" } })
     fireEvent.click(screen.getByRole("button", { name: "bookingForm.continueToBookingButton" }))
     fireEvent.click(await screen.findByRole("button", { name: "Confirm rules" }))
     await waitFor(() =>
@@ -135,6 +168,135 @@ describe("booking form Berlin calendar contract", () => {
         expect.objectContaining({ start: "2030-07-15T12:00:00.000Z" }),
       ),
     )
+  })
+
+  it("keeps a local draft through locale changes but clears it for another account or item", () => {
+    const id = `local-draft-${++sequence}`
+    const view = render(form(id))
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    fireEvent.change(screen.getByLabelText("startTime"), { target: { value: "14:00" } })
+    fireEvent.change(screen.getByLabelText("endTime"), { target: { value: "15:00" } })
+    fireEvent.change(screen.getByRole("textbox", { name: "bookingForm.notesLabel" }), {
+      target: { value: "Private first-account purpose" },
+    })
+    state.locale = "de"
+    view.rerender(form(id, { currentLocale: de }))
+    expect((screen.getByLabelText("startTime") as HTMLInputElement).value).toBe("14:00")
+    expect(screen.getByDisplayValue("Private first-account purpose")).toBeTruthy()
+    expect(sessionStorage.length).toBe(0)
+    view.rerender(
+      form(id, {
+        session: {
+          user: { id: "other-user", role: "USER", email: "other@example.test" },
+          expires: "2099-01-01",
+        },
+      }),
+    )
+    expect(screen.queryByDisplayValue("Private first-account purpose")).toBeNull()
+    expect((screen.getByLabelText("startTime") as HTMLInputElement).value).toBe("")
+    fireEvent.change(screen.getByRole("textbox", { name: "bookingForm.notesLabel" }), {
+      target: { value: "Second draft" },
+    })
+    view.rerender(
+      form(`${id}-other-item`, {
+        session: {
+          user: { id: "other-user", role: "USER", email: "other@example.test" },
+          expires: "2099-01-01",
+        },
+      }),
+    )
+    expect(screen.queryByDisplayValue("Second draft")).toBeNull()
+    expect(state.mutate).not.toHaveBeenCalled()
+  })
+
+  it("requires a purpose for lowercase room items before the rules confirmation", async () => {
+    render(
+      form("room-purpose", {
+        item: { id: "room-purpose", name: "Bar", type: "room", totalQuantity: 1 },
+      }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    fireEvent.change(screen.getByLabelText("startTime"), { target: { value: "14:00" } })
+    fireEvent.change(screen.getByLabelText("endTime"), { target: { value: "15:00" } })
+    fireEvent.click(screen.getByRole("button", { name: "bookingForm.continueToBookingButton" }))
+    await screen.findAllByText("Please describe the purpose of your booking.")
+    expect(screen.queryByRole("button", { name: "Confirm rules" })).toBeNull()
+    fireEvent.change(screen.getByRole("textbox", { name: "bookingForm.notesLabelRequired" }), {
+      target: { value: "Community meeting" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "bookingForm.continueToBookingButton" }))
+    await screen.findByRole("button", { name: "Confirm rules" })
+    expect(state.mutate).not.toHaveBeenCalled()
+  })
+
+  it("delegates back navigation to its caller", () => {
+    const goBack = vi.fn()
+    render(form(undefined, { onGoBack: goBack }))
+    fireEvent.click(screen.getByRole("button", { name: "common.back" }))
+    expect(goBack).toHaveBeenCalledOnce()
+  })
+
+  it("does not navigate the new account when an old account's pending booking succeeds", async () => {
+    const success = vi.fn()
+    const view = render(form("pending-booking", { onBookingSuccess: success }))
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    fireEvent.change(screen.getByLabelText("startTime"), { target: { value: "14:00" } })
+    fireEvent.change(screen.getByLabelText("endTime"), { target: { value: "15:00" } })
+    fireEvent.click(screen.getByRole("button", { name: "bookingForm.continueToBookingButton" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm rules" }))
+    await waitFor(() => expect(state.mutate).toHaveBeenCalledOnce())
+    const previousHandlers = state.mutationHandlers
+    view.rerender(
+      form("pending-booking", {
+        session: {
+          user: { id: "other-user", email: "other@example.test", role: "USER" },
+          expires: "2099-01-01",
+        },
+        onBookingSuccess: success,
+      }),
+    )
+    previousHandlers.onSuccess?.({ id: "first-account-booking" })
+    expect(success).not.toHaveBeenCalled()
+    expect((screen.getByLabelText("startTime") as HTMLInputElement).value).toBe("")
+  })
+
+  it("cancels a rules submission whose async validation finishes after an account switch", async () => {
+    const view = render(form("validation-pending"))
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    fireEvent.change(screen.getByLabelText("startTime"), { target: { value: "14:00" } })
+    fireEvent.change(screen.getByLabelText("endTime"), { target: { value: "15:00" } })
+    fireEvent.click(screen.getByRole("button", { name: "bookingForm.continueToBookingButton" }))
+    await screen.findByRole("button", { name: "Confirm rules" })
+    let pending: void | Promise<void>
+    act(() => {
+      pending = state.rulesConfirm!()
+    })
+    view.rerender(
+      form("validation-pending", {
+        session: {
+          user: { id: "other-user", email: "other@example.test", role: "USER" },
+          expires: "2099-01-01",
+        },
+      }),
+    )
+    await act(async () => {
+      await pending
+    })
+    expect(state.mutate).not.toHaveBeenCalled()
+  })
+
+  it.each(["USER", "RENTAL", "ADMIN"])("preserves the calendar range limit for %s", (role) => {
+    render(
+      form(undefined, {
+        session: {
+          user: { id: "actor", email: "actor@example.test", role },
+          expires: "2099-01-01",
+        },
+      }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Choose Berlin day" }))
+    expect(state.calendarProps?.disabled(new Date("2030-07-16T22:00:00Z"))).toBe(role === "USER")
+    expect(state.calendarProps?.disabled(new Date("2030-07-28T22:00:00Z"))).toBe(true)
   })
 
   it("uses Berlin's current date for disabling past calendar days", () => {

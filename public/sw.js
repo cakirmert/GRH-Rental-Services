@@ -34,32 +34,42 @@ self.addEventListener('push', function (event) {
   }
 });
 
+function notificationDestination(value) {
+  const fallback = new URL('/', self.location.origin).href;
+  if (typeof value !== 'string') return fallback;
+  try {
+    const url = new URL(value, self.location.origin);
+    if (
+      (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+      url.origin !== self.location.origin || url.username || url.password
+    ) return fallback;
+    // Notifications use native paths; old query links are not navigation aliases.
+    url.search = '';
+    url.hash = '';
+    return url.href;
+  } catch {
+    return fallback;
+  }
+}
+
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  
-  const notificationData = event.notification.data;
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientList => {
-        // Check if there's already a window open
-        for (const client of clientList) {
-          if (client.url.includes(self.location.origin)) {
-            client.focus();
-            // Send message to client to handle navigation
-            client.postMessage({
-              type: 'NOTIFICATION_CLICK',
-              bookingId: notificationData?.bookingId,
-              notificationType: notificationData?.type
-            });
-            return;
-          }
+  const target = notificationDestination(event.notification.data?.url);
+
+  event.waitUntil((async () => {
+    const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientList) {
+      try {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        const destination = client.url === target ? client : await client.navigate(target);
+        if (destination) {
+          await destination.focus();
+          return;
         }
-        
-        // No window found, open a new one with proper localStorage setup
-        // We'll use the main page and let it handle the navigation via URL params
-        const url = notificationData?.url || '/';
-        return clients.openWindow(url);
-      })
-  );
+      } catch {
+        // A closing or unavailable window must not prevent opening the requested page.
+      }
+    }
+    return clients.openWindow(target);
+  })());
 });

@@ -170,7 +170,7 @@ describe("app-wide problem reports", () => {
       "mailto:rentals@grh-hamburg.de",
     )
     await userEvent.click(screen.getByRole("button", { name: "Contact us privately" }))
-    expect(mocks.setView).toHaveBeenCalledExactlyOnceWith("contact")
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/contact")
     expect(screen.queryByRole("dialog")).toBeNull()
     expect(mocks.mutate).not.toHaveBeenCalled()
   })
@@ -217,17 +217,17 @@ describe("app-wide problem reports", () => {
     expect(mocks.mutate).not.toHaveBeenCalled()
   })
 
-  it("routes private support from a non-home page and selects Contact after navigation", async () => {
+  it("routes private support directly from any page", async () => {
     mocks.status = "unauthenticated"
     mocks.pathname = "/missing-page"
     const view = render(<AppFeedback />, { wrapper: Wrapper })
     await openReport()
     await userEvent.click(screen.getByRole("button", { name: "Contact us privately" }))
-    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/?contact")
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/contact")
     expect(mocks.setView).not.toHaveBeenCalled()
     mocks.pathname = "/"
     view.rerender(<AppFeedback />)
-    expect(mocks.setView).toHaveBeenCalledExactlyOnceWith("contact")
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/contact")
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 
@@ -258,7 +258,7 @@ describe("app-wide problem reports", () => {
     expect(screen.getByText("Your report will be public on GitHub")).toBeTruthy()
     expect(screen.getByText(/The app copy is removed after 30 days/)).toBeTruthy()
     expect(screen.getByRole("link", { name: "contact us privately" }).getAttribute("href")).toBe(
-      "/?contact",
+      "/contact",
     )
     const consent = screen.getByRole("checkbox", { name: /I understand/ }) as HTMLInputElement
     expect(consent.checked).toBe(false)
@@ -308,7 +308,7 @@ describe("app-wide problem reports", () => {
     render(<AppFeedback />, { wrapper: Wrapper })
     await openReport()
     await userEvent.click(screen.getByRole("link", { name: "contact us privately" }))
-    expect(mocks.setView).toHaveBeenCalledExactlyOnceWith("contact")
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/contact")
     expect(screen.queryByRole("dialog")).toBeNull()
     expect(mocks.mutate).not.toHaveBeenCalled()
   })

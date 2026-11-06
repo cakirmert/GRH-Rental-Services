@@ -62,7 +62,9 @@ describe("compact staff calendar controls", () => {
     expect(footer.queryByRole("button", { name: "Calendar feedback" })).toBeNull()
     expect(footer.queryByRole("button", { name: "Use classic calendar" })).toBeNull()
     expect(footer.queryByRole("button", { name: "Feedback overview" })).toBeNull()
-    expect(footer.getByRole("button", { name: "footer.suggestionsPrompt" })).toBeTruthy()
+    expect(
+      footer.getByRole("link", { name: "footer.suggestionsPrompt" }).getAttribute("href"),
+    ).toBe("/contact")
   })
 
   it("removes an open feedback dialog immediately when staff access disappears", () => {

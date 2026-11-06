@@ -45,10 +45,10 @@ export function Calendar({
   /* ---------- class-names ------------------------------ */
   const cls: Partial<ClassNames> = {
     day: cn(
-      "relative text-center p-0",
-      "h-10 w-10 text-sm",
-      "md:h-12 md:w-12 md:text-base",
-      "lg:h-14 lg:w-14 lg:text-lg",
+      "relative min-w-0 flex-1 text-center p-0",
+      "h-10 text-sm",
+      "md:h-12 md:text-base",
+      "lg:h-14 lg:text-lg",
     ),
     day_button: cn(
       "h-full w-full rounded-md font-normal select-none transition-colors cursor-pointer",
@@ -71,7 +71,8 @@ export function Calendar({
 
     /* weeks & month grid */
     week: "flex w-full",
-    month_grid: "w-full border-collapse",
+    month: "min-w-0 w-[17.5rem] max-w-full flex-1 md:w-[21rem] lg:w-[24.5rem]",
+    month_grid: "w-full table-fixed border-collapse",
     months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
 
     /* nav bar hidden (we roll our own) */
@@ -86,6 +87,7 @@ export function Calendar({
     return (
       <div className="flex items-center justify-between h-10 px-2 mb-4">
         <button
+          type="button"
           aria-label="Previous month"
           className={cn(
             buttonVariants({ variant: "outline" }),
@@ -107,6 +109,7 @@ export function Calendar({
         </span>
 
         <button
+          type="button"
           aria-label="Next month"
           className={cn(
             buttonVariants({ variant: "outline" }),
@@ -125,7 +128,10 @@ export function Calendar({
   return (
     <div
       ref={host}
-      className={cn("p-3 rounded-md border bg-background/50 glass inline-block", className)}
+      className={cn(
+        "max-w-full p-3 rounded-md border bg-background/50 glass inline-block",
+        className,
+      )}
     >
       <DayPicker
         key={months} /* force full remount when layout changes   */

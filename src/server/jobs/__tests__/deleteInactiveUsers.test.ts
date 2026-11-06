@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { TRPCError } from "@trpc/server"
 
-vi.mock("node-cron", () => ({ default: { schedule: vi.fn() } }))
-
 const prisma = {
   $transaction: vi.fn(async (operation: (tx: unknown) => Promise<unknown>) => operation(prisma)),
   user: {

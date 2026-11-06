@@ -599,7 +599,12 @@
     "today": "Heute",
     "yesterday": "Gestern",
     "messageRead": "Gelesen",
-    "messageSent": "Gesendet"
+    "messageSent": "Gesendet",
+    "description": "Nachrichten zu dieser Buchung.",
+    "unavailable": "Dieser Chat ist nicht verfügbar. Gehe zurück zu deinen Buchungen oder kontaktiere das Verleihteam.",
+    "loadFailed": "Nachrichten konnten nicht geladen werden. Bitte versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "empty": "Noch keine Nachrichten. Starte die Unterhaltung!"
   },
   "notifications": {
     "none": "Keine Benachrichtigungen",
@@ -638,7 +643,9 @@
       "completedBy": "Buchung für {item} wurde von {actor} abgeschlossen",
       "cancelled": "Buchung für {item} wurde storniert",
       "cancelledBy": "Buchung für {item} wurde von {actor} storniert"
-    }
+    },
+    "title": "Benachrichtigungen",
+    "delete": "Benachrichtigung löschen"
   },
   "install": {
     "message": "App über das Browsermenü installieren",
@@ -701,7 +708,12 @@
     "today": "Heute",
     "jumpToDate": "Datum auswählen",
     "viewLabel": "Kalenderansicht",
-    "views": { "agenda": "Agenda", "month": "Monat", "week": "Woche", "day": "Tag" },
+    "views": {
+      "agenda": "Agenda",
+      "month": "Monat",
+      "week": "Woche",
+      "day": "Tag"
+    },
     "previous": {
       "agenda": "Vorherige Woche",
       "month": "Vorheriger Monat",

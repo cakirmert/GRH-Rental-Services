@@ -4,7 +4,40 @@ This release targets Node 26, Next.js 16.4.5, React 19.3.1, Auth.js
 5.0.0-beta.32, and Prisma 7.10.1. The Auth.js prerelease is intentional; Prisma
 8 release candidates are excluded. Keep the exact lockfile used for validation.
 
-## Current release gate
+## V2 verification — 6 November 2026
+
+The new `codex/v2-rebuild` worktree implements the [V2 structure](release-preview.md)
+at version `0.3.0-rc.1`, independently of the retained earlier candidate.
+
+Final checks on this source and lockfile:
+
+- **773 tests passed in 94 files**, including 40 PostgreSQL integration cases.
+- TypeScript and the production build passed.
+- Repository lint: zero errors, 18 warnings in retained components/hooks
+  (down from 35 in the earlier candidate); warnings are not hidden or waived.
+- npm audit: zero known vulnerabilities. Stable dependency updates include
+  tRPC 11.25.0, Tailwind 4.3.5, Lucide 1.70.0 and Web Push 4.0.0.
+- Five guarded browser journeys are discoverable; they have **not been executed**.
+- Forty offline page/language/viewport combinations plus four report-consent
+  captures use the real V2 components with synthetic private data. All forty
+  have no measured document/header overflow or horizontally clipped controls.
+  These are static layout checks, not HTTP/browser acceptance.
+- After the final tests, the restored clone still has 82 users, 91 bookings,
+  25 threads, 60 messages and 235 notifications. All 25 original passkeys and
+  indexed credentials match the original digest. No synthetic accounts or
+  problem reports remain. The restore-tested backup hash is unchanged.
+
+No production deployment, migration, cleanup or outbound notification occurred.
+Automatic approval review rejected starting the local HTTP test server under the
+execution policy. An isolated hosted preview is also not configured. These
+remaining browser and cutover gates still block promotion. Existing passkeys need
+a real-device test on the canonical origin before release.
+
+See [authentication/backend changes](auth-backend-summary.md) for the issue/fix
+summary. V2 introduces no additional schema migration beyond the security
+candidate's additive migrations below.
+
+## Earlier security candidate and release gates
 
 The production site has not been changed. The backup was restored to isolated
 PostgreSQL, migrations and passkey indexing were rehearsed there, and source,
@@ -29,8 +62,7 @@ Full-page static previews cover the real components in English/German at
 1440px and 320px, with synthetic account/booking data. They exposed and helped
 fix clipped mobile booking actions and crowded filters. They do not satisfy
 the pending HTTP/browser release gate. No database migration or production
-deployment was performed for this UI follow-up. The larger V2 rebuild remains
-a [proposal](release-preview.md#proposed-v2-rebuild-not-implemented).
+deployment was performed for this UI follow-up. The V2 implementation and current verification are recorded above.
 
 The candidate now includes [the reviewed retention policy](data-retention.md):
 365-day automatic cleanup only for eligible regular users, manual inactive-staff

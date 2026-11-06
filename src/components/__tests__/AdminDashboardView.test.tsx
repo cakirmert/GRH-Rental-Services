@@ -6,12 +6,18 @@ import { I18nProvider } from "@/locales/i18n"
 
 const mocks = vi.hoisted(() => ({
   session: undefined as { user: { id: string; role: string } } | undefined,
+  status: undefined as "loading" | "authenticated" | "unauthenticated" | undefined,
   stats: vi.fn(),
   accounts: vi.fn(),
   members: vi.fn(),
   deleteAccount: vi.fn(),
 }))
-vi.mock("next-auth/react", () => ({ useSession: () => ({ data: mocks.session }) }))
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: mocks.session,
+    status: mocks.status ?? (mocks.session ? "authenticated" : "unauthenticated"),
+  }),
+}))
 vi.mock("@/utils/trpc", () => ({
   trpc: {
     useUtils: () => ({ invalidate: vi.fn() }),
@@ -59,6 +65,7 @@ beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   mocks.session = undefined
+  mocks.status = undefined
   mocks.stats.mockReturnValue({ data: undefined, isLoading: false, error: null })
   mocks.members.mockReturnValue({ data: [inactiveMember], isLoading: false, refetch: vi.fn() })
   mocks.accounts.mockReturnValue({
@@ -73,17 +80,33 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-it("keeps hook order stable across session changes and only enables statistics for admins", () => {
+it("waits for the admin session without showing an access error or fetching statistics", () => {
+  mocks.status = "loading"
+  const page = () => (
+    <I18nProvider>
+      <AdminDashboardView onGoBack={vi.fn()} />
+    </I18nProvider>
+  )
+  const view = render(page())
+  expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy()
+  expect(screen.queryByText("Administrator access required")).toBeNull()
+  expect(mocks.stats).not.toHaveBeenCalled()
+  mocks.status = "authenticated"
+  mocks.session = { user: { id: "admin", role: "ADMIN" } }
+  view.rerender(page())
+  expect(screen.queryByRole("status", { name: "Loading" })).toBeNull()
+  expect(screen.getByRole("heading", { name: "Admin Dashboard" })).toBeTruthy()
+  expect(mocks.stats).toHaveBeenCalled()
+})
+
+it("keeps hook order stable across session changes and only mounts statistics for admins", () => {
   const view = render(
     <I18nProvider>
       <AdminDashboardView onGoBack={vi.fn()} />
     </I18nProvider>,
   )
   expect(screen.getByText("Administrator access required")).toBeTruthy()
-  expect(mocks.stats).toHaveBeenLastCalledWith(
-    undefined,
-    expect.objectContaining({ enabled: false }),
-  )
+  expect(mocks.stats).not.toHaveBeenCalled()
   mocks.session = { user: { id: "admin", role: "ADMIN" } }
   view.rerender(
     <I18nProvider>
@@ -93,8 +116,9 @@ it("keeps hook order stable across session changes and only enables statistics f
   expect(screen.getByRole("button", { name: /Inactive staff/ })).toBeTruthy()
   expect(mocks.stats).toHaveBeenLastCalledWith(
     undefined,
-    expect.objectContaining({ enabled: true }),
+    expect.objectContaining({ refetchOnWindowFocus: false }),
   )
+  mocks.stats.mockClear()
   mocks.session = { user: { id: "admin", role: "USER" } }
   view.rerender(
     <I18nProvider>
@@ -102,10 +126,7 @@ it("keeps hook order stable across session changes and only enables statistics f
     </I18nProvider>,
   )
   expect(screen.getByText("Administrator access required")).toBeTruthy()
-  expect(mocks.stats).toHaveBeenLastCalledWith(
-    undefined,
-    expect.objectContaining({ enabled: false }),
-  )
+  expect(mocks.stats).not.toHaveBeenCalled()
 })
 
 it("opens normal review from home and deletes via badge then confirmation in exactly two clicks", async () => {

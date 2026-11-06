@@ -599,7 +599,12 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "messageRead": "Read",
-    "messageSent": "Sent"
+    "messageSent": "Sent",
+    "description": "Messages about this booking.",
+    "unavailable": "This conversation is unavailable. Return to your bookings or contact the rental team.",
+    "loadFailed": "Messages could not be loaded. Please try again.",
+    "retry": "Try again",
+    "empty": "No messages yet. Start the conversation!"
   },
   "notifications": {
     "none": "No notifications",
@@ -638,7 +643,9 @@
       "completedBy": "Booking for {item} was completed by {actor}",
       "cancelled": "Booking for {item} was cancelled",
       "cancelledBy": "Booking for {item} was cancelled by {actor}"
-    }
+    },
+    "title": "Notifications",
+    "delete": "Delete notification"
   },
   "install": {
     "message": "Install this app from your browser menu",
@@ -701,7 +708,12 @@
     "today": "Today",
     "jumpToDate": "Jump to date",
     "viewLabel": "Calendar view",
-    "views": { "agenda": "Agenda", "month": "Month", "week": "Week", "day": "Day" },
+    "views": {
+      "agenda": "Agenda",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
     "previous": {
       "agenda": "Previous week",
       "month": "Previous month",

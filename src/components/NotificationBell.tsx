@@ -11,8 +11,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { useView, View } from "@/contexts/ViewContext"
-import { useRouter, usePathname } from "next/navigation"
+import { useChat } from "@/features/chat/ChatProvider"
+import { useRouter } from "next/navigation"
 import { useI18n } from "@/locales/i18n"
 
 export default function NotificationBell() {
@@ -41,9 +41,8 @@ export default function NotificationBell() {
     },
   })
   const unread = notifications.filter((n) => !n.read).length
-  const { setView } = useView()
+  const { openChat } = useChat()
   const router = useRouter()
-  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const loading = open && (isLoading || isFetching)
   const handleClick = (n: {
@@ -54,40 +53,29 @@ export default function NotificationBell() {
     read: boolean
   }) => {
     if (!n.read) markRead.mutate({ id: n.id })
+    setOpen(false)
     if (n.bookingId) {
-      localStorage.setItem("grh-highlight-booking-id", n.bookingId)
       let isChat = false
-      let targetView: View = View.MY_BOOKINGS
       try {
         const parsed = JSON.parse(n.message) as { key: string; vars?: Record<string, string> }
         if (
           parsed.key === "notifications.newChat" ||
           parsed.key === "notifications.newChatMessage"
         ) {
-          localStorage.setItem("grh-open-chat-booking-id", n.bookingId)
           isChat = true
         }
       } catch {
         if (n.message.toLowerCase().includes("chat message")) {
-          localStorage.setItem("grh-open-chat-booking-id", n.bookingId)
           isChat = true
         }
       }
 
-      if (pathname !== "/") router.push("/")
-
-      // Navigate to appropriate view based on notification type
       if (isChat) {
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("grh-open-chat", { detail: { bookingId: n.bookingId } }),
-          )
-        }, 50)
+        openChat(n.bookingId)
       } else {
-        if (n.type === "BOOKING_REQUEST") {
-          targetView = View.RENTAL_DASHBOARD
-        }
-        setTimeout(() => setView(targetView), 50)
+        router.push(
+          n.type === "BOOKING_REQUEST" ? "/staff" : "/bookings/" + encodeURIComponent(n.bookingId),
+        )
       }
     }
   }
@@ -103,7 +91,12 @@ export default function NotificationBell() {
       }}
     >
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={t("notifications.title")}
+        >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full text-[10px] h-4 w-4 flex items-center justify-center">
@@ -138,6 +131,7 @@ export default function NotificationBell() {
                 >
                   <span className="flex-1">{text}</span>
                   <button
+                    aria-label={t("notifications.delete")}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()

@@ -24,6 +24,20 @@ afterEach(() => {
 })
 
 describe("shared booking date picker", () => {
+  it("navigates months without submitting its surrounding booking form", async () => {
+    const submit = vi.fn((event) => event.preventDefault())
+    render(
+      <form onSubmit={submit}>
+        <Calendar defaultMonth={berlinDate(2026, 10, 1)} numberOfMonths={1} />
+      </form>,
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Next month" }))
+    expect(screen.getByText("December 2026")).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Previous month" }))
+    expect(screen.getByText("November 2026")).toBeTruthy()
+    expect(submit).not.toHaveBeenCalled()
+  })
+
   it("uses Berlin today and emits Berlin midnight even if a caller requests another timezone", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date("2026-11-08T23:30:00Z"))

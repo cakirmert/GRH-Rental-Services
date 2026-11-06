@@ -60,29 +60,26 @@ describe("ThemeProvider", () => {
     )
   })
 
-  it("initially renders children hidden and then visible after mount", () => {
-    const { container } = render(
+  it("keeps children directly under the theme provider", () => {
+    render(
       <ThemeProvider>
         <div data-testid="child">Content</div>
       </ThemeProvider>,
     )
 
-    // After mount (standard render behavior), it should NOT be wrapped in the visibility: hidden div
     const child = screen.getByTestId("child")
-    // The component logic is: {mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
-    // After mount, child.parentElement should be the mocked NextThemesProvider div
     expect(child.parentElement?.getAttribute("data-testid")).toBe("next-themes-provider")
     expect(child.parentElement?.style.visibility).not.toBe("hidden")
   })
 
-  it("demonstrates the hydration fix by checking the render output when not mounted", () => {
+  it("serves visible content before JavaScript runs", () => {
     const html = renderToString(
       <ThemeProvider>
         <div>Content</div>
       </ThemeProvider>,
     )
 
-    expect(html).toContain("visibility:hidden")
+    expect(html).not.toContain("visibility:hidden")
     expect(html).toContain("Content")
   })
 })

@@ -20,6 +20,7 @@ vi.mock("@/lib/mail", () => ({
 
 const to = { email: "resident@example.com", name: "Synthetic Resident" }
 const booking = {
+  id: "synthetic",
   itemTitle: "Example room",
   startDate: new Date("2026-11-06T10:00:00Z"),
   endDate: new Date("2026-11-06T12:00:00Z"),
@@ -66,7 +67,13 @@ describe("automated message identity", () => {
         }),
       )
       const message = sendMail.mock.calls[0]?.[0]
-      const link = name === "chat" ? "https://app.example.com/?chat=synthetic" : "https://app.example.com/"
+      const path =
+        name === "chat"
+          ? "/messages/synthetic"
+          : name === "request"
+            ? "/staff"
+            : "/bookings/synthetic"
+      const link = `https://app.example.com${path}`
       expect(message.text).toContain(link)
       expect(message.html).toContain(`href="${link}"`)
       for (const content of [message.text, message.html]) {
@@ -77,22 +84,43 @@ describe("automated message identity", () => {
     },
   )
 
-  it.each(senders)("does not redirect replies for %s messages when Reply-To is disabled", async (_name, send) => {
-    mailMode.replyTo = undefined
-    await send()
-    expect(sendMail.mock.calls[0]?.[0].replyTo).toBeUndefined()
-  })
+  it.each(senders)(
+    "does not redirect replies for %s messages when Reply-To is disabled",
+    async (_name, send) => {
+      mailMode.replyTo = undefined
+      await send()
+      expect(sendMail.mock.calls[0]?.[0].replyTo).toBeUndefined()
+    },
+  )
 
   it("encodes the booking ID inside the app chat link", async () => {
     await sendChatMessageEmail({
-      to, senderName: "Example Staff", itemTitle: booking.itemTitle,
-      messagePreview: "Synthetic message", bookingId: 'booking&next=https://other.example/"',
+      to,
+      senderName: "Example Staff",
+      itemTitle: booking.itemTitle,
+      messagePreview: "Synthetic message",
+      bookingId: 'booking&next=https://other.example/"',
     })
     const message = sendMail.mock.calls[0]?.[0]
-    const url = new URL(message.text.match(/https:\/\/app\.example\.com\/\?chat=\S+/)[0])
+    const url = new URL(message.text.match(/https:\/\/app\.example\.com\/messages\/\S+/)[0])
     expect(url.origin).toBe("https://app.example.com")
-    expect(url.searchParams.get("chat")).toBe('booking&next=https://other.example/"')
-    expect(url.searchParams.has("next")).toBe(false)
+    expect(decodeURIComponent(url.pathname.slice("/messages/".length))).toBe(
+      'booking&next=https://other.example/"',
+    )
+    expect(url.search).toBe("")
+    expect(url.hash).toBe("")
+    expect(message.html).toContain(`href="${url.toString()}"`)
+  })
+
+  it("encodes the booking ID inside the status link", async () => {
+    const id = 'booking/with?query=#fragment&"'
+    await sendBookingStatusEmail({ to, booking: { ...booking, id }, status: "ACCEPTED" })
+    const message = sendMail.mock.calls[0]?.[0]
+    const url = new URL(message.text.match(/https:\/\/app\.example\.com\/bookings\/\S+/)[0])
+    expect(url.origin).toBe("https://app.example.com")
+    expect(decodeURIComponent(url.pathname.slice("/bookings/".length))).toBe(id)
+    expect(url.search).toBe("")
+    expect(url.hash).toBe("")
     expect(message.html).toContain(`href="${url.toString()}"`)
   })
 

@@ -1,16 +1,7 @@
-import { Suspense } from "react"
-import HomeShell from "./_components/home-shell.client"
-import CatalogSection from "./_components/catalog-section"
-import ListSkeleton from "./_components/list-skeleton"
+import CatalogFeature from "@/features/catalog/CatalogFeature"
+import { getAllEquipment } from "./_data/equipment"
 
-export default function Page() {
-  return (
-    <HomeShell
-      catalog={
-        <Suspense fallback={<ListSkeleton />}>
-          <CatalogSection />
-        </Suspense>
-      }
-    />
-  )
+export default async function Page() {
+  const items = await getAllEquipment()
+  return <CatalogFeature items={items} />
 }

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Send, Check } from "lucide-react"
 import clsx from "clsx"
-import { useSession } from "next-auth/react"
+import { useCurrentAccount } from "@/features/identity/client"
 import { trpc } from "@/utils/trpc"
 import {
   formatChatMessageDate,
@@ -27,18 +27,19 @@ interface Props {
 
 export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }: Props) {
   // ─────── Hooks run unconditionally ───────
-  const { data: session } = useSession()
-  const meId = session?.user.id
+  const { user, status } = useCurrentAccount()
+  const meId = user?.id
 
   const { locale, t } = useI18n()
 
   const [body, setBody] = useState("")
+  const canRead = open && !!bookingId && status === "authenticated"
 
   const utils = trpc.useUtils()
   const msgsQry = trpc.chat.list.useInfiniteQuery(
     { bookingId: bookingId!, limit: 30 },
     {
-      enabled: !!bookingId,
+      enabled: canRead,
       getNextPageParam: (d) => d.nextCursor,
       refetchInterval: 3000,
     },
@@ -58,6 +59,12 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
   })
 
   const markMut = trpc.chat.markRead.useMutation()
+  const unavailable =
+    status === "unauthenticated" ||
+    ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].includes(msgsQry.error?.data?.code ?? "")
+  const errorState = unavailable ? "unavailable" : msgsQry.error ? "loadFailed" : null
+  const loading = status === "loading" || (canRead && msgsQry.isPending)
+  const canSend = canRead && msgsQry.isSuccess && !errorState && !sendMut.isPending
 
   const messagesRef = useRef<HTMLDivElement>(null)
   const topSentinelRef = useRef<HTMLDivElement>(null)
@@ -67,8 +74,8 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
 
   // flatten pages
   const messages = useMemo(
-    () => msgsQry.data?.pages.flatMap((p) => p.messages) ?? [],
-    [msgsQry.data],
+    () => (canRead && !errorState ? (msgsQry.data?.pages.flatMap((p) => p.messages) ?? []) : []),
+    [canRead, errorState, msgsQry.data],
   )
 
   // unread → mark read
@@ -122,7 +129,9 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
   // ─────── Guard UI after hooks ───────
   if (!bookingId) return null
 
-  const handleSend = () => body.trim() && sendMut.mutate({ bookingId, body })
+  const handleSend = () => {
+    if (canSend && body.trim()) sendMut.mutate({ bookingId, body })
+  }
   // back closes dialog
   const handleBack = () => onOpenChange(false)
 
@@ -136,13 +145,17 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
             {/* Hidden title for a11y */}
             <Dialog.Title asChild>
               <VisuallyHidden>
-                {t("Chat.title")} – {itemTitle ?? "booking"}
+                {t("Chat.title")}
+                {itemTitle ? ` – ${itemTitle}` : ""}
               </VisuallyHidden>
             </Dialog.Title>
+            <Dialog.Description asChild>
+              <VisuallyHidden>{t("Chat.description")}</VisuallyHidden>
+            </Dialog.Description>
 
             {/* Header */}
             <header className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-background">
-              <Button variant="ghost" size="sm" onClick={handleBack} aria-label="Back">
+              <Button variant="ghost" size="sm" onClick={handleBack} aria-label={t("common.back")}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <h2 className="text-lg font-semibold">{t("Chat.title")}</h2>
@@ -157,14 +170,37 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
               onScroll={onListScroll}
               className="flex-1 min-h-[220px] overflow-y-auto space-y-4 px-4 py-4 bg-background/80 rounded-b-xl"
             >
-              {msgsQry.isInitialLoading && <Spinner className="mx-auto mt-10 size-6" />}
+              {loading && (
+                <div role="status" aria-label={t("common.loading")}>
+                  <Spinner className="mx-auto mt-10 size-6" />
+                </div>
+              )}
+
+              {!loading && errorState && (
+                <div
+                  role="alert"
+                  className="space-y-3 rounded-lg border border-destructive/40 p-4 text-sm"
+                >
+                  <p>{t(`Chat.${errorState}`)}</p>
+                  {!unavailable && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void msgsQry.refetch()}
+                      disabled={msgsQry.isFetching}
+                    >
+                      {t("Chat.retry")}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               <div ref={topSentinelRef} />
 
-              {messages.length === 0 && !msgsQry.isInitialLoading && (
+              {messages.length === 0 && canRead && msgsQry.isSuccess && !errorState && (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
                   <span className="text-3xl mb-2">💬</span>
-                  <span className="text-sm">No messages yet. Start the conversation!</span>
+                  <span className="text-sm">{t("Chat.empty")}</span>
                 </div>
               )}
 
@@ -232,6 +268,8 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
             <footer className="flex-shrink-0 border-t bg-background px-4 py-4">
               <div className="flex items-end gap-3">
                 <Textarea
+                  aria-label={t("Chat.inputPlaceholder")}
+                  disabled={!canSend}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder={t("Chat.inputPlaceholder")}
@@ -246,7 +284,8 @@ export default function ChatDialog({ open, onOpenChange, bookingId, itemTitle }:
                 />
                 <Button
                   onClick={handleSend}
-                  disabled={sendMut.isPending || !body.trim()}
+                  aria-label={t("common.send")}
+                  disabled={!canSend || !body.trim()}
                   size="lg"
                   className="flex-1 min-h-[80px] rounded-xl px-4 py-2"
                 >

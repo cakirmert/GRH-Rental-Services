@@ -8,17 +8,6 @@ const imageOrigins = [process.env.BLOB_URL_BASE, process.env.IMAGE_DOMAIN && `ht
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_APP_VERSION: version },
   agentRules: false,
-  cacheComponents: true,
-  partialPrefetching: true,
-  experimental: {
-    serverActions: {},
-    scrollRestoration: true,
-  },
-  turbopack: {
-    resolveAlias: {
-      lodash: "",
-    },
-  },
   images: {
     localPatterns: [
       {

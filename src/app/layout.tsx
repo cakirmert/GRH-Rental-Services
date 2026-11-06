@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import type { ReactNode } from "react"
 import AppLayoutClient from "./layout-client"
+import { cookies } from "next/headers"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,6 +15,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "GRH Rental Services",
+  appleWebApp: { capable: true, title: "GRH Rentals", statusBarStyle: "default" },
+  icons: { apple: "/icon-192x192.png" },
 }
 
 export const viewport: Viewport = {
@@ -25,9 +28,10 @@ export const viewport: Viewport = {
  * @param children - Child components to render in the main content area
  * @returns Root HTML structure with providers and layout components
  */
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = (await cookies()).get("grh-locale")?.value === "de" ? "de" : "en"
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         {/* Pre-hydration fallback: ensure body background matches system theme before next-themes applies */}
         <style id="grh-prefers-fallback">{`
@@ -40,7 +44,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         `}</style>
       </head>
       <body className={`${inter.className} antialiased`}>
-        <AppLayoutClient>{children}</AppLayoutClient>
+        <AppLayoutClient initialLocale={locale}>{children}</AppLayoutClient>
         <SpeedInsights />
         <Analytics />
       </body>

@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const state = vi.hoisted(() => ({
@@ -6,7 +7,12 @@ const state = vi.hoisted(() => ({
   start: "2030-07-15T12:00:00.000Z",
   end: "2030-07-15T13:00:00.000Z",
 }))
-vi.mock("next-auth/react", () => ({ useSession: () => ({ status: "authenticated" }) }))
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "resident", email: "resident@example.test", role: "USER" } },
+    status: "authenticated",
+  }),
+}))
 vi.mock("@/locales/i18n", () => ({ useI18n: () => ({ locale: "en", t: (key: string) => key }) }))
 vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => true }))
 vi.mock("@/utils/trpc", () => ({
@@ -99,5 +105,20 @@ describe("my bookings Berlin display and edits", () => {
     expect(screen.getByText("11:30 PM – 12:30 AM (myBookings.nextDayIndicator)")).toBeTruthy()
     fireEvent.click(screen.getByRole("button", { name: "myBookings.viewDetailsButton" }))
     expect(screen.getByText("July 15th, 2030 - July 16th, 2030")).toBeTruthy()
+  })
+
+  it("opens a past highlighted booking without trapping the user in the past filter", async () => {
+    state.start = "2020-07-15T12:00:00Z"
+    state.end = "2020-07-15T13:00:00Z"
+    render(<MyBookings onGoBackToList={vi.fn()} highlightBookingId="booking" />)
+    expect(
+      screen.getByRole("tab", { name: "myBookings.tabs.past" }).getAttribute("aria-selected"),
+    ).toBe("true")
+    expect(screen.getByText("Projector")).toBeTruthy()
+    await userEvent.click(screen.getByRole("tab", { name: "myBookings.tabs.upcoming" }))
+    expect(
+      screen.getByRole("tab", { name: "myBookings.tabs.upcoming" }).getAttribute("aria-selected"),
+    ).toBe("true")
+    expect(screen.queryByText("Projector")).toBeNull()
   })
 })

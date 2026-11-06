@@ -137,7 +137,7 @@ export async function notifyBookingStatusChange({
       try {
         await sendBookingStatusEmail({
           to: { email: recipient.email, name: recipient.name },
-          booking: { itemTitle, startDate, endDate },
+          booking: { id: bookingId, itemTitle, startDate, endDate },
           status,
           notes,
           performedBy: actorName ?? undefined,

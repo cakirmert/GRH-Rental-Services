@@ -64,6 +64,9 @@ describe("notifyBookingStatusChange", () => {
 
     expect(notificationEmitter.emit).toHaveBeenCalledTimes(2)
     expect(sendBookingStatusEmail).toHaveBeenCalledTimes(2)
+    expect(sendBookingStatusEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ booking: expect.objectContaining({ id: "booking-1" }) }),
+    )
   })
 
   it("should not send email if status is not ACCEPTED or CANCELLED", async () => {

@@ -192,7 +192,7 @@ export default function AppFeedbackDialog({
               <p>
                 {copy.privateHelp}{" "}
                 <Link
-                  href="/?contact"
+                  href="/contact"
                   prefetch={false}
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return

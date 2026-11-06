@@ -1,96 +1,92 @@
-// locales/i18n.tsx
 "use client"
-import React, {
+import {
   createContext,
   useContext,
-  useState,
-  useEffect,
   useCallback,
-  ReactNode,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
 } from "react"
 import en from "./en.json"
 import de from "./de.json"
 import type { Locale, Translations, I18nContextProps } from "@/types/i18n"
 
 const translations: Record<Locale, Translations> = { en, de }
-
 const I18nContext = createContext<I18nContextProps | undefined>(undefined)
-
-/**
- * Get a nested value from translations object using dot notation
- * @param obj - The translations object
- * @param key - The dot-notation key (e.g., "common.submit")
- * @returns The translation string or undefined if not found
- */
+const eventName = "grh-language-change"
+const storageKey = "grh-booking-language"
+let memoryLocale: Locale | null = null
+function subscribe(notify: () => void) {
+  window.addEventListener(eventName, notify)
+  window.addEventListener("storage", notify)
+  return () => {
+    window.removeEventListener(eventName, notify)
+    window.removeEventListener("storage", notify)
+  }
+}
+function readLocale(fallback: Locale): Locale {
+  try {
+    const stored = localStorage.getItem(storageKey)
+    return stored === "de" || stored === "en" ? stored : fallback
+  } catch {
+    return memoryLocale ?? fallback
+  }
+}
 function getValue(obj: Translations, key: string): string | undefined {
-  return key.split(".").reduce<string | Translations | undefined>((cur, k) => {
-    if (typeof cur === "object" && cur && k in cur) {
-      return (cur as Translations)[k]
-    }
-    return undefined
-  }, obj) as string | undefined
+  const value = key
+    .split(".")
+    .reduce<string | Translations | undefined>(
+      (cur, part) => (typeof cur === "object" && cur && part in cur ? cur[part] : undefined),
+      obj,
+    )
+  return typeof value === "string" ? value : undefined
 }
 
-/**
- * I18n provider component for managing internationalization
- * @param children - Child components
- * @returns I18n provider wrapper
- */
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en")
-  const [mounted, setMounted] = useState(false)
-
+export function I18nProvider({
+  children,
+  initialLocale = "en",
+}: {
+  children: ReactNode
+  initialLocale?: Locale
+}) {
+  const read = useCallback(() => readLocale(initialLocale), [initialLocale])
+  const server = useCallback(() => initialLocale, [initialLocale])
+  const locale = useSyncExternalStore(subscribe, read, server)
   useEffect(() => {
-    const stored = (localStorage.getItem("grh-booking-language") as Locale) || "en"
-    setLocaleState(stored)
-    setMounted(true)
+    document.documentElement.lang = locale
+    document.cookie =
+      "grh-locale=" +
+      locale +
+      "; Path=/; Max-Age=31536000; SameSite=Lax" +
+      (location.protocol === "https:" ? "; Secure" : "")
+  }, [locale])
+  const setLocale = useCallback((next: Locale) => {
+    memoryLocale = next
+    try {
+      localStorage.setItem(storageKey, next)
+    } catch {
+      /* Current tab still changes language. */
+    }
+    window.dispatchEvent(new Event(eventName))
   }, [])
-
-  /**
-   * Set the current locale and persist to localStorage
-   * @param newLoc - The new locale to set
-   */
-  const setLocale = useCallback((newLoc: Locale) => {
-    setLocaleState(newLoc)
-    localStorage.setItem("grh-booking-language", newLoc)
-  }, [])
-
-  /**
-   * Translation function that resolves keys and interpolates variables
-   * @param key - The translation key (e.g., "common.submit")
-   * @param vars - Variables to interpolate into the translation
-   * @returns The translated and interpolated string
-   */
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => {
-      const raw = getValue(translations[locale], key)
-      let out = raw ?? key
-      if (vars) {
-        for (const k in vars) {
-          out = out.replace(new RegExp(`\\{${k}\\}`, "g"), String(vars[k]))
-        }
-      }
-      return out
+      const raw =
+        getValue(translations[locale], key) ??
+        getValue(en, key) ??
+        String(vars?.defaultValue ?? key)
+      return raw.replace(/\{([^}]+)\}/g, (match, name: string) =>
+        vars?.[name] === undefined ? match : String(vars[name]),
+      )
     },
     [locale],
   )
-
-  return (
-    <I18nContext.Provider value={{ locale, setLocale, t }}>
-      {mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
-    </I18nContext.Provider>
-  )
+  const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t])
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
-
-/**
- * Hook to access i18n context
- * @returns I18n context with locale, setLocale, and translation function
- * @throws Error if used outside of I18nProvider
- */
 export function useI18n() {
-  const ctx = useContext(I18nContext)
-  if (!ctx) {
-    throw new Error("useI18n must be used within an I18nProvider")
-  }
-  return ctx
+  const value = useContext(I18nContext)
+  if (!value) throw new Error("useI18n requires I18nProvider")
+  return value
 }

@@ -12,12 +12,18 @@ interface SendChatMessageEmailArgs {
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (match) => {
     switch (match) {
-      case "&": return "&amp;"
-      case "<": return "&lt;"
-      case ">": return "&gt;"
-      case '"': return "&quot;"
-      case "'": return "&#39;"
-      default: return match
+      case "&":
+        return "&amp;"
+      case "<":
+        return "&lt;"
+      case ">":
+        return "&gt;"
+      case '"':
+        return "&quot;"
+      case "'":
+        return "&#39;"
+      default:
+        return match
     }
   })
 
@@ -32,10 +38,11 @@ export async function sendChatMessageEmail({
 
   const greetingName = to.name ? to.name.split(" ")[0] : null
   const greeting = greetingName ? `Hello ${greetingName},` : "Hello,"
-  const preview = messagePreview.length > 200 ? messagePreview.substring(0, 200) + "…" : messagePreview
+  const preview =
+    messagePreview.length > 200 ? messagePreview.substring(0, 200) + "…" : messagePreview
 
   const subject = `New message from ${senderName} — ${itemTitle}`
-  const chatUrl = emailAppUrl(bookingId)
+  const chatUrl = emailAppUrl({ type: "chat", bookingId })
 
   const text = [
     greeting,

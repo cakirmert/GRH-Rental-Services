@@ -32,6 +32,7 @@ describe.each(["UTC", "America/New_York", "Asia/Tokyo"])(
       async (instant, startLabel, endLabel) => {
         const startDate = new Date(instant)
         const booking = {
+          id: "synthetic",
           itemTitle: "Test room",
           startDate,
           endDate: new Date(startDate.getTime() + 3600000),

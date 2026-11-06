@@ -2,14 +2,12 @@
 
 import { useState, KeyboardEvent } from "react"
 import { useI18n } from "@/locales/i18n"
-import { useView, View } from "@/contexts/ViewContext"
+import Link from "next/link"
 import { Container } from "@/components/ui/container"
-import { Button } from "@/components/ui/button"
 
 export default function FAQPage() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const { t } = useI18n()
-  const { setView } = useView()
 
   const toggleAnswer = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index)
@@ -32,16 +30,13 @@ export default function FAQPage() {
           <p>{t("faqPage.signUpAnswerPart2")}</p>
           <p>
             {t("faqPage.signUpAnswerPart3")}
-            <Button
-              variant="link"
-              className="px-0"
-              onClick={(event) => {
-                event.stopPropagation()
-                setView(View.CONTACT)
-              }}
+            <Link
+              href="/contact"
+              className="font-medium text-primary underline underline-offset-4"
+              onClick={(event) => event.stopPropagation()}
             >
               {t("footer.contactFormLink")}
-            </Button>
+            </Link>
             {t("faqPage.signUpAnswerPart4")}
           </p>
         </div>
@@ -82,16 +77,13 @@ export default function FAQPage() {
           <p>{t("faqPage.cancelAnswerPart2")}</p>
           <p>
             {t("faqPage.cancelAnswerPart3")}{" "}
-            <Button
-              variant="link"
-              className="px-0"
-              onClick={(event) => {
-                event.stopPropagation()
-                setView(View.CONTACT)
-              }}
+            <Link
+              href="/contact"
+              className="font-medium text-primary underline underline-offset-4"
+              onClick={(event) => event.stopPropagation()}
             >
               {t("footer.contactFormLink")}
-            </Button>{" "}
+            </Link>{" "}
             {t("faqPage.cancelAnswerPart4")}
           </p>
         </div>
@@ -103,16 +95,13 @@ export default function FAQPage() {
       answer: (
         <p className="mt-2 text-base">
           {t("faqPage.supportAnswerPart1")}
-          <Button
-            variant="link"
-            className="px-0"
-            onClick={(event) => {
-              event.stopPropagation()
-              setView(View.CONTACT)
-            }}
+          <Link
+            href="/contact"
+            className="font-medium text-primary underline underline-offset-4"
+            onClick={(event) => event.stopPropagation()}
           >
             {t("footer.contactFormLink")}
-          </Button>
+          </Link>
           {t("faqPage.supportAnswerPart2")}
           <a href="mailto:rentals@grh-hamburg.de" className="underline">
             rentals@grh-hamburg.de
@@ -150,16 +139,13 @@ export default function FAQPage() {
         <div className="mt-2 text-base space-y-2">
           <p>
             {t("faqPage.suggestItemAnswerPart1")}
-            <Button
-              variant="link"
-              className="px-0"
-              onClick={(event) => {
-                event.stopPropagation()
-                setView(View.CONTACT)
-              }}
+            <Link
+              href="/contact"
+              className="font-medium text-primary underline underline-offset-4"
+              onClick={(event) => event.stopPropagation()}
             >
               {t("footer.contactFormLink")}
-            </Button>
+            </Link>
             {t("faqPage.suggestItemAnswerPart2")}
           </p>
           <p>{t("faqPage.suggestItemAnswerPart3")}</p>

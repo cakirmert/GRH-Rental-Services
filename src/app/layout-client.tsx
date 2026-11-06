@@ -2,57 +2,55 @@
 
 import dynamic from "next/dynamic"
 import type { ReactNode } from "react"
-import type { Session } from "next-auth"
+import type { IdentitySession } from "@/features/identity/types"
+import type { Locale } from "@/types/i18n"
 import Providers from "./providers"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { ReleaseProvider } from "@/contexts/ReleaseContext"
 import AppFeedback, { AppFeedbackProvider } from "@/components/feedback/AppFeedback"
-
-const FlickeringGrid = dynamic(
-  () => import("@/components/ui/shadcn-io/flickering-grid").then((mod) => mod.FlickeringGrid),
-  { ssr: false, loading: () => null },
-)
+import { ChatProvider } from "@/features/chat/ChatProvider"
 
 const PushNotificationManager = dynamic(() => import("@/components/PushNotificationManager"), {
   ssr: false,
-  loading: () => null,
 })
+const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { ssr: false })
 
-const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), {
-  ssr: false,
-  loading: () => null,
-})
-
-interface AppLayoutClientProps {
-  session?: Session | null
+export default function AppLayoutClient({
+  session,
+  initialLocale,
+  children,
+}: {
+  session?: IdentitySession | null
+  initialLocale?: Locale
   children: ReactNode
-}
-
-export default function AppLayoutClient({ session, children }: AppLayoutClientProps) {
+}) {
   return (
-    <Providers session={session}>
+    <Providers session={session} initialLocale={initialLocale}>
       <ReleaseProvider>
         <AppFeedbackProvider>
-          <div className="relative flex flex-col min-h-screen tabindex--1">
-            <FlickeringGrid
-              className="absolute inset-0 -z-10 hidden h-full w-full pointer-events-none md:block"
-              color="rgb(120, 113, 108)"
-              squareSize={4}
-              gridGap={10}
-              maxOpacity={0.25}
-            />
-            <div className="relative z-10 flex flex-col min-h-screen">
+          <ChatProvider>
+            <div className="flex min-h-screen flex-col">
+              <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-background focus:p-3"
+              >
+                Skip to content
+              </a>
               <Header />
               <AppFeedback />
-              <main role="main" className="flex-grow">
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="container mx-auto w-full flex-grow px-4 py-8 outline-none sm:px-6 lg:px-8 lg:py-12"
+              >
                 {children}
               </main>
               <Footer />
               <PushNotificationManager />
               <InstallPrompt />
             </div>
-          </div>
+          </ChatProvider>
         </AppFeedbackProvider>
       </ReleaseProvider>
     </Providers>

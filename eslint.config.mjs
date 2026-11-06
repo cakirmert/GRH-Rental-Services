@@ -6,7 +6,7 @@ import reactHooks from "eslint-plugin-react-hooks"
 // Type correctness is enforced by `npm run typecheck` and `next build`.
 const eslintConfig = [
   {
-    ignores: [".next/**", "node_modules/**", "coverage/**", "out/**", "next-env.d.ts"],
+    ignores: [".next/**", "node_modules/**", "coverage/**", "test-results/**", "playwright-report/**", "out/**", "next-env.d.ts"],
   },
   {
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],

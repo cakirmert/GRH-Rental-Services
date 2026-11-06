@@ -1,4 +1,4 @@
-import webpush from "web-push"
+import * as webpush from "web-push"
 import prisma from "@/lib/prismadb"
 import { notificationEmitter } from "@/lib/notifications"
 import { toWebPushSubscription } from "@/lib/pushSubscription"
@@ -83,13 +83,18 @@ export function setupNotificationListener() {
             title = `New message - ${parsed.vars?.item || "Booking"}`
             body = `${parsed.vars?.sender || "Someone"}: ${parsed.vars?.message || "New message"}`
             notificationType = "chat"
-            url = `/?chat=${n.bookingId}`
+            url = n.bookingId ? `/messages/${encodeURIComponent(n.bookingId)}` : "/bookings"
           } else if (parsed.key === "notifications.newChat") {
             // Fallback for old chat notifications
             title = `New message - ${parsed.vars?.item || "Booking"}`
             body = `You have a new chat message`
             notificationType = "chat"
-            url = `/?chat=${n.bookingId}`
+            url = n.bookingId ? `/messages/${encodeURIComponent(n.bookingId)}` : "/bookings"
+          } else if (parsed.key === "notifications.bookingRequest") {
+            title = "New booking request"
+            body = `New request for ${parsed.vars?.item || "a rental item"}`
+            notificationType = "booking-request"
+            url = "/staff"
           } else {
             // Other notification types (booking status changes)
             body = `New update for your booking`
@@ -97,7 +102,7 @@ export function setupNotificationListener() {
               body = `New update for ${parsed.vars.item}`
             }
             notificationType = "booking"
-            url = `/?highlight=${n.bookingId}`
+            url = n.bookingId ? `/bookings/${encodeURIComponent(n.bookingId)}` : "/bookings"
           }
         }
       } catch {
