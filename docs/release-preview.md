@@ -39,14 +39,23 @@ bookings, relationships, passkeys and validated business rules. Keep the current
 candidate as a recoverable checkpoint. Avoid parallel production writers until
 their shared-schema compatibility has been proven.
 
+The user's priority clarified on 6 November is that existing passkeys keep
+working. Replacing the authentication provider is optional and must not force
+credential re-enrollment or block the application refactor. Retaining a supported,
+security-patched compatible dependency version is acceptable when a newer
+version would break existing credentials. Begin V2 with the hardened current
+authentication implementation behind a small application-owned interface.
+
 ### Stack policy
 
-Use the latest supported stable versions, with a clean dependency tree and no
-known audit findings. Recheck versions at implementation and release time.
+Prefer the latest supported stable versions, with an explicit authentication
+compatibility exception where necessary, a clean dependency tree and no known
+audit findings. Recheck versions at implementation and release time.
 The current candidate already uses Next 16.4.5 and React 19.3.1, the latest
 stable releases checked on 6 November. Auth.js v5 is still beta; v4 is in
-maintenance mode. Better Auth 1.7.18 is the proposed stable replacement,
-subject to the passkey proof below. Its Prisma adapter currently supports
+maintenance mode. Better Auth 1.7.18 is an optional stable replacement candidate,
+subject to a demonstrable benefit and the passkey proof below. Retaining the
+current provider is the baseline. Better Auth's Prisma adapter currently supports
 Prisma 7, not the Prisma 8 release candidate. A newer npm tag or transitive
 major version is not sufficient reason to override a library's supported range.
 
@@ -66,8 +75,12 @@ Official references: [Next registry](https://registry.npmjs.org/next/16.4.5),
 
 ### Implementation sequence and acceptance gates
 
-1. **Prove identity migration first.** Use a disposable clone and additive
-   auth tables/columns. Map nullable verification timestamps and required user
+1. **Lock down the identity compatibility contract first.** Start with the
+   current hardened authentication/passkey implementation behind an auth facade
+   and retain its regression tests. Changing providers is a separate optional
+   decision; the wider rebuild does not depend on it. If evaluating Better Auth,
+   use a disposable clone and additive auth tables/columns. Map nullable
+   verification timestamps and required user
    fields without losing originals or changing account IDs. Import synthetic
    legacy credentials and test cryptographic assertions, double-encoded IDs,
    alias collisions, counter updates and concurrent revocation. Preserve the
@@ -75,7 +88,8 @@ Official references: [Next registry](https://registry.npmjs.org/next/16.4.5),
    Auth.js migration guide does not document importing this custom passkey
    store, so a conversion/compatibility adapter is required. If the standard
    plugin cannot preserve these security properties, keep the proven credential
-   service behind the new auth facade until a compatible implementation passes.
+   service and compatible dependencies behind the auth facade. Do not require
+   users to register replacement passkeys merely to upgrade a library.
    Treat session migration separately: users may need to sign in again, without
    re-registering passkeys. Require a real-device canonical-origin check before
    claiming passkeys are preserved end to end.
