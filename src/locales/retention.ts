@@ -11,6 +11,10 @@ export const retentionCopy = {
     empty: "No inactive staff to review",
     emptyDetail: "Staff accounts appear here after 365 days without activity.",
     review: "Review inactive staff",
+    showAll: "Show all inactive staff",
+    noLongerInactive: "This account no longer needs inactivity review",
+    noLongerInactiveDetail:
+      "It may have become active again or its account details may have changed.",
     scrollMembers: "Scroll horizontally to see email, roles, and actions.",
     lastActive: "Last active",
     berlinTime: "Berlin time",
@@ -53,6 +57,10 @@ export const retentionCopy = {
     empty: "Keine inaktiven Teammitglieder zu prüfen",
     emptyDetail: "Teamkonten erscheinen hier nach 365 Tagen ohne Aktivität.",
     review: "Inaktive Teammitglieder prüfen",
+    showAll: "Alle inaktiven Teammitglieder anzeigen",
+    noLongerInactive: "Dieses Konto muss nicht mehr wegen Inaktivität geprüft werden",
+    noLongerInactiveDetail:
+      "Es könnte wieder aktiv sein oder seine Kontodaten könnten sich geändert haben.",
     scrollMembers: "Seitlich scrollen, um E-Mail, Rollen und Aktionen zu sehen.",
     lastActive: "Zuletzt aktiv",
     berlinTime: "Berliner Zeit",

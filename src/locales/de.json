@@ -570,6 +570,7 @@
     "intro": "Wir betreiben diese Buchungsseite ehrenamtlich. Der Browserspeicher unterstützt die Anmeldung, Anzeigeeinstellungen und noch nicht abgeschickte Buchungsformulare. Vercel stellt Hosting, Nutzungsstatistiken und Leistungsdiagnosen bereit.",
     "collectionTitle": "Welche Daten werden erhoben?",
     "collectionDesc": "Für den Verleih speichern wir deinen Namen, deine E-Mail-Adresse, Buchungen, Nachrichten, Benachrichtigungen und Kontoeinstellungen. Passkey-Datensätze enthalten öffentliche Anmeldedaten und Geräteinformationen, nicht deinen Fingerabdruck oder dein Gesicht. Wir erfassen Anmeldungen und die letzte Kontonutzung, damit ein weiterhin genutztes Konto nicht als inaktiv gilt.",
+    "problemReportsDesc": "Im Formular Problem melden erlaubst du ausdrücklich, dass dein eingegebener Titel und Text als öffentliches GitHub-Issue veröffentlicht werden. Dein Name, deine E-Mail-Adresse, Buchungen, Browserdaten und die Seitenadresse werden nicht automatisch angehängt. Bitte veröffentliche keine privaten Informationen, Passwörter oder Details zu Sicherheitslücken; nutze dafür den privaten Kontakt. Die in der App gespeicherte Meldung wird bei der täglichen Bereinigung nach 30 Tagen oder beim Löschen deines Kontos entfernt. Bereits auf GitHub veröffentlichte Meldungen bleiben dort bis zu einer gesonderten Entfernung bestehen und werden durch die Kontolöschung nicht zurückgerufen.",
     "storageTitle": "Wie lange werden Daten gespeichert?",
     "storageDesc": "Abgeschlossene, stornierte und abgelehnte Buchungen werden bei der täglichen Bereinigung gelöscht, sobald ihr Enddatum mehr als 180 Tage zurückliegt. Zugehörige Chats, Nachrichten, Lesebestätigungen, Benachrichtigungen und Protokolle werden ebenfalls gelöscht. Offene Buchungen bleiben bis zur Klärung erhalten. Dass ein Chat sieben Tage nach Buchungsende geschlossen wird, löscht seinen Verlauf noch nicht.",
     "accountStorageDesc": "Normale Nutzerkonten werden nach mehr als 365 Tagen ohne Anmeldung oder erfasste Kontonutzung bei der täglichen Bereinigung automatisch gelöscht. Konten mit offenen oder zukünftigen Buchungen, unerledigten Buchungszuweisungen oder Artikelverantwortung bleiben bis zur Klärung geschützt.",
@@ -579,7 +580,7 @@
     "contactTitle": "Verantwortlich",
     "contactDesc": "Studentische Selbstverwaltung (SV), Gustav‑Radbruch Haus, Borgfelderstr. 16, 20537 Hamburg. E-Mail: sv@grh-hamburg.de",
     "disclaimerTitle": "Haftungsausschluss",
-    "disclaimerDesc": "Wir organisieren die Buchungen als studentischer Service. Unerwartete Konflikte oder technische Probleme k?nnen dazu f?hren, dass Reservierungen verschoben oder storniert werden. Ein rechtlicher Anspruch auf die Buchung besteht nicht."
+    "disclaimerDesc": "Wir organisieren die Buchungen als studentischer Service. Unerwartete Konflikte oder technische Probleme können dazu führen, dass Reservierungen verschoben oder storniert werden. Ein rechtlicher Anspruch auf die Buchung besteht nicht."
   },
   "imprint": {
     "title": "Impressum",
@@ -700,8 +701,18 @@
     "jumpToDate": "Datum auswählen",
     "viewLabel": "Kalenderansicht",
     "views": { "agenda": "Agenda", "month": "Monat", "week": "Woche", "day": "Tag" },
-    "previous": { "agenda": "Vorherige Woche", "month": "Vorheriger Monat", "week": "Vorherige Woche", "day": "Vorheriger Tag" },
-    "next": { "agenda": "Nächste Woche", "month": "Nächster Monat", "week": "Nächste Woche", "day": "Nächster Tag" },
+    "previous": {
+      "agenda": "Vorherige Woche",
+      "month": "Vorheriger Monat",
+      "week": "Vorherige Woche",
+      "day": "Vorheriger Tag"
+    },
+    "next": {
+      "agenda": "Nächste Woche",
+      "month": "Nächster Monat",
+      "week": "Nächste Woche",
+      "day": "Nächster Tag"
+    },
     "hint": "Buchung für Details und Aktionen öffnen. Vor dem Sperren einen Zeitpunkt auswählen.",
     "selected": "Ausgewählter Zeitpunkt",
     "legend": "Legende zum Buchungsstatus",

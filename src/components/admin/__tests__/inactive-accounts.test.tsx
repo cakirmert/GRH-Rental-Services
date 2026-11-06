@@ -91,6 +91,8 @@ function queryState(accounts = [eligible, blocked, protectedAccount]) {
     data: { pages: [{ accounts, nextCursor: null }] },
     isLoading: false,
     isError: false,
+    isFetching: false,
+    isFetchedAfterMount: true,
     hasNextPage: false,
     isFetchingNextPage: false,
     refetch: mocks.refetch,
@@ -124,7 +126,7 @@ describe("inactive account review", () => {
     await userEvent.click(
       within(row).getByRole("button", { name: "Review inactive staff: Alex Sample" }),
     )
-    expect(openReview).toHaveBeenCalledOnce()
+    expect(openReview).toHaveBeenCalledExactlyOnceWith(eligible.id)
   })
   it("shows inactive notices beside names, Berlin activity time, and all handover blockers", () => {
     render(<InactiveAccountsTab />, { wrapper: Wrapper })
@@ -143,6 +145,69 @@ describe("inactive account review", () => {
       (screen.getByRole("button", { name: "Delete account: Robin Sample" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true)
+  })
+
+  it("waits for fresh targeted eligibility instead of opening from cached data", () => {
+    mocks.query.mockReturnValue({
+      ...queryState([eligible]),
+      isFetching: true,
+      isFetchedAfterMount: false,
+    })
+    const view = render(<InactiveAccountsTab requestedReviewId={eligible.id} />, {
+      wrapper: Wrapper,
+    })
+    expect(screen.queryByRole("alertdialog")).toBeNull()
+    expect(screen.getByRole("status").textContent).toContain("Loading inactive staff")
+    mocks.query.mockReturnValue(queryState([eligible]))
+    view.rerender(<InactiveAccountsTab requestedReviewId={eligible.id} />)
+    expect(screen.getByRole("alertdialog")).toBeTruthy()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it.each([blocked, protectedAccount])(
+    "shows blockers instead of confirmation for $name",
+    (account) => {
+      mocks.query.mockReturnValue(queryState([account]))
+      render(<InactiveAccountsTab requestedReviewId={account.id} />, { wrapper: Wrapper })
+      expect(screen.queryByRole("alertdialog")).toBeNull()
+      expect(
+        (
+          screen.getByRole("button", {
+            name: `Delete account: ${account.name}`,
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true)
+      expect(
+        screen.getByText(
+          account.id === blocked.id ? "Open or upcoming bookings: 1" : /Protected account/,
+        ),
+      ).toBeTruthy()
+      expect(mocks.mutate).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not reopen a targeted confirmation after keyboard cancellation", async () => {
+    const view = render(<InactiveAccountsTab requestedReviewId={eligible.id} />, {
+      wrapper: Wrapper,
+    })
+    expect(screen.getByRole("alertdialog")).toBeTruthy()
+    await userEvent.keyboard("{Escape}")
+    view.rerender(<InactiveAccountsTab requestedReviewId={eligible.id} />)
+    expect(screen.queryByRole("alertdialog")).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Inactive staff" }))
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it("explains a target that became active and offers the full staff list", async () => {
+    mocks.query.mockReturnValue(queryState([]))
+    const showAll = vi.fn()
+    render(<InactiveAccountsTab requestedReviewId={eligible.id} onShowAll={showAll} />, {
+      wrapper: Wrapper,
+    })
+    expect(screen.queryByRole("alertdialog")).toBeNull()
+    expect(screen.getByText("This account no longer needs inactivity review")).toBeTruthy()
+    await userEvent.click(screen.getByRole("button", { name: "Show all inactive staff" }))
+    expect(showAll).toHaveBeenCalledOnce()
   })
 
   it("requires the second confirmation click and sends the reviewed activity timestamps", async () => {

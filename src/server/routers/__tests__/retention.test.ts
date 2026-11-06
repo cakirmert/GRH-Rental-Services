@@ -71,6 +71,7 @@ describe("manual inactive-account review authorization", () => {
     async (role) => {
       db.user.findUnique.mockResolvedValue({ ...actor(), role })
       await expect(caller().inactiveAccounts({})).rejects.toMatchObject({ code: "FORBIDDEN" })
+      await expect(caller().inactiveAccounts({ userId: "target" })).rejects.toMatchObject({ code: "FORBIDDEN" })
       await expect(caller().deleteInactiveAccount(input())).rejects.toMatchObject({
         code: "FORBIDDEN",
       })
@@ -78,6 +79,39 @@ describe("manual inactive-account review authorization", () => {
       expect(deleteData).not.toHaveBeenCalled()
     },
   )
+
+  it("reads one targeted inactive staff account with the same operational blockers", async () => {
+    db.user.findMany.mockResolvedValue([{ ...target(), _count: { bookings: 1, assignedBookings: 2, responsibleItems: 3 } }])
+    const result = await caller().inactiveAccounts({ userId: "target", limit: 100 })
+    expect(result).toMatchObject({
+      accounts: [{ id: "target", canDelete: false,
+        counts: { ownBookings: 1, assignedBookings: 2, responsibleItems: 3 },
+        blockers: ["ownBookings", "assignedBookings", "responsibleItems"] }],
+      nextCursor: null,
+    })
+    expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "target", role: { in: ["RENTAL", "ADMIN"] },
+        lastLoginAt: { lt: expect.any(Date) }, lastActiveAt: { lt: expect.any(Date) } },
+      take: 1,
+    }))
+    expect(deleteData).not.toHaveBeenCalled()
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+
+  it("returns an empty terminal page when the target is no longer eligible", async () => {
+    db.user.findMany.mockResolvedValue([])
+    expect(await caller().inactiveAccounts({ userId: "reactivated-or-missing" }))
+      .toEqual({ accounts: [], nextCursor: null })
+  })
+
+  it.each([
+    { userId: "" }, { userId: "x".repeat(201) },
+    { userId: "target", cursor: { id: "previous", lastLoginAt: inactive } },
+  ])("rejects an invalid or cursor-mixed target lookup before DB access: %j", async input => {
+    await expect(caller().inactiveAccounts(input)).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    expect(db.user.findUnique).not.toHaveBeenCalled()
+    expect(db.user.findMany).not.toHaveBeenCalled()
+  })
 
   it.each(["lastLoginAt", "lastActiveAt"])(
     "rejects activity after confirmation was opened (%s)",

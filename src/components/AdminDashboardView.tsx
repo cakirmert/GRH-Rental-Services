@@ -87,6 +87,12 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
 
   // Default to 'home' for the new homepage experience
   const [currentViewOrTab, setCurrentViewOrTab] = useState<AdminView>("home")
+  const [requestedReview, setRequestedReview] = useState<{
+    actorId: string
+    userId: string
+  } | null>(null)
+  const requestedReviewId =
+    requestedReview?.actorId === session?.user?.id ? requestedReview?.userId : undefined
 
   // Check if user has admin role
   const isAdmin = session?.user?.role === "ADMIN"
@@ -106,10 +112,12 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
   }
 
   const handleNavigateToSection = (section: AdminView) => {
+    setRequestedReview(null)
     setCurrentViewOrTab(section)
   }
 
   const handleBackToAdminHome = () => {
+    setRequestedReview(null)
     setCurrentViewOrTab("home")
   }
   const stats = {
@@ -322,7 +330,7 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
 
         <Tabs
           value={currentViewOrTab}
-          onValueChange={(value) => setCurrentViewOrTab(value as AdminView)}
+          onValueChange={(value) => handleNavigateToSection(value as AdminView)}
           className="w-full"
         >
           <TabsList className="h-auto w-full flex flex-wrap gap-2 md:w-auto md:gap-0">
@@ -388,7 +396,12 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               value="members"
               className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
             >
-              <MembersTab onReviewInactive={() => handleNavigateToSection("inactive")} />
+              <MembersTab
+                onReviewInactive={(userId) => {
+                  setRequestedReview({ actorId: session.user.id, userId })
+                  setCurrentViewOrTab("inactive")
+                }}
+              />
             </TabsContent>
           )}
           {currentViewOrTab === "calendar" && (
@@ -407,7 +420,11 @@ export default function AdminDashboardView({ onGoBack }: { onGoBack: () => void 
               value="inactive"
               className="mt-5 rounded-lg border bg-card text-card-foreground shadow"
             >
-              <InactiveAccountsTab />
+              <InactiveAccountsTab
+                key={`${session.user.id}:${requestedReviewId ?? "all"}`}
+                requestedReviewId={requestedReviewId}
+                onShowAll={() => handleNavigateToSection("inactive")}
+              />
             </TabsContent>
           )}
           {currentViewOrTab === "cancellations" && (

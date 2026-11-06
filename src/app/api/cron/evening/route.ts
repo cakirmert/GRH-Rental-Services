@@ -8,6 +8,7 @@ import { cleanExpiredAuthState } from "@/lib/auth/state"
 import { cleanExpiredAuthRecords } from "@/server/jobs/cleanExpiredAuthRecords"
 import { deleteInactiveUsers } from "@/server/jobs/deleteInactiveUsers"
 import { cleanOrphanLogs } from "@/server/jobs/cleanOrphanLogs"
+import { cleanExpiredProblemReports, processProblemReports } from "@/server/problemReports"
 
 export async function GET(req: NextRequest) {
   const authResponse = authorizeCronRequest(req)
@@ -20,6 +21,8 @@ export async function GET(req: NextRequest) {
     { name: "cancelExpiredBookings", execute: cancelExpiredBookings },
     { name: "deleteInactiveUsers", execute: deleteInactiveUsers },
     { name: "cleanOrphanLogs", execute: cleanOrphanLogs },
+    { name: "cleanExpiredProblemReports", execute: cleanExpiredProblemReports },
+    { name: "processProblemReports", execute: processProblemReports },
   ])
 
   return Response.json(result, { status: result.ok ? 200 : 500 })

@@ -1,0 +1,93 @@
+export const appFeedbackCopy = {
+  en: {
+    controls: "App feedback",
+    noticeTitle: "We’ve updated GRH Rentals.",
+    noticeBody: "Feedback and bug reports are welcome.",
+    dismiss: "Dismiss update notice",
+    prompt: "Something not working? Have an idea?",
+    report: "Report a problem",
+    title: "Help improve GRH Rentals",
+    description: "Tell us about a problem or suggest an improvement.",
+    category: "Report type",
+    problem: "Problem",
+    feedback: "Feedback or idea",
+    summary: "Short title",
+    summaryHint: "Briefly describe the problem or idea.",
+    details: "What happened, or what would you improve?",
+    detailsHint: "For a problem, include what you expected and the steps to reproduce it.",
+    publicTitle: "Your report will be public on GitHub",
+    publicBody:
+      "Leave out names, emails, booking details, passwords, and other private information. Don’t report security vulnerabilities here.",
+    privateHelp: "For private support or security concerns, use app chat or",
+    contact: "contact us privately",
+    metadata:
+      "Only the report type, title, and details you enter are sent. We don’t attach account details, page addresses, screenshots, or logs.",
+    retention:
+      "The app copy is removed after 30 days or account deletion. Published reports remain on GitHub; a delivery already in progress may still complete.",
+    consent: "I understand that my report will be published publicly on GitHub.",
+    send: "Submit public report",
+    sending: "Submitting…",
+    close: "Close",
+    success: "Thank you for your report",
+    published: "Your report has been posted on GitHub.",
+    queued: "Your report is saved for delivery to GitHub. You don’t need to send it again.",
+    needsReview: "Saved for a delivery check. It may already be on GitHub. Please don’t resubmit.",
+    openIssue: "View public report on GitHub",
+    another: "Send another report",
+    error: "We couldn’t confirm submission. Your text is still here; please retry this report.",
+    retryHint: "Retry sends the same report to avoid duplicates. Your text is kept.",
+    rateLimit: "Reporting is temporarily limited. Your text is still here; please try again later.",
+    titleRequired: "Enter a title between 5 and 120 characters.",
+    detailsRequired: "Add between 20 and 4,000 characters so we can understand your report.",
+    consentRequired: "Confirm that you understand your report will be public.",
+  },
+  de: {
+    controls: "Feedback zur App",
+    noticeTitle: "Wir haben GRH Rentals aktualisiert.",
+    noticeBody: "Feedback und Fehlermeldungen sind willkommen.",
+    dismiss: "Hinweis zum Update schließen",
+    prompt: "Funktioniert etwas nicht? Hast du eine Idee?",
+    report: "Problem melden",
+    title: "Hilf uns, GRH Rentals zu verbessern",
+    description: "Melde ein Problem oder schlage eine Verbesserung vor.",
+    category: "Art der Meldung",
+    problem: "Problem",
+    feedback: "Feedback oder Idee",
+    summary: "Kurzer Titel",
+    summaryHint: "Beschreibe das Problem oder die Idee kurz.",
+    details: "Was ist passiert oder was würdest du verbessern?",
+    detailsHint:
+      "Bei einem Problem: Was hast du erwartet und mit welchen Schritten lässt es sich wiederholen?",
+    publicTitle: "Deine Meldung wird auf GitHub öffentlich sein",
+    publicBody:
+      "Lass Namen, E-Mail-Adressen, Buchungsdetails, Passwörter und andere private Informationen weg. Melde hier keine Sicherheitslücken.",
+    privateHelp: "Für private Hilfe oder Sicherheitsfragen nutze den App-Chat oder",
+    contact: "kontaktiere uns vertraulich",
+    metadata:
+      "Nur die Art der Meldung, dein Titel und deine Beschreibung werden gesendet. Wir fügen keine Kontodaten, Seitenadressen, Screenshots oder Protokolle hinzu.",
+    retention:
+      "Die App-Kopie wird nach 30 Tagen oder bei Kontolöschung entfernt. Veröffentlichte Meldungen bleiben auf GitHub; eine laufende Übermittlung kann noch abgeschlossen werden.",
+    consent: "Ich verstehe, dass meine Meldung öffentlich auf GitHub veröffentlicht wird.",
+    send: "Öffentliche Meldung senden",
+    sending: "Wird gesendet…",
+    close: "Schließen",
+    success: "Danke für deine Meldung",
+    published: "Deine Meldung wurde auf GitHub veröffentlicht.",
+    queued:
+      "Deine Meldung ist für die Übermittlung an GitHub gespeichert. Du musst sie nicht erneut senden.",
+    needsReview:
+      "Zur Prüfung der Übermittlung gespeichert. Die Meldung könnte bereits auf GitHub sein. Bitte sende sie nicht erneut.",
+    openIssue: "Öffentliche Meldung auf GitHub ansehen",
+    another: "Weitere Meldung senden",
+    error:
+      "Wir konnten die Übermittlung nicht bestätigen. Dein Text ist noch da; bitte sende diese Meldung erneut.",
+    retryHint:
+      "Beim erneuten Senden bleibt die Meldung unverändert, um Duplikate zu vermeiden. Dein Text bleibt erhalten.",
+    rateLimit:
+      "Meldungen sind vorübergehend begrenzt. Dein Text ist noch da; bitte versuche es später erneut.",
+    titleRequired: "Gib einen Titel mit 5 bis 120 Zeichen ein.",
+    detailsRequired:
+      "Beschreibe deine Meldung mit 20 bis 4.000 Zeichen, damit wir sie verstehen können.",
+    consentRequired: "Bestätige, dass du verstehst, dass deine Meldung öffentlich sein wird.",
+  },
+} as const

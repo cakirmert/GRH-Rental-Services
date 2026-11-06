@@ -68,6 +68,9 @@ export const retentionProcedures = {
       z.object({
         limit: z.number().int().min(1).max(100).default(50),
         cursor: cursorSchema.optional(),
+        userId: z.string().min(1).max(200).optional(),
+      }).refine(input => !input.userId || !input.cursor, {
+        message: "A single account lookup cannot use a pagination cursor.",
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -77,6 +80,7 @@ export const retentionProcedures = {
       const threshold = accountInactivityThreshold(now)
       const accounts = await ctx.prisma.user.findMany({
         where: {
+          ...(input.userId ? { id: input.userId } : {}),
           role: { in: ["RENTAL", "ADMIN"] },
           lastLoginAt: { lt: threshold },
           lastActiveAt: { lt: threshold },
@@ -91,7 +95,7 @@ export const retentionProcedures = {
         },
         select: targetSelect(now),
         orderBy: [{ lastLoginAt: "asc" }, { id: "asc" }],
-        take: input.limit + 1,
+        take: input.userId ? 1 : input.limit + 1,
       })
       const adminCount = await ctx.prisma.user.count({ where: { role: "ADMIN" } })
       const page = accounts.slice(0, input.limit)
@@ -99,7 +103,7 @@ export const retentionProcedures = {
       return {
         accounts: page.map((account) => review(account, actor, adminCount)),
         nextCursor:
-          accounts.length > input.limit && last
+          !input.userId && accounts.length > input.limit && last
             ? { lastLoginAt: last.lastLoginAt, id: last.id }
             : null,
       }

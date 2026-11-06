@@ -22,6 +22,8 @@ describe("scheduled retention safety", () => {
       expect(tasks).not.toContain("autoCompleteBorrowedBookings")
       if (period === "morning") expect(tasks).toContain("deleteOldBookings")
       if (period === "evening") expect(tasks).toContain("cleanExpiredAuthRecords")
+      expect(tasks).toContain("processProblemReports")
+      if (period === "evening") expect(tasks).toContain("cleanExpiredProblemReports")
     },
   )
 })

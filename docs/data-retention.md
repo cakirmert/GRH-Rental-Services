@@ -58,6 +58,22 @@ identified notifications from other authors survive.
 Voluntary account deletion also requires item and unfinished assigned-booking
 handover. Super-admin/last-admin protections prevent accidental loss of control.
 
+## Public problem reports
+
+The subsequent app-wide problem-reporting feature stores a report locally for
+30 days, including reports awaiting delivery. Daily cleanup removes expired
+reports in bounded batches, and account deletion cascades local report rows
+immediately. The form requires explicit consent to public GitHub posting and
+does not automatically attach names, email addresses, bookings, page addresses,
+browser information, screenshots or logs.
+
+Published GitHub issues are external copies and remain until separately removed
+by a repository maintainer. An external request already in flight cannot be
+atomically recalled by a simultaneous account deletion. Users are told to keep
+private data and security disclosures out of this public channel. Delivery
+uncertainty is retained for review instead of blindly creating another issue.
+See [problem-reporting.md](problem-reporting.md) for configuration and review.
+
 ## Problems found and corrected locally
 
 - The deployed inactivity job could delete any role, including admins, and removed
@@ -117,9 +133,9 @@ the live database and original restored users/bookings/passkeys are preserved.
 
 ## Validation of this revision
 
-The complete suite passed 543 tests across 76 files. After the final legacy
-notification cleanup adjustment, all eight PostgreSQL retention cases passed
-again. TypeScript, lint and the production build passed. Tests cover inactivity
+The complete suite passed 634 tests across 80 files, including all eight
+PostgreSQL retention cases and eight report-queue cases. TypeScript, lint and
+the production build passed. Tests cover inactivity
 boundaries, activity refresh, staff permission/handover checks, stale review
 rejection, deletion cascades and notification-copy races. Database integration
 files run sequentially to avoid unrelated serializable predicate conflicts;
@@ -131,6 +147,11 @@ After testing, the restored baseline still matched the retained backup: 82 users
 credentials remained, with the original passkey digest and backup SHA-256
 unchanged. Production has newer activity, so its snapshot counts differ from
 this restored baseline. No production cleanup or account deletion was run.
+
+Clicking an inactive badge beside a member's name makes a fresh targeted lookup
+and opens confirmation directly when eligible: badge, then Confirm deletion.
+Blocked, protected and newly active accounts cannot open confirmation. The
+normal review list also keeps its Delete account, then Confirm deletion flow.
 
 The staff review screenshots use real components with synthetic fixture data.
 They verify the desktop/mobile layout and confirmation dialog, not a complete

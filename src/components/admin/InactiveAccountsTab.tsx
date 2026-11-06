@@ -23,37 +23,59 @@ import { AlertTriangle, CheckCircle2, Clock3, Loader2, Trash2 } from "lucide-rea
 type InactiveAccount =
   inferRouterOutputs<AppRouter>["admin"]["inactiveAccounts"]["accounts"][number]
 
-export default function InactiveAccountsTab() {
+export default function InactiveAccountsTab({
+  requestedReviewId,
+  onShowAll,
+}: {
+  requestedReviewId?: string
+  onShowAll?: () => void
+}) {
   const { locale } = useI18n()
   const copy = retentionCopy[locale]
   const utils = trpc.useUtils()
-  const [selected, setSelected] = useState<InactiveAccount | null>(null)
+  const [manualSelection, setManualSelection] = useState<InactiveAccount | null>(null)
+  const [targetHandled, setTargetHandled] = useState(false)
   const [deleted, setDeleted] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
   const returnFocus = useRef<HTMLButtonElement | null>(null)
   const query = trpc.admin.inactiveAccounts.useInfiniteQuery(
-    { limit: 25 },
-    { getNextPageParam: (page) => page.nextCursor ?? undefined },
+    { limit: 25, ...(requestedReviewId ? { userId: requestedReviewId } : {}) },
+    {
+      getNextPageParam: (page) => page.nextCursor ?? undefined,
+      staleTime: 0,
+      refetchOnMount: "always",
+    },
   )
   const deletion = trpc.admin.deleteInactiveAccount.useMutation({
     onSuccess: () => {
-      setSelected(null)
+      setManualSelection(null)
+      setTargetHandled(true)
       setDeleted(true)
       void utils.invalidate()
     },
   })
   const accounts = query.data?.pages.flatMap((page) => page.accounts) ?? []
+  // A badge is already the user's first action. Wait for a fresh targeted lookup,
+  // then offer confirmation directly; cached eligibility must never open it.
+  const checkingTarget =
+    !!requestedReviewId && (query.isFetching || !query.isFetchedAfterMount) && !query.isError
+  const requestedAccount =
+    requestedReviewId && !targetHandled && !checkingTarget && !query.isError
+      ? accounts.find((account) => account.id === requestedReviewId)
+      : undefined
+  const selected = manualSelection ?? (requestedAccount?.canDelete ? requestedAccount : null)
   const roles = { USER: copy.resident, RENTAL: copy.rental, ADMIN: copy.admin }
 
   function review(account: InactiveAccount, trigger: HTMLButtonElement) {
     returnFocus.current = trigger
     deletion.reset()
     setDeleted(false)
-    setSelected(account)
+    setManualSelection(account)
   }
 
   function refresh() {
-    setSelected(null)
+    if (selected) setTargetHandled(true)
+    setManualSelection(null)
     deletion.reset()
     void query.refetch()
   }
@@ -75,6 +97,11 @@ export default function InactiveAccountsTab() {
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
           {copy.description}
         </p>
+        {requestedReviewId && onShowAll && (
+          <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={onShowAll}>
+            {copy.showAll}
+          </Button>
+        )}
       </header>
 
       {deleted && (
@@ -83,12 +110,12 @@ export default function InactiveAccountsTab() {
         </p>
       )}
 
-      {query.isLoading ? (
+      {query.isLoading || checkingTarget ? (
         <p role="status" className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />
           {copy.loading}
         </p>
-      ) : query.isError && accounts.length === 0 ? (
+      ) : query.isError && (accounts.length === 0 || !!requestedReviewId) ? (
         <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 p-4">
           <p className="text-sm">{copy.loadError}</p>
           <Button type="button" variant="outline" onClick={refresh}>
@@ -98,8 +125,10 @@ export default function InactiveAccountsTab() {
       ) : accounts.length === 0 ? (
         <div className="space-y-2 rounded-xl border border-dashed p-6 text-center">
           <CheckCircle2 aria-hidden="true" className="mx-auto h-6 w-6 text-muted-foreground" />
-          <h3 className="font-medium">{copy.empty}</h3>
-          <p className="text-sm text-muted-foreground">{copy.emptyDetail}</p>
+          <h3 className="font-medium">{requestedReviewId ? copy.noLongerInactive : copy.empty}</h3>
+          <p className="text-sm text-muted-foreground">
+            {requestedReviewId ? copy.noLongerInactiveDetail : copy.emptyDetail}
+          </p>
         </div>
       ) : (
         <>
@@ -229,7 +258,10 @@ export default function InactiveAccountsTab() {
       <AlertDialog
         open={selected !== null}
         onOpenChange={(open) => {
-          if (!open && !deletion.isPending) setSelected(null)
+          if (!open && !deletion.isPending) {
+            setManualSelection(null)
+            setTargetHandled(true)
+          }
         }}
       >
         <AlertDialogContent

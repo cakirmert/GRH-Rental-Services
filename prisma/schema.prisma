@@ -66,6 +66,7 @@ model User {
   passkeys      Json[]   @default([])
   passkeyCredentials PasskeyCredential[]
   releaseFeedback ReleaseFeedback[]
+  problemReports ProblemReport[]
   createdBlocks RecurringBlock[]
   emailBookingNotifications Boolean @default(true)
 
@@ -325,6 +326,32 @@ model ReleaseFeedback {
 
   @@unique([userId, releaseId])
   @@index([releaseId, updatedAt])
+}
+
+// Explicitly consented public reports; local payloads expire after 30 days.
+model ProblemReport {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId          String   @db.Uuid
+  category           String   @db.VarChar(8)
+  title              String   @db.VarChar(120)
+  description        String   @db.VarChar(4000)
+  publicConsentAt    DateTime
+  status             String   @default("QUEUED") @db.VarChar(12)
+  issueNumber        Int?
+  deliveryAttempts   Int      @default(0)
+  nextAttemptAt      DateTime @default(now())
+  leaseToken         String?  @db.Uuid
+  leaseUntil         DateTime?
+  lastErrorCode      String?  @db.VarChar(32)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  expiresAt          DateTime
+
+  @@unique([userId, requestId])
+  @@index([status, nextAttemptAt])
+  @@index([expiresAt])
 }
 
 // Availability rules are evaluated for each requested date range, without a generated horizon.

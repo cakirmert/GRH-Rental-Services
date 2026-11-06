@@ -101,6 +101,8 @@ export function localEnvironment(fileValues, inherited, mode) {
     TURNSTILE_SECRET_KEY: "",
     CRON_SECRET: "",
     CACHE_WARM_TOKEN: "",
+    GITHUB_REPORTS_ENABLED: "false",
+    GITHUB_ISSUES_TOKEN: "",
   }
 }
 

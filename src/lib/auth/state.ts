@@ -64,7 +64,8 @@ export async function consumeBoundSecretState(
 export async function cleanExpiredAuthState() {
   // Bounded deletion prevents a maintenance request monopolizing the database.
   await prisma.$executeRaw`DELETE FROM "AuthState" WHERE "key" IN
-    (SELECT "key" FROM "AuthState" WHERE "expiresAt" < clock_timestamp() LIMIT 1000)`
+    (SELECT "key" FROM "AuthState" WHERE "expiresAt" < clock_timestamp() LIMIT 1000)
+    AND "expiresAt" < clock_timestamp()`
 }
 
 export async function maintainAuthState() {

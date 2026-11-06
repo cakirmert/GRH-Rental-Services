@@ -13,11 +13,11 @@ Browser tests are present but have not yet run: local server startup was denied
 by the execution policy. Hosted preview is also pending isolated credentials.
 Do not promote this release until those checks pass.
 
-On 6 November 2026, the calendar candidate passed 500 tests across 68 files with
-the host timezone set to New York. The subsequent retention candidate passed
-543 tests across 76 files, plus eight focused PostgreSQL retention cases after
-the final notification cleanup adjustment, TypeScript, lint and a production
-build. The dependency audit reported zero known vulnerabilities. The restored local
+On 6 November 2026, the complete candidate passed 634 tests across 80 files,
+TypeScript, lint and a production build. This includes the report queue and the
+two-click inactive-staff badge flow. The earlier calendar candidate also passed
+500 tests with the host timezone set to New York. The dependency audit reported
+zero known vulnerabilities. The restored local
 database still has 82 users, 91 bookings, and 25 unchanged passkeys; its only
 intentional availability change is the confirmed weekly Bar rule. The production
 database and backup fingerprints remain unchanged.
@@ -30,6 +30,18 @@ additive and were rehearsed only on the restored local database. The former
 backfills activity from existing sign-in timestamps; the latter lets deletion
 remove notification copies associated with their author. The scheduled job no
 longer treats an unreturned borrowed item as completed after 14 days.
+
+The subsequent app-wide public report queue adds migration
+`20261106030000_problem_reports`. Follow [problem-reporting.md](problem-reporting.md)
+for its production-only GitHub credential, explicit enable flag, delivery checks
+and 30-day local retention. The local runner and hosted previews cannot publish
+issues. Reports and their GitHub copies have separate deletion behavior, as
+disclosed in the form and privacy page.
+
+Dependabot alerts and security-update pull requests are now enabled on GitHub.
+The prepared weekly version-update configuration takes effect after it reaches
+the default branch; see [dependency-maintenance.md](dependency-maintenance.md).
+These repository settings do not deploy the candidate or modify the database.
 
 ## Isolated rehearsal
 

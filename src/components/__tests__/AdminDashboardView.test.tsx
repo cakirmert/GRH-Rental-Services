@@ -7,29 +7,69 @@ import { I18nProvider } from "@/locales/i18n"
 const mocks = vi.hoisted(() => ({
   session: undefined as { user: { id: string; role: string } } | undefined,
   stats: vi.fn(),
+  accounts: vi.fn(),
+  members: vi.fn(),
+  deleteAccount: vi.fn(),
 }))
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: mocks.session }) }))
-vi.mock("@/utils/trpc", () => ({ trpc: { admin: { dashboardStats: { useQuery: mocks.stats } } } }))
+vi.mock("@/utils/trpc", () => ({
+  trpc: {
+    useUtils: () => ({ invalidate: vi.fn() }),
+    admin: {
+      dashboardStats: { useQuery: mocks.stats },
+      inactiveAccounts: { useInfiniteQuery: mocks.accounts },
+      deleteInactiveAccount: {
+        useMutation: () => ({ mutate: mocks.deleteAccount, reset: vi.fn(), isPending: false }),
+      },
+      memberManagement: {
+        list: { useQuery: mocks.members },
+        ...Object.fromEntries(
+          ["add", "remove", "promoteToAdmin", "demoteFromAdmin"].map((name) => [
+            name,
+            { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+          ]),
+        ),
+      },
+    },
+  },
+}))
+vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }))
 vi.mock("../admin/ProfilesTab", () => ({ default: () => <p>Profiles view</p> }))
 vi.mock("../admin/ItemsTab", () => ({ default: () => <p>Items view</p> }))
 vi.mock("../admin/CancelledByStaffTab", () => ({ default: () => <p>Cancellations view</p> }))
-vi.mock("../admin/InactiveAccountsTab", () => ({
-  default: () => <p>Inactive staff review view</p>,
-}))
-vi.mock("../admin/MembersTab", () => ({
-  default: ({ onReviewInactive }: { onReviewInactive: () => void }) => (
-    <button onClick={onReviewInactive}>Review inactive staff member</button>
-  ),
-}))
 vi.mock("../calendar/calendar", () => ({ Calendar: () => <p>Calendar view</p> }))
 vi.mock("../DashboardHelpSheet", () => ({ default: () => null }))
 vi.mock("../NotAuthorized", () => ({ default: () => <p>Administrator access required</p> }))
+
+const inactiveMember = {
+  id: "inactive-staff",
+  name: "Alex Sample",
+  email: "alex@example.test",
+  role: "RENTAL",
+  isSuperAdmin: false,
+  isInactiveStaff: true,
+  lastLoginAt: new Date("2025-10-01T12:00:00Z"),
+  lastActiveAt: new Date("2025-10-02T12:00:00Z"),
+  blockers: [],
+  counts: { ownBookings: 0, assignedBookings: 0, responsibleItems: 0 },
+  canDelete: true,
+}
 
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   mocks.session = undefined
   mocks.stats.mockReturnValue({ data: undefined, isLoading: false, error: null })
+  mocks.members.mockReturnValue({ data: [inactiveMember], isLoading: false, refetch: vi.fn() })
+  mocks.accounts.mockReturnValue({
+    data: { pages: [{ accounts: [inactiveMember], nextCursor: null }] },
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    isFetchedAfterMount: true,
+    hasNextPage: false,
+    refetch: vi.fn(),
+  })
 })
 afterEach(cleanup)
 
@@ -68,7 +108,7 @@ it("keeps hook order stable across session changes and only enables statistics f
   )
 })
 
-it("opens staff review from the home shortcut and from a member notification", async () => {
+it("opens normal review from home and deletes via badge then confirmation in exactly two clicks", async () => {
   mocks.session = { user: { id: "admin", role: "ADMIN" } }
   render(
     <I18nProvider>
@@ -76,11 +116,20 @@ it("opens staff review from the home shortcut and from a member notification", a
     </I18nProvider>,
   )
   await userEvent.click(screen.getByRole("button", { name: /Inactive staff/ }))
-  expect(screen.getByText("Inactive staff review view")).toBeTruthy()
+  expect(screen.getByRole("heading", { name: "Inactive staff" })).toBeTruthy()
+  expect(screen.queryByRole("alertdialog")).toBeNull()
   await userEvent.click(screen.getByRole("tab", { name: "Manage Team Members" }))
-  await userEvent.click(screen.getByRole("button", { name: "Review inactive staff member" }))
-  expect(screen.getByText("Inactive staff review view")).toBeTruthy()
-  expect(screen.getByRole("tab", { name: "Inactive staff" }).getAttribute("aria-selected")).toBe(
-    "true",
+  await userEvent.click(screen.getByRole("button", { name: "Review inactive staff: Alex Sample" }))
+  expect(mocks.accounts).toHaveBeenLastCalledWith(
+    { limit: 25, userId: inactiveMember.id },
+    expect.objectContaining({ refetchOnMount: "always" }),
   )
+  expect(screen.getByRole("alertdialog")).toBeTruthy()
+  expect(mocks.deleteAccount).not.toHaveBeenCalled()
+  await userEvent.click(screen.getByRole("button", { name: "Confirm deletion" }))
+  expect(mocks.deleteAccount).toHaveBeenCalledExactlyOnceWith({
+    userId: inactiveMember.id,
+    expectedLastLoginAt: inactiveMember.lastLoginAt,
+    expectedLastActiveAt: inactiveMember.lastActiveAt,
+  })
 })

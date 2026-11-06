@@ -62,7 +62,11 @@ type RouterOutput = inferRouterOutputs<AppRouter>
 
 type MemberManagementUserInList = RouterOutput["admin"]["memberManagement"]["list"][number]
 
-export default function MembersTab({ onReviewInactive }: { onReviewInactive: () => void }) {
+export default function MembersTab({
+  onReviewInactive,
+}: {
+  onReviewInactive: (userId: string) => void
+}) {
   const { t, locale } = useI18n()
   const { data: session } = useSession()
   const isSuperAdmin = Boolean(session?.user?.isSuperAdmin)
@@ -264,7 +268,7 @@ export default function MembersTab({ onReviewInactive }: { onReviewInactive: () 
                           {member.isInactiveStaff && (
                             <button
                               type="button"
-                              onClick={onReviewInactive}
+                              onClick={() => onReviewInactive(member.id)}
                               aria-label={`${retentionCopy[locale].review}: ${member.name || member.email}`}
                               className="inline-flex min-h-8 items-center gap-1 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 text-xs font-medium text-amber-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100"
                             >
