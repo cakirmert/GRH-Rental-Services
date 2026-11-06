@@ -21,6 +21,12 @@ import { ReleaseProvider, useRelease } from "@/contexts/ReleaseContext"
 import { berlinDateFromParts as berlinDate, formatBerlinDateTime } from "@/lib/berlin-time"
 
 const { query, retry } = vi.hoisted(() => ({ query: vi.fn(), retry: vi.fn() }))
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "staff-calendar-test", role: "RENTAL" } },
+    status: "authenticated",
+  }),
+}))
 vi.mock("@/utils/trpc", () => ({
   trpc: {
     bookings: {
@@ -223,12 +229,20 @@ describe("calendar navigation", () => {
         </ReleaseProvider>
       </I18nProvider>,
     )
+    expect(screen.getAllByRole("region", { name: "Calendar feedback and settings" })).toHaveLength(
+      1,
+    )
+    expect(screen.getByRole("button", { name: "Use classic calendar" })).toBeTruthy()
     expect(screen.getByRole("button", { name: "Agenda" }).getAttribute("aria-pressed")).toBe("true")
     await userEvent.click(screen.getByRole("button", { name: "Switch interface" }))
     expect(screen.queryByRole("button", { name: "Agenda" })).toBeNull()
     expect(screen.getByRole("button", { name: "Week" })).toBeTruthy()
-    await userEvent.click(screen.getByRole("button", { name: "Switch interface" }))
+    expect(screen.getAllByRole("region", { name: "Calendar feedback and settings" })).toHaveLength(
+      1,
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Use new calendar" }))
     expect(screen.getByRole("button", { name: "Agenda" }).getAttribute("aria-pressed")).toBe("true")
+    expect(screen.getByRole("button", { name: "Calendar feedback" })).toBeTruthy()
   })
   it("moves by the active view, jumps to a local calendar date, and returns to today", async () => {
     const user = userEvent.setup()

@@ -13,7 +13,6 @@ import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
 import { useView, View } from "@/contexts/ViewContext"
 import { Button } from "@/components/ui/button"
-import ReleaseControls from "@/components/release/ReleaseControls"
 
 export default function Footer() {
   const { t } = useI18n()
@@ -124,7 +123,6 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <ReleaseControls />
         {/* Bottom section */}
         <div className="mt-8 pt-8 border-t border-border">
           <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4 text-sm text-muted-foreground text-center sm:text-left">

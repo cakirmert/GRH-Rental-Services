@@ -18,7 +18,7 @@ export default function ReleaseControls() {
   const { data: session, status } = useSession()
   const [dialog, setDialog] = useState<"submit" | "summary" | "classic" | null>(null)
   if (
-    status === "loading" ||
+    status !== "authenticated" ||
     !session?.user?.id ||
     (session.user.role !== "RENTAL" && session.user.role !== "ADMIN")
   )
@@ -26,22 +26,22 @@ export default function ReleaseControls() {
   return (
     <section
       aria-label={copy.controls}
-      className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
+      className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-3"
     >
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
         onClick={() => setDialog("submit")}
-        className="min-h-9 text-muted-foreground"
+        className="h-auto min-h-10 w-full max-w-full whitespace-normal px-3 py-2 sm:w-auto"
       >
         <MessageSquare aria-hidden="true" /> {copy.feedback}
       </Button>
       <Button
         type="button"
-        variant="link"
+        variant="ghost"
         size="sm"
-        className="min-h-9 text-muted-foreground"
+        className="h-auto min-h-10 w-full max-w-full whitespace-normal px-3 py-2 sm:w-auto"
         onClick={() => (mode === "classic" ? setMode("preview") : setDialog("classic"))}
       >
         {mode === "classic" ? copy.useNew : copy.useClassic}
@@ -51,7 +51,7 @@ export default function ReleaseControls() {
           type="button"
           variant="ghost"
           size="sm"
-          className="min-h-9 text-muted-foreground"
+          className="h-auto min-h-10 w-full max-w-full whitespace-normal px-3 py-2 sm:w-auto"
           onClick={() => setDialog("summary")}
         >
           {copy.review}

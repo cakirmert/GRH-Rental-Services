@@ -13,14 +13,18 @@ import { ClassicCalendar } from "./classic/calendar"
 import { useRelease } from "@/contexts/ReleaseContext"
 import { BookingDialog } from "./booking-dialog"
 import { BlockSlotDialog } from "./block-slot-dialog"
+import ReleaseControls from "@/components/release/ReleaseControls"
 
 /** Show the new calendar by default and keep classic available as a staff fallback. */
 export function Calendar() {
   const { mode } = useRelease()
   return (
-    <CalendarProvider key={mode} responsive={mode === "preview"}>
-      {mode === "preview" ? <PreviewCalendar /> : <ClassicCalendar />}
-    </CalendarProvider>
+    <div className="min-w-0 space-y-3">
+      <ReleaseControls />
+      <CalendarProvider key={mode} responsive={mode === "preview"}>
+        {mode === "preview" ? <PreviewCalendar /> : <ClassicCalendar />}
+      </CalendarProvider>
+    </div>
   )
 }
 

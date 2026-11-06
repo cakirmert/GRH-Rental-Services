@@ -151,7 +151,10 @@ feedback storage. Calendar choices never select an older backend or database.
 The new calendar is the default. Only rental team members and administrators see
 the calendar feedback and view controls. Regular users retain the familiar
 catalog and booking layouts; the shared header reporting control is app-wide.
-The footer lets eligible staff give feedback or choose the classic calendar.
+The calendar page places a visible feedback and view-control bar directly above
+the calendar. It is available only to signed-in rental team members and admins,
+in both the new and classic calendar. It never appears in the global footer or
+on catalog, booking-list, team-management or other non-calendar views.
 Switching to classic asks for a nonblank explanation and saves it before switching.
 If saving fails, an explicit escape still allows classic without saving; the reason
 stays only in the open form and is cleared when accounts change. Returning to the
@@ -167,7 +170,7 @@ admins can manage all items. See [recurring-blocks.md](recurring-blocks.md).
 
 Rental team members and administrators can submit or update one feedback response for version
 `0.2.0-rc.1`: interface choice, experience rating, and an optional comment. The
-footer explains storage and visibility before submission. A classic-switch reason
+feedback dialog explains storage and visibility before submission. A classic-switch reason
 replaces the current response with the classic view and a mixed rating; the form
 explains this before submission. Administrators can
 open **Feedback overview** there to see totals and recent comments. Other

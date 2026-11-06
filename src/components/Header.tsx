@@ -240,7 +240,7 @@ export default function Header() {
             </button>
           </div>
 
-          <div className="hidden xl:flex xl:flex-wrap items-center justify-end gap-2">
+          <div className="hidden xl:ml-auto xl:flex xl:flex-wrap items-center justify-end gap-2">
             <nav className="flex items-center space-x-1 lg:space-x-2">
               <Button variant="ghost" size="sm" onClick={handleLogoClick}>
                 <LayoutGrid className="mr-1.5 h-4 w-4" />
@@ -414,7 +414,7 @@ export default function Header() {
             <span className="sr-only">{t("header.toggleMenu")}</span>
           </Button>
 
-          <ReportProblemButton className="col-start-1 row-start-2 min-h-10 w-fit max-w-full xl:ml-auto" />
+          <ReportProblemButton className="col-start-1 row-start-2 min-h-10 w-fit max-w-full" />
 
           {/* Keep the report control visible without crowding the mobile brand row. */}
           <div className="col-start-2 row-start-2 flex items-center justify-end gap-1 xl:hidden">

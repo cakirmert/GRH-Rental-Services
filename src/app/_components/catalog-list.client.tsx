@@ -10,7 +10,7 @@ import { mapDbItemToClient } from "@/lib/mapItem"
 function getGridClasses(itemCount: number) {
   if (itemCount === 0) return "grid-cols-1"
   if (itemCount === 1) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
-  if (itemCount === 2) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
+  if (itemCount === 2) return "grid-cols-1 sm:grid-cols-2"
   if (itemCount === 3) return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"
   if (itemCount <= 6)
     return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4"
