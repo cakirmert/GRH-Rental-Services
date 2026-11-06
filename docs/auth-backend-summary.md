@@ -16,6 +16,14 @@ modernization before the V2 rebuild. Production is unchanged.
 | Maintainability          | Large route handlers mixed transport, policy, database work and side effects.                                                                       | Separate booking/admin service modules with unchanged tested business contracts and injected effects.                                                                                            |
 | Dependency maintenance   | Framework and transitive packages had become outdated.                                                                                              | Current stable supported versions, unused dependency removal, lockfile audit, Dependabot and weekly review setup. Auth.js compatibility and Prisma RC exclusions are deliberate.                 |
 
+Browser follow-up also corrected two ordinary functional bugs: PostgreSQL filters
+excluded staff bookings whose notes were NULL, and an extra whitespace child
+inside the profile dialog portal crashed with the updated UI library. Both have
+regression coverage; the actual passkey sign-in and profile-saving browser flow
+now passes. All 18 remaining React lint warnings were corrected without
+disabling rules. Existing question-mark bookmarks render directly, with the
+same permissions and no redirect; normal navigation keeps the same browser document.
+
 The provider is still Auth.js; V2 does not require users to register new passkeys.
 Upgrading the framework, React, build tools and supported libraries is maintenance,
 not proof that each old version had an exploitable flaw. Zero known npm audit

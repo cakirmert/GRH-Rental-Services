@@ -2,7 +2,9 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
+import { readBookmark } from "@/utils/bookmarks"
+import { routeToPath } from "@/utils/routing"
 import { Menu, X, LayoutGrid, ListChecks, CalendarCheck, UserCog, HelpCircle } from "lucide-react"
 import { useCurrentAccount } from "@/features/identity/client"
 import { useI18n } from "@/locales/i18n"
@@ -15,6 +17,13 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useCurrentAccount()
   const { t } = useI18n()
   const pathname = usePathname()
+  const search = useSearchParams()
+  const bookmark = pathname === "/" ? readBookmark(Object.fromEntries(search)) : null
+  const activePath = bookmark
+    ? bookmark.view === "chat"
+      ? "/messages"
+      : routeToPath(bookmark)
+    : pathname
   const links = [
     { href: "/", label: "header.homeLink", icon: LayoutGrid, visible: true },
     { href: "/bookings", label: "header.myBookingsLink", icon: ListChecks, visible: !!user },
@@ -41,7 +50,9 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
               href={href}
               onClick={onNavigate}
               aria-current={
-                (href === "/" ? pathname === "/" : pathname?.startsWith(href)) ? "page" : undefined
+                (href === "/" ? activePath === "/" : activePath?.startsWith(href))
+                  ? "page"
+                  : undefined
               }
             >
               <Icon className="size-4" />

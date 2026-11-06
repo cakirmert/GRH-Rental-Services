@@ -321,148 +321,130 @@ export default function InteractiveTimeRangePicker<TFieldValues extends TimeRang
     [pct, trackVisibleWidthScale],
   )
 
-  const Row = React.useCallback(
-    (row: 0 | 1) => {
-      const showStartThumb = row === 0
-      const showEndThumb = row === (isRangeSelection ? 1 : 0)
+  const Row = (row: 0 | 1) => {
+    const showStartThumb = row === 0
+    const showEndThumb = row === (isRangeSelection ? 1 : 0)
 
-      const rStartForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, startM))
-      const rEndForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, endM))
+    const rStartForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, startM))
+    const rEndForThumb = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, endM))
 
-      let hL_pct: number, hR_pct: number
-      if (!isRangeSelection) {
-        hL_pct = pct(startM)
-        hR_pct = pct(endM)
-      } else if (row === 0) {
-        hL_pct = pct(startM)
-        hR_pct = pct(MAX_MINUTES)
-      } else {
-        hL_pct = pct(MIN_MINUTES)
-        hR_pct = pct(endM)
-      }
+    let hL_pct: number, hR_pct: number
+    if (!isRangeSelection) {
+      hL_pct = pct(startM)
+      hR_pct = pct(endM)
+    } else if (row === 0) {
+      hL_pct = pct(startM)
+      hR_pct = pct(MAX_MINUTES)
+    } else {
+      hL_pct = pct(MIN_MINUTES)
+      hR_pct = pct(endM)
+    }
 
-      if (hL_pct > hR_pct && !isRangeSelection) {
-        hL_pct = hR_pct
-      }
+    if (hL_pct > hR_pct && !isRangeSelection) {
+      hL_pct = hR_pct
+    }
 
-      const highlightLeftStyle = `${GUTTER_PERCENT + hL_pct * trackVisibleWidthScale}%`
-      const highlightWidthStyle = `${Math.max(0, hR_pct - hL_pct) * trackVisibleWidthScale}%`
+    const highlightLeftStyle = `${GUTTER_PERCENT + hL_pct * trackVisibleWidthScale}%`
+    const highlightWidthStyle = `${Math.max(0, hR_pct - hL_pct) * trackVisibleWidthScale}%`
 
-      const currentRowDate = row === 1 ? (toDateProp ?? fromDate) : fromDate
+    const currentRowDate = row === 1 ? (toDateProp ?? fromDate) : fromDate
 
-      return (
-        <div key={row} className="relative h-24 select-none">
-          {isRangeSelection && (
-            <span className="absolute -left-14 top-[46px] px-2 py-0.5 rounded bg-muted text-[10px]">
-              {format(currentRowDate, "dd MMM")}
-            </span>
-          )}
-          <div
-            ref={tracks[row]}
-            className="absolute top-11 h-4 bg-muted rounded-lg"
-            style={{ left: `${GUTTER_PERCENT}%`, right: "0px" }}
+    return (
+      <div key={row} className="relative h-24 select-none">
+        {isRangeSelection && (
+          <span className="absolute -left-14 top-[46px] px-2 py-0.5 rounded bg-muted text-[10px]">
+            {format(currentRowDate, "dd MMM")}
+          </span>
+        )}
+        <div
+          ref={tracks[row]}
+          className="absolute top-11 h-4 bg-muted rounded-lg"
+          style={{ left: `${GUTTER_PERCENT}%`, right: "0px" }}
+        />
+        <div
+          className="absolute top-11 h-4 bg-primary/30 rounded z-0"
+          style={{ left: highlightLeftStyle, width: highlightWidthStyle }}
+        />
+        {intervals.map((iv, i) => {
+          const s_relativeToRowDay = localMinutesFromDay(iv.startDate, currentRowDate)
+          const e_relativeToRowDay = localMinutesFromDay(iv.endDate, currentRowDate)
+
+          if (e_relativeToRowDay <= MIN_MINUTES || s_relativeToRowDay >= MAX_MINUTES) {
+            return null
+          }
+
+          const l_clamped = Math.max(s_relativeToRowDay, MIN_MINUTES)
+          const r_clamped = Math.min(e_relativeToRowDay, MAX_MINUTES)
+
+          const interval_pct_l = pct(l_clamped)
+          const interval_pct_r = pct(r_clamped)
+
+          const minStepPct = pct(MIN_MINUTES + STEP_MINUTES) - pct(MIN_MINUTES)
+          const w_pct = Math.max(
+            minStepPct / MIN_VISUAL_STEP_DIVISOR,
+            interval_pct_r - interval_pct_l,
+          )
+
+          if (w_pct <= 0) return null
+
+          const isConf = iv.status === "ACCEPTED" || iv.status === "BORROWED"
+
+          const formatIntervalDates = (startDate: Date, endDate: Date) => {
+            const pickerIsSingleDayAndIntervalIsOnSameDay =
+              !isRangeSelection &&
+              differenceInDays(toBerlinDate(startDate), fromDate) === 0 &&
+              differenceInDays(toBerlinDate(endDate), fromDate) === 0
+            const startFmt = pickerIsSingleDayAndIntervalIsOnSameDay ? "p" : "PP p"
+            const endFmt =
+              pickerIsSingleDayAndIntervalIsOnSameDay ||
+              differenceInDays(toBerlinDate(endDate), toBerlinDate(startDate)) === 0
+                ? "p"
+                : "PP p"
+            return `${format(startDate, startFmt)} – ${format(endDate, endFmt)}`
+          }
+
+          return (
+            <Tooltip key={`${iv.id || `interval-${i}`}-${row}`}>
+              <TooltipTrigger asChild>
+                <div
+                  className={`absolute top-11 h-4 rounded z-10 ${isConf ? "bg-rose-500/80" : "bg-amber-300/70"}`}
+                  style={{
+                    left: `calc(${GUTTER_PERCENT}% + ${interval_pct_l * trackVisibleWidthScale}%)`,
+                    width: `${w_pct * trackVisibleWidthScale}%`,
+                  }}
+                />
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                sideOffset={TOOLTIP_SIDE_OFFSET}
+                className="max-w-xs p-2 text-sm leading-tight"
+              >
+                {isConf ? "Booked" : iv.status === "REQUESTED" ? "Pending" : `Status: ${iv.status}`}
+                <br />
+                {formatIntervalDates(iv.startDate, iv.endDate)}
+              </TooltipContent>
+            </Tooltip>
+          )
+        })}
+        {showStartThumb && (
+          <Thumb
+            row={row}
+            minutes={rStartForThumb}
+            label={format(atLocalMinutes(currentRowDate, rStartForThumb), "HH:mm")}
+            onDrag={() => setDrag({ row, which: "start" })}
           />
-          <div
-            className="absolute top-11 h-4 bg-primary/30 rounded z-0"
-            style={{ left: highlightLeftStyle, width: highlightWidthStyle }}
+        )}
+        {showEndThumb && (
+          <Thumb
+            row={row}
+            minutes={rEndForThumb}
+            label={format(atLocalMinutes(currentRowDate, rEndForThumb), "HH:mm")}
+            onDrag={() => setDrag({ row, which: "end" })}
           />
-          {intervals.map((iv, i) => {
-            const s_relativeToRowDay = localMinutesFromDay(iv.startDate, currentRowDate)
-            const e_relativeToRowDay = localMinutesFromDay(iv.endDate, currentRowDate)
-
-            if (e_relativeToRowDay <= MIN_MINUTES || s_relativeToRowDay >= MAX_MINUTES) {
-              return null
-            }
-
-            const l_clamped = Math.max(s_relativeToRowDay, MIN_MINUTES)
-            const r_clamped = Math.min(e_relativeToRowDay, MAX_MINUTES)
-
-            const interval_pct_l = pct(l_clamped)
-            const interval_pct_r = pct(r_clamped)
-
-            const minStepPct = pct(MIN_MINUTES + STEP_MINUTES) - pct(MIN_MINUTES)
-            const w_pct = Math.max(
-              minStepPct / MIN_VISUAL_STEP_DIVISOR,
-              interval_pct_r - interval_pct_l,
-            )
-
-            if (w_pct <= 0) return null
-
-            const isConf = iv.status === "ACCEPTED" || iv.status === "BORROWED"
-
-            const formatIntervalDates = (startDate: Date, endDate: Date) => {
-              const pickerIsSingleDayAndIntervalIsOnSameDay =
-                !isRangeSelection &&
-                differenceInDays(toBerlinDate(startDate), fromDate) === 0 &&
-                differenceInDays(toBerlinDate(endDate), fromDate) === 0
-              const startFmt = pickerIsSingleDayAndIntervalIsOnSameDay ? "p" : "PP p"
-              const endFmt =
-                pickerIsSingleDayAndIntervalIsOnSameDay ||
-                differenceInDays(toBerlinDate(endDate), toBerlinDate(startDate)) === 0
-                  ? "p"
-                  : "PP p"
-              return `${format(startDate, startFmt)} – ${format(endDate, endFmt)}`
-            }
-
-            return (
-              <Tooltip key={`${iv.id || `interval-${i}`}-${row}`}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`absolute top-11 h-4 rounded z-10 ${isConf ? "bg-rose-500/80" : "bg-amber-300/70"}`}
-                    style={{
-                      left: `calc(${GUTTER_PERCENT}% + ${interval_pct_l * trackVisibleWidthScale}%)`,
-                      width: `${w_pct * trackVisibleWidthScale}%`,
-                    }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  sideOffset={TOOLTIP_SIDE_OFFSET}
-                  className="max-w-xs p-2 text-sm leading-tight"
-                >
-                  {isConf
-                    ? "Booked"
-                    : iv.status === "REQUESTED"
-                      ? "Pending"
-                      : `Status: ${iv.status}`}
-                  <br />
-                  {formatIntervalDates(iv.startDate, iv.endDate)}
-                </TooltipContent>
-              </Tooltip>
-            )
-          })}
-          {showStartThumb && (
-            <Thumb
-              row={row}
-              minutes={rStartForThumb}
-              label={format(atLocalMinutes(currentRowDate, rStartForThumb), "HH:mm")}
-              onDrag={() => setDrag({ row, which: "start" })}
-            />
-          )}
-          {showEndThumb && (
-            <Thumb
-              row={row}
-              minutes={rEndForThumb}
-              label={format(atLocalMinutes(currentRowDate, rEndForThumb), "HH:mm")}
-              onDrag={() => setDrag({ row, which: "end" })}
-            />
-          )}
-        </div>
-      )
-    },
-    [
-      intervals,
-      fromDate,
-      toDateProp,
-      isRangeSelection,
-      startM,
-      endM,
-      pct,
-      trackVisibleWidthScale,
-      tracks,
-      Thumb,
-    ],
-  ) // Added missing date-fns functions
+        )}
+      </div>
+    )
+  }
 
   if (intervalsLoading && !intervals.length) {
     return (

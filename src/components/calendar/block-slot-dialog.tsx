@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,14 @@ interface BlockSlotDialogProps {
 }
 
 export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
+  const { selectedDate } = useCalendar()
+  // Closing or choosing another slot creates a new draft; ordinary rerenders do not.
+  return open ? (
+    <BlockSlotForm key={selectedDate?.getTime() ?? "current"} open onOpenChange={onOpenChange} />
+  ) : null
+}
+
+function BlockSlotForm({ open, onOpenChange }: BlockSlotDialogProps) {
   const { t, locale } = useI18n()
   const { toast } = useToast()
   const { selectedDate, setSelectedDate } = useCalendar()
@@ -64,8 +72,9 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
   })
 
   const [itemId, setItemId] = useState<string>("")
-  const [startValue, setStartValue] = useState<string>("")
-  const [endValue, setEndValue] = useState<string>("")
+  const [initialDate] = useState(() => selectedDate ?? toBerlinDate())
+  const [startValue, setStartValue] = useState(() => formatBerlinDateTime(initialDate))
+  const [endValue, setEndValue] = useState(() => formatBerlinDateTime(addHours(initialDate, 1)))
   const [quantity, setQuantity] = useState<string>("")
   const [reason, setReason] = useState<string>("")
   const [recurrence, setRecurrence] = useState<BlockRecurrenceFrequency>("NONE")
@@ -97,23 +106,6 @@ export function BlockSlotDialog({ open, onOpenChange }: BlockSlotDialogProps) {
       setFormError(error.message)
     },
   })
-
-  useEffect(() => {
-    if (open) {
-      const base = selectedDate ?? toBerlinDate()
-      const defaultStart = formatBerlinDateTime(base)
-      const defaultEnd = formatBerlinDateTime(addHours(base, 1))
-      setItemId("")
-      setStartValue(defaultStart)
-      setEndValue(defaultEnd)
-      setQuantity("")
-      setReason("")
-      setRecurrence("NONE")
-      setRepeatUntil("")
-      setNoEndDate(true)
-      setFormError(null)
-    }
-  }, [open, selectedDate])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()

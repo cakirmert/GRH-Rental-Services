@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -33,9 +33,74 @@ interface OnboardingOverlayProps {
   t?: (key: string) => string
 }
 
-export default function OnboardingOverlay({
+const noSubscription = () => () => {}
+const clientReady = () => true
+const serverReady = () => false
+const emptyRects: (DOMRect | null)[] = []
+const serverRects = () => emptyRects
+
+function createTargetStore(selectorKey: string) {
+  const selectors: string[] = JSON.parse(selectorKey)
+  let snapshot = emptyRects
+  return {
+    getSnapshot() {
+      const next = selectors.map(
+        (selector) => document.querySelector(selector)?.getBoundingClientRect() ?? null,
+      )
+      if (
+        next.length !== snapshot.length ||
+        next.some((rect, i) => {
+          const previous = snapshot[i]
+          return (
+            rect?.top !== previous?.top ||
+            rect?.left !== previous?.left ||
+            rect?.width !== previous?.width ||
+            rect?.height !== previous?.height
+          )
+        })
+      )
+        snapshot = next
+      return snapshot
+    },
+    subscribe(notify: () => void) {
+      if (!selectors.length) return () => {}
+      window.addEventListener("resize", notify)
+      window.addEventListener("scroll", notify, true)
+      const resizeObserver =
+        typeof ResizeObserver === "undefined" ? null : new ResizeObserver(notify)
+      const observeTargets = () => {
+        resizeObserver?.disconnect()
+        selectors.forEach((selector) => {
+          const element = document.querySelector(selector)
+          if (element) resizeObserver?.observe(element)
+        })
+      }
+      observeTargets()
+      const mutationObserver = new MutationObserver(() => {
+        observeTargets()
+        notify()
+      })
+      mutationObserver.observe(document.body, { childList: true, subtree: true })
+      return () => {
+        window.removeEventListener("resize", notify)
+        window.removeEventListener("scroll", notify, true)
+        resizeObserver?.disconnect()
+        mutationObserver.disconnect()
+      }
+    },
+  }
+}
+
+export default function OnboardingOverlay(props: OnboardingOverlayProps) {
+  const ready = useSyncExternalStore(noSubscription, clientReady, serverReady)
+  if (!props.visible || !ready) return null
+  return (
+    <OnboardingSession key={`${props.mode ?? "tour"}:${JSON.stringify(props.steps)}`} {...props} />
+  )
+}
+
+function OnboardingSession({
   steps,
-  visible,
   mode = "tour",
   title = "",
   description = "",
@@ -45,17 +110,22 @@ export default function OnboardingOverlay({
   hasSeenTour = false,
   t = (key: string) => key,
 }: OnboardingOverlayProps) {
-  const [rects, setRects] = useState<(DOMRect | null)[]>([])
   const [currentStep, setCurrentStep] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
+  const selectorKey = JSON.stringify(
+    mode === "tour" && !isCompleted ? steps.map((step) => step.selector) : [],
+  )
+  const targetStore = useMemo(() => createTargetStore(selectorKey), [selectorKey])
+  const rects = useSyncExternalStore(targetStore.subscribe, targetStore.getSnapshot, serverRects)
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     } else {
       setIsCompleted(true)
+      onClose?.()
     }
-  }, [currentStep, steps.length])
+  }, [currentStep, steps.length, onClose])
 
   const prevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -74,16 +144,9 @@ export default function OnboardingOverlay({
     onStartTour?.()
   }, [onStartTour])
 
-  useEffect(() => {
-    if (visible) {
-      setCurrentStep(0)
-      setIsCompleted(false)
-    }
-  }, [visible])
-
   // Handle keyboard navigation
   useEffect(() => {
-    if (!visible) return
+    if (isCompleted) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -108,59 +171,28 @@ export default function OnboardingOverlay({
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [visible, mode, closeOverlay, nextStep, prevStep])
+  }, [isCompleted, mode, closeOverlay, nextStep, prevStep])
 
   useEffect(() => {
-    function update() {
-      const newRects = steps.map((step) => {
-        const el = document.querySelector<HTMLElement>(step.selector)
-        if (el && visible) {
-          // Remove previous highlights
-          el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background")
-
-          // Add highlight to current step
-          if (step.index === currentStep + 1) {
-            el.classList.add(
-              "ring-2",
-              "ring-blue-500",
-              "ring-offset-2",
-              "ring-offset-background",
-              "relative",
-              "z-30",
-            )
-          }
-        }
-        return el?.getBoundingClientRect() || null
-      })
-      setRects(newRects)
-    }
-
-    update()
-    if (visible) {
-      window.addEventListener("resize", update)
-      window.addEventListener("scroll", update)
-    }
-
+    if (mode !== "tour" || isCompleted) return
+    const selector = steps[currentStep]?.selector
+    const element = selector ? document.querySelector(selector) : null
+    if (!element) return
+    const addedClasses = [
+      "ring-2",
+      "ring-blue-500",
+      "ring-offset-2",
+      "ring-offset-background",
+      "relative",
+      "z-30",
+    ].filter((className) => !element.classList.contains(className))
+    element.classList.add(...addedClasses)
     return () => {
-      // Clean up all highlights
-      steps.forEach((step) => {
-        const el = document.querySelector<HTMLElement>(step.selector)
-        el?.classList.remove(
-          "ring-2",
-          "ring-blue-500",
-          "ring-primary",
-          "ring-offset-2",
-          "ring-offset-background",
-          "relative",
-          "z-30",
-        )
-      })
-      window.removeEventListener("resize", update)
-      window.removeEventListener("scroll", update)
+      element.classList.remove(...addedClasses)
     }
-  }, [steps, visible, currentStep])
+  }, [steps, mode, currentStep, isCompleted, rects])
 
-  if (!visible || isCompleted) return null
+  if (isCompleted) return null
 
   // Show help mode or tour mode
   if (mode === "help") {
@@ -261,7 +293,7 @@ export default function OnboardingOverlay({
             <div
               key={i}
               className="absolute flex h-6 w-6 items-center justify-center rounded-full bg-gray-500 text-[11px] font-bold text-white opacity-50"
-              style={{ top: rect.top + window.scrollY - 12, left: rect.left + window.scrollX - 12 }}
+              style={{ top: rect.top - 12, left: rect.left - 12 }}
             >
               {steps[i].index}
             </div>
@@ -273,8 +305,8 @@ export default function OnboardingOverlay({
           <div
             className="absolute flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-[12px] font-bold text-white animate-pulse border-2 border-white"
             style={{
-              top: currentRect.top + window.scrollY - 16,
-              left: currentRect.left + window.scrollX - 16,
+              top: currentRect.top - 16,
+              left: currentRect.left - 16,
             }}
           >
             {currentStepData.index}

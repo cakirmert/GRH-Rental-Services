@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, FormEvent } from "react"
+import { useEffect, useState, useRef, useSyncExternalStore, FormEvent } from "react"
 import { useSession, signOut } from "next-auth/react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
@@ -28,42 +28,82 @@ import { Key, Plus, Trash2, Shield, Fingerprint, X, Bell, BellOff } from "lucide
 import { toast } from "@/components/ui/use-toast"
 import { startRegistration } from "@simplewebauthn/browser-v14"
 import { Spinner } from "@/components/ui/spinner"
-import { cn } from "@/lib/utils"
 import { isPasskeySupported } from "@/lib/webauthnUtils"
 import type { NamePromptSection } from "@/types/view"
 import { BERLIN_TIME_ZONE } from "@/lib/berlin-time"
 
-export default function NamePrompt({
-  open,
-  onOpenChange,
-  focusSection,
-}: {
+type NamePromptProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   focusSection?: NamePromptSection
-}) {
+}
+
+const subscribeToCapabilities = () => () => {}
+const noBrowserCapabilities = () => false
+const hasPushSupport = () => "serviceWorker" in navigator && "PushManager" in window
+
+export default function NamePrompt(props: NamePromptProps) {
   const { data: session, status, update } = useSession()
+  if (!props.open || status !== "authenticated" || !session?.user?.id) return null
+  return (
+    <AccountSettings
+      key={JSON.stringify([session.user.id, session.user.role, session.user.isSuperAdmin])}
+      {...props}
+      session={session}
+      update={update}
+    />
+  )
+}
+
+function AccountSettings({
+  open,
+  onOpenChange,
+  focusSection,
+  session,
+  update,
+}: NamePromptProps & {
+  session: NonNullable<ReturnType<typeof useSession>["data"]>
+  update: ReturnType<typeof useSession>["update"]
+}) {
   const { t } = useI18n()
-  const [name, setName] = useState("")
+  const [name, setName] = useState(session.user.name ?? "")
   const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
 
   // Passkey state
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState(false)
   const [passkeyError, setPasskeyError] = useState<string | null>(null)
-  const [highlightPasskeys, setHighlightPasskeys] = useState(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
 
   // Push notification state
   const [pushSubscription, setPushSubscription] = useState<PushSubscription | null>(null)
-  const [pushSupported, setPushSupported] = useState(false)
+  const pushSupported = useSyncExternalStore(
+    subscribeToCapabilities,
+    hasPushSupport,
+    noBrowserCapabilities,
+  )
+  const passkeysSupported = useSyncExternalStore(
+    subscribeToCapabilities,
+    isPasskeySupported,
+    noBrowserCapabilities,
+  )
   const [pushLoading, setPushLoading] = useState(false)
   const utils = trpc.useUtils()
   const { data: userPreferences } = trpc.user.getPreferences.useQuery(undefined, {
     refetchOnWindowFocus: false,
     enabled: isRentalTeam,
   })
-  const [emailBookingEnabled, setEmailBookingEnabled] = useState(true)
+  const [emailBookingDraft, setEmailBookingDraft] = useState<boolean | null>(null)
+  const emailBookingEnabled =
+    emailBookingDraft ?? userPreferences?.emailBookingNotifications ?? true
   const updateName = trpc.user.updateName.useMutation({
     onSuccess: async () => {
+      if (!active.current) return
       await update()
       toast({
         title: t("profile.updateSuccess"),
@@ -121,8 +161,9 @@ export default function NamePrompt({
   })
   const updatePreferences = trpc.user.updatePreferences.useMutation({
     onSuccess: (data) => {
+      if (!active.current) return
       utils.user.getPreferences.setData(undefined, data)
-      setEmailBookingEnabled(data.emailBookingNotifications)
+      setEmailBookingDraft(null)
       toast({
         title: data.emailBookingNotifications
           ? t("security.bookingEmailsEnabledToast")
@@ -130,7 +171,8 @@ export default function NamePrompt({
       })
     },
     onError: (error) => {
-      setEmailBookingEnabled(userPreferences?.emailBookingNotifications ?? true)
+      if (!active.current) return
+      setEmailBookingDraft(null)
       toast({
         title: t("common.error"),
         description: error.message,
@@ -138,82 +180,36 @@ export default function NamePrompt({
       })
     },
   })
-  useEffect(() => {
-    if (status === "authenticated") {
-      setName(session?.user?.name ?? "")
-    }
-  }, [status, session])
   const passkeySectionRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (isRentalTeam && typeof userPreferences?.emailBookingNotifications !== "undefined") {
-      setEmailBookingEnabled(userPreferences.emailBookingNotifications)
-    }
-  }, [isRentalTeam, userPreferences?.emailBookingNotifications])
 
   // Check push notification support and subscription
   useEffect(() => {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      setPushSupported(true)
-      navigator.serviceWorker.ready.then(async (reg) => {
-        const sub = await reg.pushManager.getSubscription()
-        setPushSubscription(sub)
-      })
-    }
-  }, [])
-  // Track if the window has focus to prevent closing on tab switch
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      // Prevent modal from closing when tab becomes hidden/visible
-      if (document.hidden) {
-        // Tab is being hidden, don't close modal
-        return
+    if (pushSupported) {
+      let current = true
+      navigator.serviceWorker.ready
+        .then(async (reg) => {
+          const sub = await reg.pushManager.getSubscription()
+          if (current) setPushSubscription(sub)
+        })
+        .catch(() => {
+          /* Unsupported or unavailable browser registration. */
+        })
+      return () => {
+        current = false
       }
     }
-
-    const handleFocus = () => {
-      // When window regains focus, ensure modal stays open
-      if (open && !document.hidden) {
-        // Force modal to stay open after tab switch
-        setTimeout(() => {
-          if (open) {
-            // Modal should remain open
-          }
-        }, 100)
-      }
-    }
-    const handleBlur = () => {
-      // Prevent closing on blur (tab switch)
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("focus", handleFocus)
-    window.addEventListener("blur", handleBlur)
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("focus", handleFocus)
-      window.removeEventListener("blur", handleBlur)
-    }
-  }, [open])
+  }, [pushSupported])
 
   useEffect(() => {
     if (open && focusSection === "passkeys" && passkeySectionRef.current) {
       passkeySectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
-      setHighlightPasskeys(true)
-      const timeout = window.setTimeout(() => setHighlightPasskeys(false), 2400)
-      return () => window.clearTimeout(timeout)
+      const highlight = passkeySectionRef.current.animate?.(
+        [{ boxShadow: "0 0 0 2px var(--primary)" }, { boxShadow: "0 0 0 2px transparent" }],
+        { duration: 2400, easing: "ease-out" },
+      )
+      return () => highlight?.cancel()
     }
   }, [open, focusSection])
-
-  useEffect(() => {
-    if (!open) {
-      setHighlightPasskeys(false)
-    }
-  }, [open])
-
-  // Don't render anything if not authenticated
-  if (status !== "authenticated") return null
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -230,12 +226,15 @@ export default function NamePrompt({
     try {
       // Get registration options from server
       const options = await registerOptions.mutateAsync({ userId: session.user.id })
+      if (!active.current) return
 
       // Start registration with the browser
       const credential = await startRegistration({ optionsJSON: options })
+      if (!active.current) return
 
       // Send the response to server for verification
       await registerFinish.mutateAsync({ credential })
+      if (!active.current) return
 
       toast({
         title: t("security.passkeyRegistered"),
@@ -245,6 +244,7 @@ export default function NamePrompt({
       // Refetch the passkeys list to show the new one
       refetchPasskeys()
     } catch (err: unknown) {
+      if (!active.current) return
       console.error("Passkey registration error:", err)
       let errorMessage = t("security.passkeyRegistrationFailed")
 
@@ -256,7 +256,7 @@ export default function NamePrompt({
 
       setPasskeyError(errorMessage)
     } finally {
-      setIsRegisteringPasskey(false)
+      if (active.current) setIsRegisteringPasskey(false)
     }
   }
   const handleDeletePasskey = (passkeyId: string) => {
@@ -290,7 +290,7 @@ export default function NamePrompt({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        {/* Overlay scrolls and centers */}{" "}
+        {/* Overlay scrolls and centers */}
         <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm grid place-items-center overflow-auto p-4">
           <Dialog.Content className="w-full z-[100] max-w-2xl max-h-[90vh] bg-background rounded-xl shadow-lg flex flex-col overflow-hidden">
             {/* Hidden title for a11y */}
@@ -446,7 +446,7 @@ export default function NamePrompt({
                       <Switch
                         checked={emailBookingEnabled}
                         onCheckedChange={(checked) => {
-                          setEmailBookingEnabled(checked)
+                          setEmailBookingDraft(checked)
                           updatePreferences.mutate({
                             emailBookingNotifications: checked,
                           })
@@ -459,13 +459,7 @@ export default function NamePrompt({
               </Card>
 
               {/* Passkeys Section */}
-              <Card
-                ref={passkeySectionRef}
-                className={cn(
-                  highlightPasskeys &&
-                    "ring-2 ring-primary/50 shadow-lg shadow-primary/20 transition-shadow",
-                )}
-              >
+              <Card ref={passkeySectionRef}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Fingerprint className="h-5 w-5" />
@@ -475,7 +469,7 @@ export default function NamePrompt({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Passkey Support Check */}
-                  {!isPasskeySupported() ? (
+                  {!passkeysSupported ? (
                     <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
                       <p className="text-sm text-yellow-800 dark:text-yellow-200">
                         {t("security.passkeyNotSupported")}

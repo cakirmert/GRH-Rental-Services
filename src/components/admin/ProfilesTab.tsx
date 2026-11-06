@@ -1,7 +1,7 @@
 // src/components/admin/ProfilesTab.tsx
 "use client"
 
-import React, { useState, useMemo, useEffect, useCallback } from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import clsx from "clsx"
 import { ItemType } from "@prisma/client"
 import { trpc } from "@/utils/trpc"
@@ -49,36 +49,65 @@ const useItemTypeLabels = () => {
   }
 }
 
+type RentalMember = RouterOutput["admin"]["rentalTeamMembers"]["list"][number]
+
 export default function ProfilesTab() {
+  const { data: members = [], isLoading: membersLoading } =
+    trpc.admin.rentalTeamMembers.list.useQuery(undefined, { initialData: [] })
+  const { data: items = [], isLoading: itemsLoading } = trpc.admin.itemsDefaults.list.useQuery(
+    undefined,
+    { initialData: [] },
+  )
+  const [requestedMemberId, setRequestedMemberId] = useState<string | null>(null)
+  const [memberSearch, setMemberSearch] = useState("")
+  const [itemSearch, setItemSearch] = useState("")
+  const selectedMember = members.find((member) => member.id === requestedMemberId) ?? members[0]
+
+  return (
+    <AssignmentEditor
+      key={selectedMember?.id ?? "no-member"}
+      members={members}
+      allItemsDefaults={items}
+      selectedMember={selectedMember}
+      isLoadingMembers={membersLoading && members.length === 0}
+      isLoadingItemsDefaults={itemsLoading && items.length === 0}
+      onSelectMember={setRequestedMemberId}
+      memberSearch={memberSearch}
+      setMemberSearch={setMemberSearch}
+      itemSearch={itemSearch}
+      setItemSearch={setItemSearch}
+    />
+  )
+}
+
+function AssignmentEditor({
+  members,
+  allItemsDefaults,
+  selectedMember,
+  isLoadingMembers,
+  isLoadingItemsDefaults,
+  onSelectMember,
+  memberSearch,
+  setMemberSearch,
+  itemSearch,
+  setItemSearch,
+}: {
+  members: RentalMember[]
+  allItemsDefaults: ItemWithDefaults[]
+  selectedMember?: RentalMember
+  isLoadingMembers: boolean
+  isLoadingItemsDefaults: boolean
+  onSelectMember: (id: string) => void
+  memberSearch: string
+  setMemberSearch: (value: string) => void
+  itemSearch: string
+  setItemSearch: (value: string) => void
+}) {
   const { t, locale } = useI18n()
   const utils = trpc.useContext()
   const getItemTypeLabel = useItemTypeLabels()
-
-  const { data: members = [], isLoading: isLoadingMembersFallback } =
-    trpc.admin.rentalTeamMembers.list.useQuery(undefined, { initialData: [] })
-  const { data: allItemsDefaults = [], isLoading: isLoadingItemsDefaultsFallback } =
-    trpc.admin.itemsDefaults.list.useQuery(undefined, { initialData: [] })
-
-  const isLoadingMembers = isLoadingMembersFallback && members.length === 0
-  const isLoadingItemsDefaults = isLoadingItemsDefaultsFallback && allItemsDefaults.length === 0
-
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  const selectedMemberId = selectedMember?.id ?? null
   const [pendingAssignments, setPendingAssignments] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    if (members.length > 0 && !selectedMemberId) {
-      setSelectedMemberId(members[0].id)
-    }
-  }, [members, selectedMemberId])
-
-  useEffect(() => {
-    setPendingAssignments({})
-  }, [selectedMemberId])
-
-  const selectedMember = useMemo(
-    () => members.find((m) => m.id === selectedMemberId),
-    [members, selectedMemberId],
-  )
 
   const updateAssignment = trpc.admin.itemsDefaults.update.useMutation({
     onError: (error) => {
@@ -184,26 +213,22 @@ export default function ProfilesTab() {
       })
   }
 
-  const [memberSearch, setMemberSearch] = useState("")
   const filteredMembers = members.filter((m) =>
     (m.name ?? m.email).toLowerCase().includes(memberSearch.toLowerCase()),
   )
 
-  const [itemSearch, setItemSearch] = useState("")
-  const itemsGroupedByType = useMemo(() => {
-    const filtered = allItemsDefaults.filter((i) =>
-      (locale === "de" && i.titleDe ? i.titleDe : i.titleEn)
-        .toLowerCase()
-        .includes(itemSearch.toLowerCase()),
-    )
-    return Object.values(ItemType).reduce(
-      (acc, type) => {
-        acc[type] = filtered.filter((item) => item.type === type)
-        return acc
-      },
-      {} as Record<ItemType, ItemWithDefaults[]>,
-    )
-  }, [allItemsDefaults, itemSearch, locale])
+  const filteredItems = allItemsDefaults.filter((item) =>
+    (locale === "de" && item.titleDe ? item.titleDe : item.titleEn)
+      .toLowerCase()
+      .includes(itemSearch.toLowerCase()),
+  )
+  const itemsGroupedByType = Object.values(ItemType).reduce(
+    (groups, type) => {
+      groups[type] = filteredItems.filter((item) => item.type === type)
+      return groups
+    },
+    {} as Record<ItemType, ItemWithDefaults[]>,
+  )
 
   if (isLoadingMembers || isLoadingItemsDefaults) {
     return (
@@ -249,7 +274,7 @@ export default function ProfilesTab() {
             {filteredMembers.map((member) => (
               <button
                 key={member.id}
-                onClick={() => setSelectedMemberId(member.id)}
+                onClick={() => onSelectMember(member.id)}
                 className={clsx(
                   "w-full text-left px-4 py-3 hover:bg-muted/50 flex gap-3 items-center border-b last:border-b-0 transition-colors duration-150",
                   selectedMemberId === member.id && "bg-primary/10 text-primary font-semibold",

@@ -61,9 +61,12 @@ export async function withLocalAccount(
       [userId, email, "Browser Test " + role, role],
     )
     await db.query(
-      'INSERT INTO "Item" (id,type,"titleEn","titleDe","updatedAt") VALUES ($1,\'ROOM\',$2,$2,now())',
+      'INSERT INTO "Item" (id,type,"titleEn","titleDe",active,"updatedAt") VALUES ($1,\'ROOM\',$2,$2,false,now())',
       [itemId, itemTitle],
     )
+    if (role === "RENTAL") {
+      await db.query('INSERT INTO "_ResponsibleMembers" ("A","B") VALUES ($1,$2)', [itemId, userId])
+    }
     await db.query(
       'INSERT INTO "Booking" (id,"userId","itemId","assignedToId","startDate","endDate","updatedAt") VALUES ($1,$2,$3,$4,now()+interval \'2 days\',now()+interval \'2 days 2 hours\',now())',
       [bookingId, userId, itemId, role === "USER" ? null : userId],

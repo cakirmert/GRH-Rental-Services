@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef, useSyncExternalStore } from "react"
 import { subscribeUser, unsubscribeUser } from "@/app/actions"
 import { useI18n } from "@/locales/i18n"
 import { useSession } from "next-auth/react"
@@ -17,44 +17,79 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray
 }
 
+const subscribeToCapabilities = () => () => {}
+const noBrowserCapabilities = () => false
+const hasPushSupport = () =>
+  "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
+
 export default function PushNotificationManager() {
+  const { data: session, status } = useSession()
+  const accountId = status === "authenticated" ? session?.user?.id : undefined
+  return <AccountPushManager key={accountId ?? status} accountId={accountId} />
+}
+
+function AccountPushManager({ accountId }: { accountId?: string }) {
   const { t } = useI18n()
-  const { data: session } = useSession()
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
-  const [isSupported, setIsSupported] = useState(false)
-  const [hasPrompted, setHasPrompted] = useState(false)
+  const isSupported = useSyncExternalStore(
+    subscribeToCapabilities,
+    hasPushSupport,
+    noBrowserCapabilities,
+  )
+  const [hasPrompted, setHasPrompted] = useState(() => {
+    try {
+      return typeof window !== "undefined" && !!localStorage.getItem("grh-notification-prompted")
+    } catch {
+      return false
+    }
+  })
   const [loading, setLoading] = useState(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
 
   const subscribe = useCallback(async () => {
-    if (!isSupported) return
+    if (!isSupported || !accountId || !active.current) return false
 
     setLoading(true)
     try {
       const reg = await navigator.serviceWorker.ready
+      if (!active.current) return false
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
       })
-
+      if (!active.current) return false
       await subscribeUser(JSON.parse(JSON.stringify(sub)))
+      if (!active.current) return false
       setSubscription(sub)
+      return true
     } catch {
+      if (!active.current) return false
       toast({
         title: t("common.error"),
         description: t("notifications.subscriptionFailed"),
         variant: "destructive",
       })
+      return false
     } finally {
-      setLoading(false)
+      if (active.current) setLoading(false)
     }
-  }, [isSupported, t])
+  }, [isSupported, accountId, t])
 
   const unsubscribe = useCallback(async () => {
+    if (!accountId || !active.current) return
     setLoading(true)
     try {
       await subscription?.unsubscribe()
+      if (!active.current) return
       if (subscription) await unsubscribeUser(subscription.endpoint)
+      if (!active.current) return
       setSubscription(null)
 
       toast({
@@ -62,6 +97,7 @@ export default function PushNotificationManager() {
         description: t("notifications.disabledDesc"),
       })
     } catch (error) {
+      if (!active.current) return
       console.error("Push unsubscription error:", error)
       toast({
         title: t("common.error"),
@@ -69,27 +105,33 @@ export default function PushNotificationManager() {
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      if (active.current) setLoading(false)
     }
-  }, [subscription, t])
+  }, [subscription, accountId, t])
 
   const promptForNotifications = useCallback(async () => {
-    if (!isSupported || hasPrompted) return
+    if (!isSupported || !accountId || hasPrompted || !active.current) return
 
     setHasPrompted(true)
-    localStorage.setItem("grh-notification-prompted", "true")
+    try {
+      localStorage.setItem("grh-notification-prompted", "true")
+    } catch {
+      /* Browser storage can be disabled. */
+    }
 
     try {
       // Request permission using native browser prompt
       const permission = await Notification.requestPermission()
+      if (!active.current) return
 
       if (permission === "granted") {
         // Automatically subscribe if permission granted
-        await subscribe()
-        toast({
-          title: t("notifications.enabled"),
-          description: t("notifications.enabledDesc"),
-        })
+        if (await subscribe()) {
+          toast({
+            title: t("notifications.enabled"),
+            description: t("notifications.enabledDesc"),
+          })
+        }
       } else if (permission === "denied") {
         toast({
           title: t("notifications.permissionDenied"),
@@ -101,25 +143,24 @@ export default function PushNotificationManager() {
     } catch {
       // Silent error handling - errors are handled via toast notifications
     }
-  }, [isSupported, hasPrompted, subscribe, t])
+  }, [isSupported, accountId, hasPrompted, subscribe, t])
 
   useEffect(() => {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      setIsSupported(true)
-
+    if (isSupported) {
+      let current = true
+      let promptTimer: ReturnType<typeof setTimeout> | undefined
       navigator.serviceWorker
         .register("/sw.js")
         .then(async (reg) => {
           const sub = await reg.pushManager.getSubscription()
+          if (!current) return
           setSubscription(sub)
           // Auto-prompt for notifications immediately if user is authenticated and hasn't been prompted
-          if (session?.user && !sub && !hasPrompted) {
-            const hasBeenPrompted = localStorage.getItem("grh-notification-prompted")
-
+          if (accountId && !sub && !hasPrompted) {
             // Check if permission is already granted or default (not denied)
-            if (!hasBeenPrompted && Notification.permission === "default") {
+            if (Notification.permission === "default") {
               // Show native permission request immediately after a short delay
-              setTimeout(() => {
+              promptTimer = setTimeout(() => {
                 promptForNotifications()
               }, 1500) // Small delay to ensure page is loaded
             }
@@ -128,22 +169,31 @@ export default function PushNotificationManager() {
         .catch(() => {
           // Silent error handling
         })
+      return () => {
+        current = false
+        if (promptTimer) clearTimeout(promptTimer)
+      }
     }
-  }, [session, hasPrompted, promptForNotifications])
+  }, [accountId, isSupported, hasPrompted, promptForNotifications])
 
   // Export functions for use in other components (e.g., profile settings)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const pushNotificationControls = {
-        subscribe,
-        unsubscribe,
-        isSubscribed: !!subscription,
-        isSupported,
-        loading,
-      }
-      ;(
-        window as typeof window & { pushNotificationControls: typeof pushNotificationControls }
-      ).pushNotificationControls = pushNotificationControls
+    const pushNotificationControls = {
+      subscribe: async () => {
+        await subscribe()
+      },
+      unsubscribe,
+      isSubscribed: !!subscription,
+      isSupported,
+      loading,
+    }
+    const target = window as typeof window & {
+      pushNotificationControls?: typeof pushNotificationControls
+    }
+    target.pushNotificationControls = pushNotificationControls
+    return () => {
+      if (target.pushNotificationControls === pushNotificationControls)
+        delete target.pushNotificationControls
     }
   }, [subscription, isSupported, loading, subscribe, unsubscribe])
 

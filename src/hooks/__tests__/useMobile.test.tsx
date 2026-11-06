@@ -11,7 +11,9 @@ let trigger: () => void
 beforeEach(() => {
   let listener: ((e: { matches: boolean }) => void) | undefined
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: window.innerWidth < 768,
+    get matches() {
+      return window.innerWidth < 768
+    },
     media: query,
     addEventListener: (_: string, l: (e: { matches: boolean }) => void) => {
       listener = l
@@ -22,6 +24,16 @@ beforeEach(() => {
 })
 
 describe("useIsMobile", () => {
+  it.each([
+    [767, true],
+    [768, false],
+  ])("uses the mobile breakpoint at width %i", (width, expected) => {
+    resizeTo(width as number)
+    const { result } = renderHook(() => useIsMobile())
+    expect(result.current).toBe(expected)
+    expect(window.matchMedia).toHaveBeenCalledWith("(max-width: 767px)")
+  })
+
   it("returns true when width below breakpoint", () => {
     resizeTo(500)
     const { result } = renderHook(() => useIsMobile())

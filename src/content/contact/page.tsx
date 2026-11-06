@@ -1,28 +1,33 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useI18n } from "@/locales/i18n"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { useSession } from "next-auth/react"
+import { useCurrentAccount } from "@/features/identity/client"
 import { Container } from "@/components/ui/container"
 import { CloudflareTurnstile } from "@/components/CloudflareTurnstile"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function ContactPage() {
+  const { user } = useCurrentAccount()
+  return <ContactForm key={user?.id ?? "guest"} accountEmail={user?.email ?? ""} />
+}
+
+function ContactForm({ accountEmail }: { accountEmail: string }) {
   const { t } = useI18n()
-  const { data: session } = useSession()
   const { toast } = useToast()
 
-  const [form, setForm] = useState({
+  const [draft, setForm] = useState({
     email: "",
     name: "",
     room: "",
     issue: "",
     message: "",
   })
+  const form = { ...draft, email: accountEmail || draft.email }
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [submitted, setSubmitted] = useState(false)
@@ -32,12 +37,6 @@ export default function ContactPage() {
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
   const turnstileEnabled = Boolean(turnstileSiteKey)
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      setForm((prev) => ({ ...prev, email: session.user.email || "" }))
-    }
-  }, [session])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -196,7 +195,7 @@ export default function ContactPage() {
                 placeholder={t("common.emailPlaceholder")}
                 value={form.email}
                 onChange={handleChange}
-                readOnly={!!session?.user?.email}
+                readOnly={!!accountEmail}
               />
               {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode } from "react"
 import { useSession } from "next-auth/react"
 import NamePrompt from "@/components/NamePrompt"
 import type { NamePromptContextType, NamePromptSection } from "@/types/view"
@@ -14,51 +14,43 @@ const NamePromptContext = createContext<NamePromptContextType | undefined>(undef
  */
 export function NamePromptProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
-  const [open, setOpen] = useState(false)
-  const [isManuallyOpened, setIsManuallyOpened] = useState(false)
-  const [focusSection, setFocusSection] = useState<NamePromptSection | undefined>(undefined)
+  const account = status === "authenticated" && session?.user?.id ? session.user : null
+  const identity = account
+    ? JSON.stringify([account.id, account.role, account.isSuperAdmin])
+    : status
+  return (
+    <AccountNamePrompt key={identity} account={account}>
+      {children}
+    </AccountNamePrompt>
+  )
+}
 
-  useEffect(() => {
-    if (status !== "authenticated") {
-      setOpen(false)
-      setIsManuallyOpened(false)
-      setFocusSection(undefined)
-      return
-    }
-
-    if (isManuallyOpened) {
-      return
-    }
-
-    if (!session?.user?.name) {
-      setFocusSection("profile")
-      setOpen(true)
-    } else {
-      setOpen(false)
-      setFocusSection(undefined)
-    }
-  }, [status, session, isManuallyOpened, open])
+function AccountNamePrompt({
+  children,
+  account,
+}: {
+  children: ReactNode
+  account: NonNullable<ReturnType<typeof useSession>["data"]>["user"] | null
+}) {
+  const [manualPrompt, setManualPrompt] = useState<{ section?: NamePromptSection } | null>(null)
+  const needsName = !!account && !account.name
+  const open = !!account && (manualPrompt !== null || needsName)
+  const focusSection = manualPrompt?.section ?? (needsName ? "profile" : undefined)
 
   /**
    * Manually open the name prompt dialog
    */
   const openPrompt = (options?: { focusSection?: NamePromptSection }) => {
-    setIsManuallyOpened(true)
-    setFocusSection(options?.focusSection)
-    setOpen(true)
+    setManualPrompt({ section: options?.focusSection })
   }
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen)
-    if (!newOpen) {
-      setIsManuallyOpened(false)
-      setFocusSection(undefined)
-    }
+    setManualPrompt(newOpen ? { section: focusSection } : null)
   }
 
   return (
     <NamePromptContext.Provider value={{ openPrompt }}>
       {children}
-      {status === "authenticated" && (
+      {account && (
         <NamePrompt open={open} onOpenChange={handleOpenChange} focusSection={focusSection} />
       )}
     </NamePromptContext.Provider>

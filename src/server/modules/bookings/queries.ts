@@ -57,19 +57,16 @@ export async function listTeamBookings(
   }
   if (input.status) {
     whereClause.status = input.status
-    if (input.status === BookingStatus.ACCEPTED) {
-      whereClause.NOT = {
-        notes: { startsWith: ADMIN_BLOCK_PREFIX },
-      }
-    }
   } else {
     // Default: Show active, actionable bookings
     whereClause.status = {
       in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.BORROWED],
     }
-    whereClause.NOT = {
-      notes: { startsWith: ADMIN_BLOCK_PREFIX },
-    }
+  }
+  if (!input.status || input.status === BookingStatus.ACCEPTED) {
+    // SQL NOT LIKE does not match NULL: notes-free bookings are still actionable.
+    // This OR stays alongside (ANDed with) the status, responsibility and search filters.
+    whereClause.OR = [{ notes: null }, { NOT: { notes: { startsWith: ADMIN_BLOCK_PREFIX } } }]
   }
 
   if (input.searchTerm) {

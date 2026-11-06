@@ -71,6 +71,7 @@ vi.mock("next-themes", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
   usePathname: () => mocks.pathname,
+  useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock("@/contexts/NamePromptContext", () => ({ useNamePrompt: () => ({ openPrompt: vi.fn() }) }))
 vi.mock("@/components/NotificationBell", () => ({ default: () => null }))

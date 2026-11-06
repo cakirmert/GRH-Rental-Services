@@ -13,6 +13,18 @@ interface NotAuthorizedProps {
   message?: string
 }
 
+// Fixed decorative positions keep server and client rendering identical.
+const particles = [
+  { id: 0, x: 35, y: 42, delay: 120 },
+  { id: 1, x: 92, y: 238, delay: 970 },
+  { id: 2, x: 165, y: 88, delay: 430 },
+  { id: 3, x: 224, y: 276, delay: 1610 },
+  { id: 4, x: 283, y: 30, delay: 760 },
+  { id: 5, x: 346, y: 175, delay: 1350 },
+  { id: 6, x: 388, y: 265, delay: 1880 },
+  { id: 7, x: 191, y: 185, delay: 290 },
+]
+
 export default function NotAuthorized({
   onGoBack,
   requiredRole = "ADMIN",
@@ -21,9 +33,6 @@ export default function NotAuthorized({
 }: NotAuthorizedProps) {
   const { t } = useI18n()
   const [animationPhase, setAnimationPhase] = useState(0)
-  const [particles, setParticles] = useState<
-    Array<{ id: number; x: number; y: number; delay: number }>
-  >([])
 
   // Cool animation effect with particles
   useEffect(() => {
@@ -31,15 +40,6 @@ export default function NotAuthorized({
     const timer2 = setTimeout(() => setAnimationPhase(2), 400)
     const timer3 = setTimeout(() => setAnimationPhase(3), 700)
     const timer4 = setTimeout(() => setAnimationPhase(4), 1000)
-
-    // Generate floating particles
-    const newParticles = Array.from({ length: 8 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 400,
-      y: Math.random() * 300,
-      delay: Math.random() * 2000,
-    }))
-    setParticles(newParticles)
 
     return () => {
       clearTimeout(timer1)

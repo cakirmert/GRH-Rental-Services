@@ -11,27 +11,31 @@ at version `0.3.0-rc.1`, independently of the retained earlier candidate.
 
 Final checks on this source and lockfile:
 
-- **773 tests passed in 94 files**, including 40 PostgreSQL integration cases.
+- **836 tests passed in 102 files**, including 44 PostgreSQL integration cases.
 - TypeScript and the production build passed.
-- Repository lint: zero errors, 18 warnings in retained components/hooks
-  (down from 35 in the earlier candidate); warnings are not hidden or waived.
+- Repository lint: **zero errors and zero warnings**, with no disabled rules.
+  All 18 outstanding React state/memoization warnings were corrected structurally.
 - npm audit: zero known vulnerabilities. Stable dependency updates include
   tRPC 11.25.0, Tailwind 4.3.5, Lucide 1.70.0 and Web Push 4.0.0.
-- Five guarded browser journeys are discoverable; they have **not been executed**.
-- Forty offline page/language/viewport combinations plus four report-consent
-  captures use the real V2 components with synthetic private data. All forty
-  have no measured document/header overflow or horizontally clipped controls.
-  These are static layout checks, not HTTP/browser acceptance.
+- **Eight HTTP/browser journeys passed**, including virtual-authenticator passkey
+  registration/login/revocation, real sign-in/profile dialogs, account role access,
+  same-document navigation, mobile keyboard navigation and direct old-bookmark
+  rendering without HTTP redirects.
+- The earlier offline previews were followed by actual local HTTP browser captures
+  using synthetic accounts/bookings and public catalog information. All four browser-capture checks passed, producing 36 screenshots with no
+  horizontal overflow, clipped controls or broken images in the measured views.
+  The gallery is separate from Playwright’s disposable output directory.
 - After the final tests, the restored clone still has 82 users, 91 bookings,
   25 threads, 60 messages and 235 notifications. All 25 original passkeys and
   indexed credentials match the original digest. No synthetic accounts or
   problem reports remain. The restore-tested backup hash is unchanged.
 
 No production deployment, migration, cleanup or outbound notification occurred.
-Automatic approval review rejected starting the local HTTP test server under the
-execution policy. An isolated hosted preview is also not configured. These
-remaining browser and cutover gates still block promotion. Existing passkeys need
-a real-device test on the canonical origin before release.
+The local HTTP server now starts normally, and Chrome browser checks run against
+it. The earlier rejection is not a current restriction. An isolated hosted preview
+is still not configured. Complete the remaining end-to-end rental workflows,
+real-device canonical-origin passkey test and production cutover rehearsal before
+promotion.
 
 See [authentication/backend changes](auth-backend-summary.md) for the issue/fix
 summary. V2 introduces no additional schema migration beyond the security
@@ -42,9 +46,8 @@ candidate's additive migrations below.
 The production site has not been changed. The backup was restored to isolated
 PostgreSQL, migrations and passkey indexing were rehearsed there, and source,
 unit, database-concurrency, type, lint, and production-build checks passed.
-Browser tests are present but have not yet run: local server startup was denied
-by the execution policy. Hosted preview is also pending isolated credentials.
-Do not promote this release until those checks pass.
+Browser execution was pending at that earlier checkpoint; the current results
+are recorded above. Hosted preview still needs isolated credentials.
 
 On 6 November 2026, the complete candidate passed 634 tests across 80 files,
 TypeScript, lint and a production build. This includes the report queue and the
@@ -60,8 +63,8 @@ three My Bookings regression tests, plus TypeScript and a fresh production
 build. Repository-wide lint reports zero errors and 35 existing warnings.
 Full-page static previews cover the real components in English/German at
 1440px and 320px, with synthetic account/booking data. They exposed and helped
-fix clipped mobile booking actions and crowded filters. They do not satisfy
-the pending HTTP/browser release gate. No database migration or production
+fix clipped mobile booking actions and crowded filters. Those static captures alone were not
+HTTP/browser acceptance evidence. No database migration or production
 deployment was performed for this UI follow-up. The V2 implementation and current verification are recorded above.
 
 The candidate now includes [the reviewed retention policy](data-retention.md):
@@ -93,8 +96,8 @@ test-only authentication secret. Optionally allow the public image CDN origin.
 Run `npm run check:local`, `npm run test:local`, and `npm run build:local`.
 `npm run start:local` serves only this computer; `npm run test:e2e:local` uses that
 already-running site. The runner overrides live integrations and never selects
-a database from the production dotenv files. Starting a process still requires
-permission from the execution environment; the script does not change that policy.
+a database from the production dotenv files. The local server and guarded browser tests were successfully executed on
+6 November 2026.
 
 For manual local sign-in, request an email code with your normal account address.
 The isolated runner prints the code in its terminal as `[local-otp]`; no email is

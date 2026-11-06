@@ -16,7 +16,9 @@ authentication. It is not a discard-and-rewrite of every working component.
 - Native App Router pages for catalog, item booking, resident bookings, staff,
   staff calendar, admin sections, conversations and information pages. Links in
   navigation, email, push and in-app notifications use the same paths. There are
-  **no old query-view redirects or aliases**, as requested. Navigation remains
+  **no navigation redirects**. Existing question-mark bookmarks render the corresponding
+  screen directly at their saved address, using the same permission checks. New links
+  use the normal paths. Browser tests confirm the same document survives navigation. Navigation remains
   client-side between pages; the home-screen manifest retains root scope/start.
 - Server-rendered public content with cached public catalog data. Language has a
   server cookie and a synchronized client preference; no wrapper hides the whole
@@ -71,14 +73,18 @@ email, push or database mutation was performed.
 The production build and focused feature/security tests pass. The complete final
 verification record is in [upgrade-release.md](upgrade-release.md). Full-page
 screenshots render the actual components using public catalog assets and
-synthetic people/bookings; they are offline previews, not deployed screenshots.
+synthetic people/bookings. The current gallery is captured from the running local
+HTTP app; earlier captures were offline component previews. Neither is production.
 
 Before release:
 
-1. Run the HTTP/browser journeys for OTP, existing passkeys, navigation,
-   permissions, booking-to-return, chat, recurring blocks, feedback and deletion.
-   Local server startup was rejected by automatic approval review; no alternate
-   mechanism was used to bypass that restriction.
+1. Eight HTTP/browser journeys now pass: OTP and virtual-authenticator registration,
+   UI passkey login/profile saving, revocation/replay, resident/staff/admin navigation,
+   mobile keyboard navigation and old bookmarks without redirects. Expand browser
+   acceptance to the complete booking-to-return, chat, recurring-block, feedback
+   and deletion workflows, and check an existing real-device passkey on the
+   canonical origin. The local server now starts normally; no current restriction
+   on running it was observed.
 2. Configure a hosted preview with an isolated database and disabled outbound
    integrations. The existing Vercel preview environment shares production
    credentials and is not a suitable rehearsal target.

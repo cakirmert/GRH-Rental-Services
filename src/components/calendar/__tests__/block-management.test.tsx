@@ -121,6 +121,27 @@ afterEach(() => {
 })
 
 describe("blocking assigned items", () => {
+  it("retains an open draft on rerender and starts a clean draft after reopening", async () => {
+    const view = render(<BlockSlotDialog open onOpenChange={vi.fn()} />, { wrapper: Wrapper })
+    await choose("Item or room", "Bar")
+    setTimes()
+    await choose("Recurrence", "Repeat weekly")
+    const reason = screen.getByRole("textbox")
+    await userEvent.type(reason, "Synthetic weekly block")
+    view.rerender(<BlockSlotDialog open onOpenChange={vi.fn()} />)
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+      "Synthetic weekly block",
+    )
+    expect((screen.getByLabelText("Start") as HTMLInputElement).value).toBe("2026-11-06T14:00")
+    expect(screen.getByRole("combobox", { name: "Recurrence" }).textContent).toBe("Repeat weekly")
+    view.rerender(<BlockSlotDialog open={false} onOpenChange={vi.fn()} />)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    view.rerender(<BlockSlotDialog open onOpenChange={vi.fn()} />)
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("")
+    expect(screen.getByRole("combobox", { name: "Recurrence" }).textContent).toBe("Do not repeat")
+    expect(screen.getByRole("combobox", { name: "Item or room" }).textContent).not.toBe("Bar")
+  })
+
   it("submits an indefinite weekly overnight block using Berlin time", async () => {
     render(
       <Wrapper>

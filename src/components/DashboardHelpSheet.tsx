@@ -2,7 +2,7 @@
 
 import { HelpCircle, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
+import { useState, useCallback, useSyncExternalStore } from "react"
 import OnboardingOverlay, { OnboardingStep } from "./OnboardingOverlay"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useI18n } from "@/locales/i18n"
@@ -11,22 +11,42 @@ interface DashboardHelpSheetProps {
   role: "rental" | "admin"
 }
 
-export default function DashboardHelpSheet({ role }: DashboardHelpSheetProps) {
+const seenEvent = "grh-dashboard-tour-seen"
+const transientSeen = new Set<string>()
+const unseenOnServer = () => false
+function subscribeToTourSeen(notify: () => void) {
+  window.addEventListener("storage", notify)
+  window.addEventListener(seenEvent, notify)
+  return () => {
+    window.removeEventListener("storage", notify)
+    window.removeEventListener(seenEvent, notify)
+  }
+}
+
+export default function DashboardHelpSheet(props: DashboardHelpSheetProps) {
+  return <DashboardHelp key={props.role} {...props} />
+}
+
+function DashboardHelp({ role }: DashboardHelpSheetProps) {
   const { t } = useI18n()
   const [helpMode, setHelpMode] = useState<"off" | "tour" | "help">("off")
-  const [hasSeenTour, setHasSeenTour] = useState(false)
-
-  // Check if user has seen the tour before
-  useEffect(() => {
-    const tourKey = `onboarding_${role}_seen`
-    const seen = localStorage.getItem(tourKey) === "true"
-    setHasSeenTour(seen)
-  }, [role])
+  const tourKey = `onboarding_${role}_seen`
+  const getSeen = useCallback(() => {
+    try {
+      return localStorage.getItem(tourKey) === "true"
+    } catch {
+      return transientSeen.has(tourKey)
+    }
+  }, [tourKey])
+  const hasSeenTour = useSyncExternalStore(subscribeToTourSeen, getSeen, unseenOnServer)
 
   const markTourAsSeen = () => {
-    const tourKey = `onboarding_${role}_seen`
-    localStorage.setItem(tourKey, "true")
-    setHasSeenTour(true)
+    try {
+      localStorage.setItem(tourKey, "true")
+    } catch {
+      transientSeen.add(tourKey)
+    }
+    window.dispatchEvent(new Event(seenEvent))
   }
 
   const startTour = () => {

@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { randomUUID } from "node:crypto"
+import superjson from "superjson"
+import type { inferRouterOutputs } from "@trpc/server"
+import type { AppRouter } from "../../src/server/routers/appRouter"
 import { localTestDatabase, signInWithLocalOtp, withLocalAccount } from "./local-fixtures"
 
 test.use({ viewport: { width: 1440, height: 1000 } })
@@ -41,33 +44,35 @@ test("OTP, real WebAuthn registration/login, revocation and public rendering", a
       automaticPresenceSimulation: true,
     },
   })
-  const rpc = async (name: string, input: unknown) => {
+  type Outputs = inferRouterOutputs<AppRouter>
+  type Calls = {
+    "webauthn.registerOptions": Outputs["webauthn"]["registerOptions"]
+    "webauthn.register": Outputs["webauthn"]["register"]
+    "webauthn.loginOptions": Outputs["webauthn"]["loginOptions"]
+    "webauthn.login": Outputs["webauthn"]["login"]
+    "user.deletePasskey": Outputs["user"]["deletePasskey"]
+  }
+  const rpc = async <Name extends keyof Calls>(name: Name, input: unknown) => {
     const response = await page.request.post("/api/trpc/" + name, { data: { json: input } })
     const data = await response.json()
     expect(response.ok(), JSON.stringify(data)).toBe(true)
-    return data.result.data.json
+    return superjson.deserialize<Calls[Name]>(data.result.data)
   }
   try {
     await page.goto("/")
-    await expect(page.locator("#catalog-title")).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "GRH Rental Services", exact: true }),
+    ).toBeVisible()
     await expect(
       page.getByRole("banner").getByRole("button", { name: "Report a problem", exact: true }),
     ).toBeVisible()
     const session = await signInWithLocalOtp(page, db, email)
     const options = await rpc("webauthn.registerOptions", { userId: session.user.id })
     const credential = await page.evaluate(async (opts) => {
-      const decode = (v: string) =>
-        Uint8Array.from(atob(v.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))
       const created = (await navigator.credentials.create({
-        publicKey: {
-          ...opts,
-          challenge: decode(opts.challenge),
-          user: { ...opts.user, id: decode(opts.user.id) },
-          excludeCredentials: opts.excludeCredentials?.map((c: { id: string }) => ({
-            ...c,
-            id: decode(c.id),
-          })),
-        },
+        publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(
+          opts as unknown as PublicKeyCredentialCreationOptionsJSON,
+        ),
       })) as PublicKeyCredential
       return created.toJSON()
     }, options)
@@ -84,10 +89,10 @@ test("OTP, real WebAuthn registration/login, revocation and public rendering", a
     const login = await rpc("webauthn.loginOptions", {})
     expect(login.allowCredentials ?? []).toHaveLength(0)
     const assertion = await page.evaluate(async (opts) => {
-      const decode = (v: string) =>
-        Uint8Array.from(atob(v.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))
       const result = (await navigator.credentials.get({
-        publicKey: { ...opts, challenge: decode(opts.challenge) },
+        publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(
+          opts as unknown as PublicKeyCredentialRequestOptionsJSON,
+        ),
       })) as PublicKeyCredential
       return result.toJSON()
     }, login)
@@ -105,6 +110,21 @@ test("OTP, real WebAuthn registration/login, revocation and public rendering", a
       data: { token: verified.token },
     })
     expect(replay.status()).toBe(401)
+    // Exercise the actual sign-in dialog and browser adapter as well as the API.
+    await signOut()
+    await page.reload()
+    await page.getByRole("banner").getByRole("button", { name: "Sign In", exact: true }).click()
+    await page.getByRole("button", { name: "Sign in with Passkey", exact: true }).click()
+    await expect
+      .poll(async () => (await (await page.request.get("/api/auth/session")).json())?.user?.id)
+      .toBe(session.user.id)
+    const profile = page.getByRole("dialog", { name: "Account Settings", exact: true })
+    await profile.getByRole("textbox", { name: "Name", exact: true }).fill("Browser Passkey User")
+    await profile.getByRole("button", { name: "Save", exact: true }).click()
+    await expect(profile).toHaveCount(0)
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: "User menu", exact: true }),
+    ).toBeVisible()
     await rpc("user.deletePasskey", { credentialId: credential.id })
     const revoked = await db.query(
       'SELECT "revokedAt" FROM "PasskeyCredential" WHERE "userId"=$1',
@@ -114,15 +134,12 @@ test("OTP, real WebAuthn registration/login, revocation and public rendering", a
     await signOut()
     const next = await rpc("webauthn.loginOptions", {})
     const deniedAssertion = await page.evaluate(async (opts) => {
-      const challenge = Uint8Array.from(
-        atob(opts.challenge.replace(/-/g, "+").replace(/_/g, "/")),
-        (c) => c.charCodeAt(0),
-      )
-      return (
-        (await navigator.credentials.get({
-          publicKey: { ...opts, challenge },
-        })) as PublicKeyCredential
-      ).toJSON()
+      const result = (await navigator.credentials.get({
+        publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(
+          opts as unknown as PublicKeyCredentialRequestOptionsJSON,
+        ),
+      })) as PublicKeyCredential
+      return result.toJSON()
     }, next)
     const denied = await page.request.post("/api/trpc/webauthn.login", {
       data: { json: { userId: "auto-detect", credential: deniedAssertion } },
@@ -157,7 +174,9 @@ test("resident navigates native booking routes without staff access or a documen
     await expect(page.getByRole("dialog")).toHaveCount(0)
     await page.getByRole("button", { name: "Browse Items to Book", exact: true }).click()
     await expectClientNavigation(page, "/", marker)
-    await expect(page.locator("#catalog-title")).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "GRH Rental Services", exact: true }),
+    ).toBeVisible()
     await page.goBack()
     await expectClientNavigation(page, "/bookings", marker)
     await expect(page.getByText(itemTitle, { exact: true })).toBeVisible()
@@ -271,3 +290,29 @@ test("resident mobile menu supports keyboard navigation and closes on route chan
     ).toBe(true)
   })
 })
+
+for (const [role, query, title] of [
+  ["USER", "bookings", "My Bookings"],
+  ["RENTAL", "rental", "Rental Dashboard"],
+  ["ADMIN", "admin", "Admin Dashboard"],
+] as const) {
+  test(`saved ?${query} bookmark opens directly without a redirect`, async ({ page, baseURL }) => {
+    await withLocalAccount(page, baseURL, role, async () => {
+      const response = await page.goto("/?" + query)
+      expect(response?.status()).toBe(200)
+      expect(response?.request().redirectedFrom()).toBeNull()
+      await expect(page).toHaveURL("http://localhost:3100/?" + query)
+      await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible()
+      const marker = await markDocument(page)
+      await page
+        .getByRole("banner")
+        .getByRole("navigation")
+        .getByRole("link", { name: "Home", exact: true })
+        .click()
+      await expectClientNavigation(page, "/", marker)
+      await page.goBack()
+      await expectClientNavigation(page, "/?" + query, marker)
+      await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible()
+    })
+  })
+}
