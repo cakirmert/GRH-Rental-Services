@@ -58,7 +58,6 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/i18n"
 import TimeSelect from "@/components/TimeSelect"
@@ -147,7 +146,6 @@ export default function MyBookingsComponent({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const highlightedBookingRef = useRef<HTMLDivElement>(null)
-  const isDesktop = useMediaQuery("(min-width: 768px)")
   const activeHighlightId = highlightBookingId || notifHighlightId
 
   useEffect(() => {
@@ -474,10 +472,16 @@ export default function MyBookingsComponent({
           className="w-full"
         >
           <TabsList className="grid w-full h-auto grid-cols-2">
-            <TabsTrigger value="upcoming" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="upcoming"
+              className="min-h-10 min-w-0 whitespace-normal text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto"
+            >
               {t("myBookings.tabs.upcoming", { defaultValue: "Upcoming" })}
             </TabsTrigger>
-            <TabsTrigger value="past" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto">
+            <TabsTrigger
+              value="past"
+              className="min-h-10 min-w-0 whitespace-normal text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto"
+            >
               {t("myBookings.tabs.past", { defaultValue: "Past" })}
             </TabsTrigger>
           </TabsList>
@@ -487,52 +491,23 @@ export default function MyBookingsComponent({
           onValueChange={(value) => setActiveTab(value as BookingStatus | "all")}
           className="w-full"
         >
-          <TabsList className={cn("grid w-full h-auto", isDesktop ? "grid-cols-7" : "grid-cols-3")}>
-            <TabsTrigger value="all" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-7">
+            <TabsTrigger
+              value="all"
+              className="col-span-2 min-h-10 min-w-0 whitespace-normal text-xs sm:col-span-1 sm:text-sm px-2 py-1.5 h-auto"
+            >
               {t("myBookings.tabs.all")}
             </TabsTrigger>
-            {(Object.values(BookingStatus) as Array<BookingStatus>)
-              // Corrected filter logic:
-              .filter(
-                (key) =>
-                  isDesktop ||
-                  key === BookingStatus.REQUESTED ||
-                  key === BookingStatus.ACCEPTED ||
-                  key === BookingStatus.BORROWED,
-              )
-              .map((key) => (
-                <TabsTrigger
-                  key={key}
-                  value={key}
-                  className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto"
-                >
-                  {t(`myBookings.tabs.${key.toLowerCase()}`)}
-                </TabsTrigger>
-              ))}
+            {(Object.values(BookingStatus) as Array<BookingStatus>).map((key) => (
+              <TabsTrigger
+                key={key}
+                value={key}
+                className="min-h-10 min-w-0 whitespace-normal text-xs sm:text-sm px-2 py-1.5 h-auto"
+              >
+                {t(`myBookings.tabs.${key.toLowerCase()}`)}
+              </TabsTrigger>
+            ))}
           </TabsList>
-          {!isDesktop && (
-            <TabsList className="grid w-full grid-cols-4 h-auto mt-1">
-              {(Object.values(BookingStatus) as Array<BookingStatus>)
-                // Corrected filter logic:
-                .filter(
-                  (key) =>
-                    !(
-                      key === BookingStatus.REQUESTED ||
-                      key === BookingStatus.ACCEPTED ||
-                      key === BookingStatus.BORROWED
-                    ),
-                )
-                .map((key) => (
-                  <TabsTrigger
-                    key={key}
-                    value={key}
-                    className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 h-auto"
-                  >
-                    {t(`myBookings.tabs.${key.toLowerCase()}`)}
-                  </TabsTrigger>
-                ))}
-            </TabsList>
-          )}
         </Tabs>
       </div>
 
@@ -647,15 +622,15 @@ export default function MyBookingsComponent({
                     setSelectedBooking(booking)
                     setShowDetails(true)
                   }}
-                  className="text-xs h-8 px-3 w-full sm:w-auto"
+                  className="min-h-10 text-xs h-auto px-3 w-full sm:w-auto"
                 >
                   {t("myBookings.viewDetailsButton")}
                 </Button>
-                <div className="flex space-x-2 w-full sm:w-auto">
+                <div className="grid min-w-0 w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs h-8 px-3 flex-1 sm:flex-none"
+                    className="col-span-2 min-w-0 max-w-full min-h-10 h-auto whitespace-normal px-3 text-xs"
                     onClick={() => {
                       localStorage.setItem("grh-open-chat-booking-id", booking.id)
                       window.dispatchEvent(
@@ -666,19 +641,21 @@ export default function MyBookingsComponent({
                     }}
                   >
                     <MessageSquare className="h-3.5 w-3.5 mr-1.5" />{" "}
-                    {booking.assignedTo
-                      ? t("myBookings.chatWithAssigned", {
-                          defaultValue: "Chat with {name}",
-                          name: booking.assignedTo.name || booking.assignedTo.email || "Team",
-                        })
-                      : t("Chat.MyBookings", { defaultValue: "Chat" })}
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                      {booking.assignedTo
+                        ? t("myBookings.chatWithAssigned", {
+                            defaultValue: "Chat with {name}",
+                            name: booking.assignedTo.name || booking.assignedTo.email || "Team",
+                          })
+                        : t("Chat.MyBookings", { defaultValue: "Chat" })}
+                    </span>
                   </Button>
                   {canUserEditOrCancel(booking.status) && (
                     <>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-xs h-8 px-3 flex-1 sm:flex-none"
+                        className="min-h-10 h-auto whitespace-normal px-3 text-xs"
                         onClick={() => prepareEditForm(booking)}
                       >
                         <Edit className="h-3.5 w-3.5 mr-1.5" />
@@ -687,7 +664,7 @@ export default function MyBookingsComponent({
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="text-xs h-8 px-3 flex-1 sm:flex-none"
+                        className="min-h-10 h-auto whitespace-normal px-3 text-xs"
                         onClick={() => {
                           setSelectedBooking(booking)
                           setShowCancelDialog(true)
@@ -705,7 +682,7 @@ export default function MyBookingsComponent({
                       variant="secondary"
                       size="sm"
                       onClick={onGoBackToList}
-                      className="text-xs h-8 px-3 w-full sm:w-auto"
+                      className="col-span-2 min-h-10 h-auto whitespace-normal text-xs px-3 w-full sm:w-auto"
                     >
                       {t("myBookings.bookAgainButton")}
                     </Button>

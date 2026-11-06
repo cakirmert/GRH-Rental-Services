@@ -13,6 +13,7 @@ import { useAuthModal } from "@/contexts/AuthModalContext"
 import { trpc } from "@/utils/trpc"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ReportProblemButton } from "@/components/feedback/AppFeedback"
 import {
   Menu,
   X,
@@ -209,12 +210,13 @@ export default function Header() {
 
   return (
     <header
-      className={`glass bg-background/80 sticky top-0 z-50 transition-transform duration-300 ${hidden ? "-translate-y-full" : "translate-y-0"
-        }`}
+      className={`glass bg-background/80 sticky top-0 z-50 transition-transform duration-300 ${
+        hidden ? "-translate-y-full" : "translate-y-0"
+      }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 xl:flex xl:flex-wrap xl:justify-between">
+          <div className="flex min-w-0 items-center space-x-2">
             {" "}
             <button
               onClick={handleLogoClick}
@@ -231,14 +233,14 @@ export default function Header() {
             </button>
             <button
               onClick={handleLogoClick}
-              className="text-lg sm:text-xl font-bold hover:opacity-80 transition-opacity bg-transparent border-0 p-0 m-0 cursor-pointer"
+              className="min-w-0 text-left text-base sm:text-xl font-bold hover:opacity-80 transition-opacity bg-transparent border-0 p-0 m-0 cursor-pointer"
               aria-label={t("header.title")}
             >
               {t("header.title")}
             </button>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+          <div className="hidden xl:flex xl:flex-wrap items-center justify-end gap-2">
             <nav className="flex items-center space-x-1 lg:space-x-2">
               <Button variant="ghost" size="sm" onClick={handleLogoClick}>
                 <LayoutGrid className="mr-1.5 h-4 w-4" />
@@ -273,7 +275,7 @@ export default function Header() {
             </nav>
 
             {showPasskeyCta && (
-              <div className="hidden md:flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 shadow-sm">
+              <div className="hidden xl:flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 shadow-sm">
                 <div className="flex flex-col leading-tight">
                   <div className="flex items-center gap-2 text-xs font-semibold text-primary">
                     <span className="inline-flex items-center rounded-full bg-primary/20 px-2 py-0.5 uppercase tracking-wide">
@@ -399,8 +401,23 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile Controls */}
-          <div className="md:hidden flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleMenuToggle}
+            className="col-start-2 row-start-1 justify-self-end xl:hidden"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-header-navigation"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <span className="sr-only">{t("header.toggleMenu")}</span>
+          </Button>
+
+          <ReportProblemButton className="col-start-1 row-start-2 min-h-10 w-fit max-w-full xl:ml-auto" />
+
+          {/* Keep the report control visible without crowding the mobile brand row. */}
+          <div className="col-start-2 row-start-2 flex items-center justify-end gap-1 xl:hidden">
             <Button
               variant="ghost"
               size="icon"
@@ -409,37 +426,6 @@ export default function Header() {
               <Globe className="h-5 w-5" />
               <span className="sr-only">{t("languageSwitcher.label")}</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={openHelpDialog} className="relative">
-              <HelpCircle className="h-5 w-5" />
-              <span className="sr-only">{t("header.helpButton")}</span>
-              {isProfileIncomplete && (
-                <span className="absolute top-1 right-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-primary" />
-              )}
-            </Button>
-            {showPasskeyCta && (
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={handleOpenPasskeySetup}
-                className="bg-primary/10 text-primary border-primary/40 hover:bg-primary/20"
-              >
-                <Fingerprint className="h-5 w-5" />
-                <span className="sr-only">{t("header.addPasskeyCta")}</span>
-              </Button>
-            )}
-            {isProfileIncomplete && (
-              <Button
-                variant="default"
-                size="icon"
-                onClick={() => {
-                  setIsMenuOpen(false)
-                  openPrompt()
-                }}
-              >
-                <UserCircle className="h-5 w-5" />
-                <span className="sr-only">{t("header.completeProfileCta")}</span>
-              </Button>
-            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -459,17 +445,13 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {status === "authenticated" && <NotificationBell />}{" "}
-            <Button variant="ghost" size="icon" onClick={handleMenuToggle}>
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              <span className="sr-only">{t("header.toggleMenu")}</span>
-            </Button>
+            {status === "authenticated" && <NotificationBell />}
           </div>
         </div>
       </div>
 
       {isMenuOpen && (
-        <nav className="md:hidden border-t bg-background">
+        <nav id="mobile-header-navigation" className="xl:hidden border-t bg-background">
           <div className="container mx-auto px-4 py-4 flex flex-col space-y-2">
             {" "}
             <Button variant="ghost" className="justify-start" onClick={handleLogoClick}>

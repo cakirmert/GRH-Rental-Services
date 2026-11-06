@@ -7,7 +7,7 @@ import Providers from "./providers"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { ReleaseProvider } from "@/contexts/ReleaseContext"
-import AppFeedback from "@/components/feedback/AppFeedback"
+import AppFeedback, { AppFeedbackProvider } from "@/components/feedback/AppFeedback"
 
 const FlickeringGrid = dynamic(
   () => import("@/components/ui/shadcn-io/flickering-grid").then((mod) => mod.FlickeringGrid),
@@ -33,25 +33,27 @@ export default function AppLayoutClient({ session, children }: AppLayoutClientPr
   return (
     <Providers session={session}>
       <ReleaseProvider>
-        <div className="relative flex flex-col min-h-screen tabindex--1">
-          <FlickeringGrid
-            className="absolute inset-0 -z-10 hidden h-full w-full pointer-events-none md:block"
-            color="rgb(120, 113, 108)"
-            squareSize={4}
-            gridGap={10}
-            maxOpacity={0.25}
-          />
-          <div className="relative z-10 flex flex-col min-h-screen">
-            <Header />
-            <AppFeedback />
-            <main role="main" className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-            <PushNotificationManager />
-            <InstallPrompt />
+        <AppFeedbackProvider>
+          <div className="relative flex flex-col min-h-screen tabindex--1">
+            <FlickeringGrid
+              className="absolute inset-0 -z-10 hidden h-full w-full pointer-events-none md:block"
+              color="rgb(120, 113, 108)"
+              squareSize={4}
+              gridGap={10}
+              maxOpacity={0.25}
+            />
+            <div className="relative z-10 flex flex-col min-h-screen">
+              <Header />
+              <AppFeedback />
+              <main role="main" className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+              <PushNotificationManager />
+              <InstallPrompt />
+            </div>
           </div>
-        </div>
+        </AppFeedbackProvider>
       </ReleaseProvider>
     </Providers>
   )

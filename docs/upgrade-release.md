@@ -22,6 +22,16 @@ database still has 82 users, 91 bookings, and 25 unchanged passkeys; its only
 intentional availability change is the confirmed weekly Bar rule. The production
 database and backup fingerprints remain unchanged.
 
+The subsequent header/mobile UI follow-up passed 26 reporting/focus tests and
+three My Bookings regression tests, plus TypeScript and a fresh production
+build. Repository-wide lint reports zero errors and 35 existing warnings.
+Full-page static previews cover the real components in English/German at
+1440px and 320px, with synthetic account/booking data. They exposed and helped
+fix clipped mobile booking actions and crowded filters. They do not satisfy
+the pending HTTP/browser release gate. No database migration or production
+deployment was performed for this UI follow-up. The larger V2 rebuild remains
+a [proposal](release-preview.md#proposed-v2-rebuild-not-implemented).
+
 The candidate now includes [the reviewed retention policy](data-retention.md):
 365-day automatic cleanup only for eligible regular users, manual inactive-staff
 review, activity-aware eligibility and complete linked-data cleanup. Migrations

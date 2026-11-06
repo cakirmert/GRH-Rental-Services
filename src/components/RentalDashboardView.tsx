@@ -361,7 +361,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
     )
   }
   const renderActionButtons = (booking: BookingForRentalTeam) => {
-    const buttonClass = "flex-1 mt-1" // Use flex-1 to make buttons expand equally
+    const buttonClass = "mt-1 h-auto min-h-10 min-w-0 flex-1 whitespace-normal py-2"
     const startDate = new Date(booking.startDate)
     const CAN_MARK_BORROWED_BEFORE_HOURS = 4
     const canMarkBorrowed =
@@ -651,11 +651,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                             {t("rentalDashboard.to", { defaultValue: "to" })}{" "}
                             {formatInBerlin(
                               booking.endDate,
-                              isSameDay(
-                                booking.startDate,
-                                booking.endDate,
-                                berlinContext,
-                              )
+                              isSameDay(booking.startDate, booking.endDate, berlinContext)
                                 ? "p"
                                 : "PPp",
                               { locale: dateFnsLocale },
@@ -701,7 +697,9 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
                             {t("rentalDashboard.notesButton", { defaultValue: "View/Add Notes" })}
                           </Button>
                         </div>
-                        <div className="flex mt-2 gap-2 w-full">{renderActionButtons(booking)}</div>
+                        <div className="mt-2 flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          {renderActionButtons(booking)}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -712,9 +710,7 @@ export default function RentalDashboardView({ onGoBack }: RentalDashboardViewPro
         </>
       )}
 
-      {viewMode === "calendar" && (
-        <Calendar />
-      )}
+      {viewMode === "calendar" && <Calendar />}
       {viewMode === "list" && hasNextPage && (
         <div className="mt-6 text-center print:hidden">
           <Button

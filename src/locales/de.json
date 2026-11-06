@@ -509,7 +509,8 @@
     "noBookingsFoundDesc": "Du hast noch keine Buchungen mit diesem Status. Schau dir doch unsere Artikel an!",
     "nextDayIndicator": "nächster Tag",
     "bookedOn": "Gebucht am {date}",
-    "quantityLabel": "Menge"
+    "quantityLabel": "Menge",
+    "chatWithAssigned": "Chat mit {name}"
   },
   "faqPage": {
     "title": "Häufig gestellte Fragen",

@@ -1,6 +1,10 @@
 # Public problem and feedback reports
 
-The in-app reporting dialog is available to every signed-in account. It sends only the report type, title and description the user writes to the **public** repository `cakirmert/GRH-Rental-Services`. The unchecked consent box must be selected for every new submission. The dialog directs private, account, booking and security concerns to existing private contact/chat channels. There are no automatic screenshots, URLs, console logs, device details, account names, email addresses, booking data or app-version metadata. A user can still put personal information in their own text, so the public disclosure matters.
+The **Report a problem** control is part of the actual site header on desktop and mobile, for residents, rental staff, administrators, and signed-out visitors. The brief update notice is separate: dismissing it removes the notice while leaving the header control available. Notice dismissal is scoped to the release and account (or the signed-out browser).
+
+Every signed-in account can use the public reporting dialog. Signed-out visitors first see private support through the existing in-app Contact page, plus a sign-in option for public reports. Contact navigation also works from non-home and missing-page routes. The existing rental email is a secondary fallback if the contact page cannot open. Session-loading state disables report opening. Account changes reset only the dialog host and its in-memory draft, preserving the current page state. No report text is saved in browser storage. The sign-in handoff keeps keyboard focus inside the authentication dialog and returns it to the header control when that dialog closes.
+
+Public reports send only the report type, title and description the user writes to the **public** repository `cakirmert/GRH-Rental-Services`. The unchecked consent box must be selected for every new submission. The dialog directs private, account, booking and security concerns to existing private contact/chat channels. There are no automatic screenshots, URLs, console logs, device details, account names, email addresses, booking data or app-version metadata. A user can still put personal information in their own text, so the public disclosure matters.
 
 The GitHub issue body renders authored lines as plain text to prevent active images, HTML, mentions and Markdown injection. The issue title neutralizes mentions and formatting. An opaque, randomly generated report marker supports recovery; it is not a user/account identifier.
 
@@ -70,9 +74,16 @@ Deleting an account cascades all its local report payloads and queue entries. Th
 
 ## Verification
 
-The complete candidate passed 634 tests across 80 files, TypeScript, lint and
+Before the header placement follow-up, the candidate passed 634 tests across 80 files, TypeScript, lint and
 a production build on 6 November 2026. The report-specific focused run passed
 66 backend/cron checks, including eight real PostgreSQL tests; the feedback
-interface passed 17 interaction tests. These overlap the full suite totals.
+interface then passed 17 interaction tests. These overlap the full suite totals.
+The header/guest follow-up passes 26 focused UI tests, including real-header
+entry points for every role and guests, session loading, account/draft isolation,
+notice dismissal, non-home contact navigation, keyboard navigation, and focus
+transfer to and from the real authentication dialog.
+Static full-page previews use real page, header, and footer components with
+synthetic account and booking data; they check layout rather than live authentication
+or delivery to GitHub.
 
 Unit tests cover authentication, literal public consent, raw and trimmed limits, role checks, local/preview/outbound gates, PostgreSQL host override aliases, inert Markdown rendering, bounded responses, global cooldown admission, safe retries and ambiguous outcomes. Isolated PostgreSQL fixtures verify concurrent submission idempotency and budgets, competing-worker single delivery, multi-report queue draining, timeout reconciliation without a second POST, account deletion cascades, expired-row cleanup and preservation of a concurrently renewed AuthState row. Network calls are mocked and fixture cleanup is scoped to synthetic rows; the original restored data is not purged.

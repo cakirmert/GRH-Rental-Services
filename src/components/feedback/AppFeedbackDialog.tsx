@@ -6,7 +6,7 @@ import { CheckCircle2, ExternalLink, Globe2, Loader2 } from "lucide-react"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { appFeedbackCopy } from "@/locales/app-feedback"
-import { useView, View } from "@/contexts/ViewContext"
+import { usePrivateContactNavigation } from "./usePrivateContactNavigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,7 +35,7 @@ export default function AppFeedbackDialog({
   onRestoreFocus: () => void
 }) {
   const { locale } = useI18n()
-  const { setView } = useView()
+  const openPrivateContact = usePrivateContactNavigation()
   const copy = appFeedbackCopy[locale]
   const [requestId, setRequestId] = useState(() => crypto.randomUUID())
   const [category, setCategory] = useState<"problem" | "feedback">("problem")
@@ -48,6 +48,7 @@ export default function AppFeedbackDialog({
   const descriptionInput = useRef<HTMLTextAreaElement>(null)
   const consentInput = useRef<HTMLInputElement>(null)
   const successMessage = useRef<HTMLDivElement>(null)
+  const handingOff = useRef(false)
   const mutation = trpc.problemReports.submit.useMutation()
   // A failed request may already have been saved. Retry its unchanged UUID/payload.
   const locked = mutation.isPending || !!mutation.error
@@ -135,7 +136,8 @@ export default function AppFeedbackDialog({
         className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto overscroll-contain rounded-xl sm:max-w-lg"
         onCloseAutoFocus={(event) => {
           event.preventDefault()
-          onRestoreFocus()
+          if (!handingOff.current) onRestoreFocus()
+          handingOff.current = false
         }}
       >
         <DialogHeader className="pr-3 text-left">
@@ -196,7 +198,8 @@ export default function AppFeedbackDialog({
                     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
                     event.preventDefault()
                     if (mutation.isPending) return
-                    setView(View.CONTACT)
+                    handingOff.current = true
+                    openPrivateContact()
                     onOpenChange(false)
                   }}
                   className="rounded-sm font-medium underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

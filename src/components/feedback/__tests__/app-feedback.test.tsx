@@ -1,8 +1,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import AppFeedback from "../AppFeedback"
+import AppFeedback, { AppFeedbackProvider, ReportProblemButton } from "../AppFeedback"
 import AppFeedbackDialog from "../AppFeedbackDialog"
+import SignedOutFeedbackDialog from "../SignedOutFeedbackDialog"
+import { useEffect, useState } from "react"
+import Header from "@/components/Header"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { I18nProvider } from "@/locales/i18n"
 import { RELEASE_ID } from "@/constants/release"
 
@@ -15,18 +19,28 @@ const mocks = vi.hoisted(() => ({
   error: null as { data?: { code: string } } | null,
   pending: false,
   setView: vi.fn(),
+  openAuthModal: vi.fn(),
+  pathname: "/",
+  push: vi.fn(),
 }))
 vi.mock("next-auth/react", () => ({
+  signOut: vi.fn(),
   useSession: () => ({
     status: mocks.status,
     data:
-      mocks.status === "authenticated" ? { user: { id: mocks.userId, role: mocks.role } } : null,
+      mocks.status === "authenticated"
+        ? { user: { id: mocks.userId, role: mocks.role, name: "Sample Resident" } }
+        : null,
   }),
 }))
 vi.mock("next/dynamic", () => ({
-  default: () =>
+  default: (loader: () => unknown) =>
     function RealFeedbackDialog(props: React.ComponentProps<typeof AppFeedbackDialog>) {
-      return <AppFeedbackDialog {...props} />
+      return loader.toString().includes("SignedOutFeedbackDialog") ? (
+        <SignedOutFeedbackDialog {...props} />
+      ) : (
+        <AppFeedbackDialog {...props} />
+      )
     },
 }))
 vi.mock("@/utils/trpc", () => ({
@@ -41,15 +55,33 @@ vi.mock("@/utils/trpc", () => ({
         }),
       },
     },
+    user: { getPasskeys: { useQuery: () => ({ data: [], isLoading: false }) } },
   },
 }))
 vi.mock("@/contexts/ViewContext", () => ({
   useView: () => ({ setView: mocks.setView }),
   View: { CONTACT: "contact" },
 }))
+vi.mock("@/contexts/AuthModalContext", () => ({
+  useAuthModal: () => ({ openAuthModal: mocks.openAuthModal }),
+}))
+vi.mock("next-themes", () => ({
+  useTheme: () => ({ theme: "light", resolvedTheme: "light", setTheme: vi.fn() }),
+}))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mocks.push }),
+  usePathname: () => mocks.pathname,
+}))
+vi.mock("@/contexts/NamePromptContext", () => ({ useNamePrompt: () => ({ openPrompt: vi.fn() }) }))
+vi.mock("@/components/NotificationBell", () => ({ default: () => null }))
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nProvider>{children}</I18nProvider>
+  <I18nProvider>
+    <AppFeedbackProvider>
+      <ReportProblemButton />
+      {children}
+    </AppFeedbackProvider>
+  </I18nProvider>
 )
 const title = "The calendar does not show my selected day"
 const description =
@@ -70,30 +102,134 @@ async function fillReport() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.openAuthModal.mockReset()
   localStorage.clear()
   mocks.userId = "resident-1"
   mocks.role = "USER"
   mocks.status = "authenticated"
   mocks.error = null
   mocks.pending = false
+  mocks.pathname = "/"
 })
 afterEach(cleanup)
 
 describe("app-wide problem reports", () => {
+  it.each(["USER", "RENTAL", "ADMIN", "guest"])(
+    "has one real header report control for %s, independent of the update notice",
+    async (role) => {
+      if (role === "guest") mocks.status = "unauthenticated"
+      else mocks.role = role
+      render(
+        <I18nProvider>
+          <AppFeedbackProvider>
+            <Header />
+            <AppFeedback />
+          </AppFeedbackProvider>
+        </I18nProvider>,
+      )
+      const header = screen.getByRole("banner")
+      const controls = screen.getAllByRole("button", { name: "Report a problem" })
+      expect(controls).toHaveLength(1)
+      expect(header.contains(controls[0])).toBe(true)
+      await userEvent.click(screen.getByRole("button", { name: "Dismiss update notice" }))
+      expect(screen.queryByRole("region", { name: "App feedback" })).toBeNull()
+      controls[0].focus()
+      await userEvent.keyboard("{Enter}")
+      expect(screen.getByRole("dialog")).toBeTruthy()
+      if (role === "guest")
+        expect(screen.getByRole("button", { name: "Contact us privately" })).toBeTruthy()
+      else expect(screen.getByRole("textbox", { name: "Short title" })).toBeTruthy()
+      await userEvent.keyboard("{Escape}")
+      expect(document.activeElement).toBe(controls[0])
+    },
+  )
+
   it.each(["USER", "RENTAL", "ADMIN"])("offers reports for authenticated %s accounts", (role) => {
     mocks.role = role
     render(<AppFeedback />, { wrapper: Wrapper })
     expect(screen.getByRole("button", { name: "Report a problem" })).toBeTruthy()
   })
 
-  it.each(["loading", "unauthenticated"])(
-    "does not show a report form for %s sessions",
-    (status) => {
-      mocks.status = status
-      render(<AppFeedback />, { wrapper: Wrapper })
-      expect(screen.queryByRole("button", { name: "Report a problem" })).toBeNull()
-    },
-  )
+  it("keeps the report control visible but disabled while the session loads", async () => {
+    mocks.status = "loading"
+    render(<AppFeedback />, { wrapper: Wrapper })
+    const control = screen.getByRole("button", { name: "Report a problem" }) as HTMLButtonElement
+    expect(control.disabled).toBe(true)
+    await userEvent.click(control)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it("offers signed-out users private in-app support and a secondary email fallback", async () => {
+    mocks.status = "unauthenticated"
+    render(<AppFeedback />, { wrapper: Wrapper })
+    await openReport()
+    expect(screen.getByText("You can get help even if you can’t sign in.")).toBeTruthy()
+    expect(screen.queryByRole("textbox", { name: "Short title" })).toBeNull()
+    expect(screen.getByRole("link", { name: "rentals@grh-hamburg.de" }).getAttribute("href")).toBe(
+      "mailto:rentals@grh-hamburg.de",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Contact us privately" }))
+    expect(mocks.setView).toHaveBeenCalledExactlyOnceWith("contact")
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it("offers sign-in before a signed-out user can create a public report", async () => {
+    mocks.status = "unauthenticated"
+    render(<AppFeedback />, { wrapper: Wrapper })
+    await openReport()
+    await userEvent.click(screen.getByRole("button", { name: "Sign in for a public report" }))
+    expect(mocks.openAuthModal).toHaveBeenCalledExactlyOnceWith("email", "", expect.any(Function))
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it("hands focus to the sign-in dialog instead of restoring it to the report trigger", async () => {
+    mocks.status = "unauthenticated"
+    function SignInDialog() {
+      const [open, setOpen] = useState(false)
+      useEffect(() => {
+        mocks.openAuthModal.mockImplementation(() => setOpen(true))
+      }, [])
+      return (
+        <Dialog open={open}>
+          <DialogContent>
+            <DialogTitle>Sign in to GRH</DialogTitle>
+            <DialogDescription>Enter your email to continue.</DialogDescription>
+            <input aria-label="Sign-in email" type="email" />
+          </DialogContent>
+        </Dialog>
+      )
+    }
+    render(
+      <>
+        <AppFeedback />
+        <SignInDialog />
+      </>,
+      { wrapper: Wrapper },
+    )
+    await openReport()
+    await userEvent.click(screen.getByRole("button", { name: "Sign in for a public report" }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Sign-in email" })),
+    )
+    expect(mocks.mutate).not.toHaveBeenCalled()
+  })
+
+  it("routes private support from a non-home page and selects Contact after navigation", async () => {
+    mocks.status = "unauthenticated"
+    mocks.pathname = "/missing-page"
+    const view = render(<AppFeedback />, { wrapper: Wrapper })
+    await openReport()
+    await userEvent.click(screen.getByRole("button", { name: "Contact us privately" }))
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/?contact")
+    expect(mocks.setView).not.toHaveBeenCalled()
+    mocks.pathname = "/"
+    view.rerender(<AppFeedback />)
+    expect(mocks.setView).toHaveBeenCalledExactlyOnceWith("contact")
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
 
   it("dismisses the update once per release/account while keeping reporting available", async () => {
     const view = render(<AppFeedback />, { wrapper: Wrapper })
@@ -283,7 +419,40 @@ describe("app-wide problem reports", () => {
     mocks.status = "unauthenticated"
     view.rerender(<AppFeedback />)
     expect(screen.queryByRole("dialog")).toBeNull()
-    expect(screen.queryByRole("button", { name: "Report a problem" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Report a problem" })).toBeTruthy()
+    await openReport()
+    expect(screen.queryByRole("textbox", { name: "Short title" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Contact us privately" })).toBeTruthy()
+  })
+
+  it("resets report drafts without remounting the current page on account changes", async () => {
+    function PageState() {
+      const [value, setValue] = useState("")
+      return (
+        <input
+          aria-label="Current booking draft"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      )
+    }
+    const view = render(<PageState />, { wrapper: Wrapper })
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Current booking draft" }),
+      "Keep this page state",
+    )
+    await openReport()
+    await fillReport()
+    mocks.userId = "another-account"
+    view.rerender(<PageState />)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(
+      (screen.getByRole("textbox", { name: "Current booking draft" }) as HTMLInputElement).value,
+    ).toBe("Keep this page state")
+    await openReport()
+    expect((screen.getByRole("textbox", { name: "Short title" }) as HTMLInputElement).value).toBe(
+      "",
+    )
   })
 
   it("restores keyboard focus when a draft closes and localizes German disclosure", async () => {
