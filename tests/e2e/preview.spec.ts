@@ -79,7 +79,13 @@ function protectPrivateScreens(page: Page, fixture: { userId: string; itemTitle:
   }
 }
 
-async function capture(page: Page, file: string, entries: Capture[], verify?: () => Promise<void>) {
+async function capture(
+  page: Page,
+  file: string,
+  entries: Capture[],
+  verify?: () => Promise<void>,
+  viewportOnly = false,
+) {
   // Radix correctly removes the background header from the accessibility tree
   // while a modal is open; it remains part of the visual page being captured.
   await expect(page.locator("header").first()).toBeVisible()
@@ -90,15 +96,15 @@ async function capture(page: Page, file: string, entries: Capture[], verify?: ()
         (document.querySelector("canvas[data-site-background]") as HTMLCanvasElement)?.width > 0,
     )
   }
-  await page.evaluate(async () => {
+  await page.evaluate(async (keepPosition) => {
     await document.fonts.ready
     // Request all real page images before a full-page capture, including those
     // normally loaded lazily as the visitor scrolls. No image content is replaced.
     document.querySelectorAll("img").forEach((image) => {
       image.loading = "eager"
     })
-    window.scrollTo(0, 0)
-  })
+    if (!keepPosition) window.scrollTo(0, 0)
+  }, viewportOnly)
   await page.waitForFunction(() => [...document.images].every((image) => image.complete))
   await verify?.()
   const metrics = await page.evaluate(() => {
@@ -136,7 +142,11 @@ async function capture(page: Page, file: string, entries: Capture[], verify?: ()
     metrics.viewportWidth + 1,
   )
   expect(metrics.clippedControls, "A control is clipped by its container").toBe(0)
-  await page.screenshot({ path: path.join(gallery, file), fullPage: true, animations: "disabled" })
+  await page.screenshot({
+    path: path.join(gallery, file),
+    fullPage: !viewportOnly,
+    animations: "disabled",
+  })
   entries.push({ file, capturedAt: new Date().toISOString(), ...metrics })
 }
 
@@ -204,6 +214,8 @@ for (const locale of ["en", "de"] as const) {
       page.on("pageerror", (error) => errors.push(error.name))
       try {
         await page.goto("/")
+        // Wait for a unique title before inspecting the hydrated page.
+        await expect(page.locator("#catalog-title")).toHaveCount(1)
         await expect(page.locator("#catalog-title")).toBeVisible()
         await expect(page.locator("html")).toHaveAttribute("lang", locale)
         await capture(page, `catalog-${suffix}`, entries)
@@ -313,7 +325,17 @@ for (const locale of ["en", "de"] as const) {
             page.getByText(copy.helpPage.adminStepInactive, { exact: true }),
           ).toBeVisible()
           await expect(page.locator("#admin-quick-inactive")).toHaveClass(/ring-blue-500/)
-          await capture(page, `admin-tour-inactive-${suffix}`, entries)
+          await expect(page.locator("#admin-quick-inactive")).toBeInViewport({ ratio: 1 })
+          await expect
+            .poll(() =>
+              page.locator("#admin-quick-inactive").evaluate((element) => {
+                const target = element.getBoundingClientRect()
+                const panel = document.querySelector("[data-tour-panel]")!.getBoundingClientRect()
+                return target.top >= 0 && target.bottom + 8 <= panel.top
+              }),
+            )
+            .toBe(true)
+          await capture(page, `admin-tour-inactive-${suffix}`, entries, undefined, true)
           await page.keyboard.press("Escape")
         })
         expect(errors, "Unexpected application runtime error during preview").toEqual([])

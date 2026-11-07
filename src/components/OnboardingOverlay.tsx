@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback, useMemo, useSyncExternalStore } from "react"
+import { useEffect, useState, useCallback, useMemo, useRef, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -118,13 +118,21 @@ function OnboardingSession({
   const targetStore = useMemo(() => createTargetStore(selectorKey), [selectorKey])
   const rects = useSyncExternalStore(targetStore.subscribe, targetStore.getSnapshot, serverRects)
   const currentSelector = steps[currentStep]?.selector
+  const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (mode !== "tour" || isCompleted || !currentSelector) return
     const element = document.querySelector(currentSelector)
     const rect = element?.getBoundingClientRect()
-    if (rect && (rect.top < 24 || rect.bottom > window.innerHeight / 2)) {
-      element?.scrollIntoView?.({ block: "center", behavior: "instant" })
+    if (!element?.scrollIntoView || !rect?.height) return
+    const headerBottom = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0
+    const top = Math.max(24, headerBottom + 16)
+    const panel = panelRef.current?.getBoundingClientRect()
+    const bottom = (panel?.height ? panel.top : window.innerHeight) - 24
+    if (rect.top < top || rect.bottom > bottom) {
+      const targetTop = top + Math.max(0, (bottom - top - rect.height) / 2)
+      element.scrollIntoView({ block: "start", behavior: "instant" })
+      window.scrollBy({ top: element.getBoundingClientRect().top - targetTop, behavior: "instant" })
     }
   }, [currentSelector, mode, isCompleted])
 
@@ -321,7 +329,11 @@ function OnboardingSession({
       </div>
 
       {/* Tour control panel */}
-      <div className="fixed inset-x-3 bottom-3 z-40 pointer-events-auto animate-in slide-in-from-bottom-4 duration-300 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2">
+      <div
+        ref={panelRef}
+        data-tour-panel
+        className="fixed inset-x-3 bottom-3 z-[60] pointer-events-auto animate-in slide-in-from-bottom-4 duration-300 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2"
+      >
         <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 max-w-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">

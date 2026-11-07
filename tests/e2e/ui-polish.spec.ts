@@ -81,14 +81,16 @@ for (const view of [
       ).toBeVisible()
       await expect(page.locator("[data-day]").first()).toBeVisible()
       const notes = page.getByRole("textbox", { name: "Notes (Required)", exact: true })
-      await notes
-        .locator("..")
-        .screenshot({ path: path.join(gallery, `notes-empty-${view.name}.png`) })
+      await notes.locator("../..").screenshot({
+        path: path.join(gallery, `notes-empty-${view.name}.png`),
+        animations: "disabled",
+      })
       await notes.fill("A private residents' celebration.")
       await notes.press("Tab")
-      await notes
-        .locator("..")
-        .screenshot({ path: path.join(gallery, `notes-filled-${view.name}.png`) })
+      await notes.locator("../..").screenshot({
+        path: path.join(gallery, `notes-filled-${view.name}.png`),
+        animations: "disabled",
+      })
       await notes.fill("")
       await notes.press("Tab")
       const today = toBerlinDate()
