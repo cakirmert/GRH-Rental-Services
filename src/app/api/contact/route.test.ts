@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { POST } from "./route"
 const budgets = vi.hoisted(() => new Map<string, number>())
+const { getCurrentAccount } = vi.hoisted(() => ({ getCurrentAccount: vi.fn() }))
+vi.mock("@/features/identity/server", () => ({ getCurrentAccount }))
 vi.mock("@/lib/auth/state", () => ({
   requestAddress: (req: Request) => req.headers.get("x-forwarded-for") || "local",
   consumeBudget: vi.fn(async (scope: string, subject: string, limit: number) => {
@@ -34,6 +36,7 @@ vi.mock("@/lib/mail", () => ({
 describe("POST /api/contact", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getCurrentAccount.mockResolvedValue(null)
     budgets.clear()
     vi.useFakeTimers()
   })
@@ -90,6 +93,33 @@ describe("POST /api/contact", () => {
     expect(body.error).toContain("Too many requests")
   })
 
+  it("uses the current database account email instead of a tampered signed-in address", async () => {
+    getCurrentAccount.mockResolvedValue({ id: "signed-in", email: "account@example.com" })
+    const { transporter } = await import("@/lib/mail")
+    const req = new Request("https://example.test/api/contact", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Test User",
+        email: "forged@example.com",
+        room: "101",
+        issue: "inquiry",
+        message: "Hello",
+      }),
+    })
+    expect((await POST(req)).status).toBe(200)
+    expect(transporter!.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        replyTo: "account@example.com",
+        text: expect.stringContaining("Email: account@example.com"),
+      }),
+    )
+    expect(transporter!.sendMail).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining("forged@example.com"),
+      }),
+    )
+  })
+
   it("should require Turnstile token if secret is configured", async () => {
     process.env.TURNSTILE_SECRET_KEY = "test-secret"
 
@@ -140,11 +170,18 @@ describe("POST /api/contact", () => {
   })
 
   it.each(["one@example.com,two@example.com", "one@example.com\r\nBcc: two@example.com"])(
-    "rejects a submitter address that cannot safely be a reply destination: %j", async (email) => {
+    "rejects a submitter address that cannot safely be a reply destination: %j",
+    async (email) => {
       const { transporter } = await import("@/lib/mail")
       const req = {
         headers: new Headers(),
-        json: async () => ({ name: "Test User", email, room: "101", issue: "test", message: "hello" }),
+        json: async () => ({
+          name: "Test User",
+          email,
+          room: "101",
+          issue: "test",
+          message: "hello",
+        }),
       } as unknown as Request
       expect((await POST(req)).status).toBe(400)
       expect(transporter!.sendMail).not.toHaveBeenCalled()

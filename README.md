@@ -7,7 +7,7 @@
 **Rooms, equipment and games. One place to book and manage them.**
 
 [![Vercel production deployment](https://img.shields.io/github/deployments/cakirmert/GRH-Rental-Services/Production?label=Vercel%20production&logo=vercel&style=flat-square)](https://vercel.com/cakirmerts-projects/grhbooking/deployments?environment=production)
-[![Code version 1.18.0](https://img.shields.io/badge/code-1.18.0-292524?style=flat-square)](docs/release-history.md)
+[![Code version 1.18.1](https://img.shields.io/badge/code-1.18.1-292524?style=flat-square)](docs/release-history.md)
 [![MIT license](https://img.shields.io/badge/license-MIT-57534e?style=flat-square)](LICENSE)
 
 [Visit the website](https://grh-rentals.de) · [Run locally](#safe-local-setup) · [Architecture](#architecture-and-navigation) · [Preview testing](docs/preview-testing.md) · [Release guide](docs/upgrade-release.md)
@@ -18,11 +18,13 @@ A bilingual rental service for residents of Gustav-Radbruch-Haus: browse rooms,
 equipment and games, request bookings, and communicate with the responsible team.
 Rental staff manage their items and bookings; administrators manage the service.
 
-The code version is **1.18.0**. The V2 rebuild keeps existing accounts,
+The code version is **1.18.1**. The V2 rebuild keeps existing accounts,
 bookings and passkeys while separating the application shell, feature controllers,
 server policies and database services. The production badge tracks the **live
-deployment**, independently of this branch. V2 still awaits its controlled
-production cutover; follow the [release procedure](docs/upgrade-release.md).
+deployment**, independently of this branch. V2 went live on 7 November 2026;
+existing bookings and passkeys were verified intact, and the owner confirmed
+passkey sign-in. See the [production record](docs/production-2026-11-07.md) and
+[release procedure](docs/upgrade-release.md) before deploying another change.
 
 ## A look around
 

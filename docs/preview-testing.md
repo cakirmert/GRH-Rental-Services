@@ -1,5 +1,9 @@
 # Hosted preview testing
 
+V2 is now live in production; see the [7 November release record](production-2026-11-07.md).
+The preview below remains a separate protected clone. It does not receive live
+bookings or subsequent production credential changes automatically.
+
 The V2 preview is prepared at **https://preview.grh-rentals.de**, on the
 `codex/v2-rebuild` Git branch. Its deployment and domain mapping use Vercel's
 **Preview** environment. Publishing this branch does not release it to production.
@@ -20,8 +24,8 @@ No browser console errors were observed during the checked preview session.
 The same application source passed 864 tests in 104 files, all 15 local browser
 checks, TypeScript, lint with zero warnings, the local production build and the
 hosted Vercel build. `npm audit` reports zero known dependency vulnerabilities for
-this lockfile. Production still serves its retained `1feb7de` revision; GitHub's
-default-branch dependency alerts are not cleared by publishing the preview branch.
+this lockfile. Production subsequently released `5e46951`; its default-branch
+Dependabot alerts were checked again at cutover and showed zero open alerts.
 
 The hosted build uses Node 26 as selected by `package.json`. Its initial build
 noted an override of the older global project setting (22.x). The project setting
@@ -91,8 +95,8 @@ backup was independently restored to local PostgreSQL and verified against its
 snapshot; private evidence is retained outside Git.
 
 The owner has now confirmed possession and successful use of an existing passkey
-on the preview. A separate sign-in on the canonical production origin remains
-required during cutover; preview acceptance cannot establish that final result.
+on the preview and subsequently on the canonical production origin. Preview
+acceptance alone would not establish that production result.
 
 ## Manual acceptance
 
@@ -113,7 +117,11 @@ logs. Console OTPs belong exclusively to the guarded localhost workflow describe
 in the README. A failed existing-passkey test should be investigated before any
 production migration rather than bypassed by pointing the preview at live data.
 
-## Remaining production gates
+## Historical production gates — completed during cutover
+
+The gates below were satisfied during the recorded production cutover. Keep
+the backup and recovery constraints for future work; do not rerun migration or
+restoration commands merely to publish a compatible code update.
 
 - Keep production on its retained deployment while preview acceptance is pending.
   Code pushes and preview tests do not authorize merging or promoting production.

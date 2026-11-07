@@ -44,12 +44,12 @@ afterEach(() => {
 describe("contact account-local drafts", () => {
   it("derives the current account email immediately without replacing the rest of the draft", async () => {
     const view = show()
-    expect(field("email").value).toBe("a@example.test")
-    expect(field("email").readOnly).toBe(true)
+    expect(screen.getByText("a@example.test")).toBeTruthy()
+    expect(screen.queryByRole("textbox", { name: "Email" })).toBeNull()
     await userEvent.type(screen.getByRole("textbox", { name: "Message" }), "My draft")
     mocks.user = { id: "a", email: "new@example.test" }
     view.rerender(<ContactPage />)
-    expect(field("email").value).toBe("new@example.test")
+    expect(screen.getByText("new@example.test")).toBeTruthy()
     expect(field("message").value).toBe("My draft")
     await userEvent.click(screen.getByRole("button", { name: "Switch language" }))
     expect(field("message").value).toBe("My draft")
@@ -63,7 +63,7 @@ describe("contact account-local drafts", () => {
     view.rerender(<ContactPage />)
     expect(field("name").value).toBe("")
     expect(field("message").value).toBe("")
-    expect(field("email").value).toBe("b@example.test")
+    expect(screen.getByText("b@example.test")).toBeTruthy()
     mocks.user = null
     view.rerender(<ContactPage />)
     expect(field("email").value).toBe("")
@@ -91,6 +91,7 @@ describe("contact account-local drafts", () => {
       email: "a@example.test",
       message: "Synthetic request",
     })
+    expect(JSON.parse(mocks.fetch.mock.calls[0][1].body)).not.toHaveProperty("turnstileToken")
     expect(screen.getByText("Thank you for reaching out!")).toBeTruthy()
   })
 })
