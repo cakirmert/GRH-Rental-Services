@@ -17,10 +17,12 @@ function configuredMailbox(value: string | undefined): string | undefined {
 export const CONTACT_EMAIL = configuredMailbox(process.env.CONTACT_EMAIL) ?? ""
 export const SMTP_USER = process.env.SMTP_USER?.trim() || CONTACT_EMAIL
 export const EMAIL_FROM = configuredMailbox(process.env.EMAIL_FROM) ?? CONTACT_EMAIL
-// An explicitly blank value opts out of Reply-To; omission preserves old deployments.
-export const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO?.trim() === ""
+// "none" also works in deployment editors that reject empty environment values.
+// Omission preserves the existing contact-address fallback.
+const replyToSetting = process.env.EMAIL_REPLY_TO?.trim()
+export const EMAIL_REPLY_TO = replyToSetting === "" || replyToSetting === "none"
   ? undefined
-  : configuredMailbox(process.env.EMAIL_REPLY_TO) ?? CONTACT_EMAIL
+  : configuredMailbox(replyToSetting) ?? CONTACT_EMAIL
 const smtpPort = Number(process.env.SMTP_PORT?.trim() || 465)
 
 /**

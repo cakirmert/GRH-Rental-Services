@@ -4,6 +4,7 @@ import { useState, KeyboardEvent } from "react"
 import { useI18n } from "@/locales/i18n"
 import Link from "next/link"
 import { Container } from "@/components/ui/container"
+import { RENTAL_CONTACT_EMAIL } from "@/constants/contact"
 
 export default function FAQPage() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
@@ -103,8 +104,8 @@ export default function FAQPage() {
             {t("footer.contactFormLink")}
           </Link>
           {t("faqPage.supportAnswerPart2")}
-          <a href="mailto:rentals@grh-hamburg.de" className="underline">
-            rentals@grh-hamburg.de
+          <a href={`mailto:${RENTAL_CONTACT_EMAIL}`} className="underline">
+            {RENTAL_CONTACT_EMAIL}
           </a>
           {t("faqPage.supportAnswerPart3")}
         </p>

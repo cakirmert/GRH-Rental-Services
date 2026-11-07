@@ -45,6 +45,11 @@ The first compatible follow-up, **1.18.1**, refines the contact form, fixes
 submission without Turnstile, and uses the current account's email on the server.
 It does not change the database schema or passkey storage.
 
+**1.18.2** aligns the public rental contact links with the separate
+`info@grh-rentals.de` inbox and documents the verified-domain mail setup.
+Mail credentials remain deployment secrets; no account or booking migration is
+required. See [email configuration](email-setup.md).
+
 - `1.18.1`, `1.18.2`, …: fixes and small compatible refinements.
 - `1.19.0`, …: a new feature milestone.
 - A major bump: a deliberate breaking product/data/API contract, with migration notes.

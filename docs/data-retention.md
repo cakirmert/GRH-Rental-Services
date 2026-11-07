@@ -25,6 +25,12 @@ while inactive rental staff and administrators require manual deletion approval.
 | Item catalog and responsibility membership             | Items persist while used by the service. Staff must transfer responsibilities before deletion; deletion removes the account's membership link.                                                                                            | No blanket age-based item deletion.                                                                                                                                                                                                      |
 | Backups, delivered emails, hosting/email-provider logs | Outside the app database's cleanup. No universal retention period is implemented by this repository. Existing release backups are deliberately retained.                                                                                  | Keep the verified rollback backup through release validation, then adopt a documented backup expiry/rotation policy. Do not restore deleted accounts from an old dump. Already delivered emails cannot be recalled by database deletion. |
 
+The configured Resend Free plan advertises 30-day email-record retention. This
+does not delete recipient mailbox copies or the rental team's contact mailbox.
+Open/click tracking is currently disabled. Mailbox contents require a separate
+review/deletion process; see [email configuration](email-setup.md) and
+[Resend's plan limits](https://resend.com/pricing).
+
 The background jobs retain the explicitly chosen 10:00 and 18:00 UTC schedules.
 Thresholds are elapsed 180/365-day periods, not calendar-month/year arithmetic.
 Deletion occurs on the next successful run and may take additional runs for a
