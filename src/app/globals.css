@@ -352,3 +352,10 @@ textarea:-webkit-autofill {
     }
   }
 }
+
+/* Touch controls stay visible; pointer and keyboard users reveal them as needed. */
+@media (hover: hover) and (pointer: fine) {
+  [data-image-gallery]:not(:hover):not(:focus-within) .gallery-control {
+    opacity: 0;
+  }
+}

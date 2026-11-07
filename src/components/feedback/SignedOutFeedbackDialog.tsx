@@ -6,6 +6,7 @@ import { usePrivateContactNavigation } from "./usePrivateContactNavigation"
 import { useI18n } from "@/locales/i18n"
 import { appFeedbackCopy } from "@/locales/app-feedback"
 import { Button } from "@/components/ui/button"
+import { RENTAL_CONTACT_EMAIL } from "@/constants/contact"
 import {
   Dialog,
   DialogContent,
@@ -72,10 +73,10 @@ export default function SignedOutFeedbackDialog({
           <p className="text-xs leading-relaxed text-muted-foreground">
             {copy.emailFallback}{" "}
             <a
-              href="mailto:rentals@grh-hamburg.de"
+              href={`mailto:${RENTAL_CONTACT_EMAIL}`}
               className="rounded-sm underline underline-offset-4 [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              rentals@grh-hamburg.de
+              {RENTAL_CONTACT_EMAIL}
             </a>
           </p>
         </div>

@@ -70,7 +70,7 @@ describe("mail identity and transport configuration", () => {
     expect(mail.EMAIL_REPLY_TO).toBe("contact@example.com")
   })
 
-  it.each(["", "   "])("omits Reply-To when explicitly blank, while retaining the sender fallback: %j", async (value) => {
+  it.each(["", "   ", "none", " none "])("omits Reply-To when explicitly disabled, while retaining the sender fallback: %j", async (value) => {
     vi.stubEnv("EMAIL_FROM", value)
     vi.stubEnv("EMAIL_REPLY_TO", value)
     const mail = await import("../mail")

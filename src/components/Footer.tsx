@@ -4,6 +4,7 @@ import { Mail, LifeBuoy, Users, Megaphone, Shield, FileText, HelpCircle } from "
 import { GitHubLogoIcon } from "@radix-ui/react-icons"
 import { useI18n } from "@/locales/i18n"
 import Link from "next/link"
+import { RENTAL_CONTACT_EMAIL } from "@/constants/contact"
 
 export default function Footer() {
   const { t, locale } = useI18n()
@@ -41,11 +42,11 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:rentals@grh-hamburg.de"
+                  href={`mailto:${RENTAL_CONTACT_EMAIL}`}
                   className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
                 >
                   <Mail className="h-4 w-4" />
-                  rentals@grh-hamburg.de
+                  {RENTAL_CONTACT_EMAIL}
                 </a>
               </li>
             </ul>

@@ -1,146 +1,52 @@
-# Hosted preview testing
+# Local and hosted preview testing
 
-V2 is now live in production; see the [7 November release record](production-2026-11-07.md).
-The preview below remains a separate protected clone. It does not receive live
-bookings or subsequent production credential changes automatically.
+## Local development
 
-The V2 preview is prepared at **https://preview.grh-rentals.de**, on the
-`codex/v2-rebuild` Git branch. Its deployment and domain mapping use Vercel's
-**Preview** environment. Publishing this branch does not release it to production.
-Manual deployment is deliberate while `vercel.json` disables automatic Git
-deployments for this branch.
+Use the guarded commands in the [README](../README.md#safe-local-setup).
+The runner requires a named loopback PostgreSQL database, a test-only secret and
+the localhost origin. It strips production credentials and disables outbound
+integrations.
 
-## Verified deployment — 7 November 2026
+For manual local sign-in, request an email code. The local runner prints it as
+`[local-otp]` in its terminal; no email is sent. Expiry, rate limits and single-use
+verification still apply. Codes are never returned in HTTP responses or exposed
+by hosted previews.
 
-Vercel Preview deployment `6sdNRmSNB9rb7StiG77uEefyk5Jr` is **Ready**, built
-from application revision `c566eccdcec318eb987009ec7d35b7e49b313c97`. The custom
-domain serves that revision with valid HTTPS. An unauthenticated request redirects
-to Vercel authentication; the authorized owner's browser loads the application.
-The owner **successfully signed in with an existing production passkey** and
-confirmed the result. The hosted clone records one authenticated credential;
-all 25 credential IDs/public keys still match the independently restored backup.
-No browser console errors were observed during the checked preview session.
+Production passkeys cannot authenticate on localhost. Use email-code sign-in and
+a separate local test passkey.
 
-The same application source passed 864 tests in 104 files, all 15 local browser
-checks, TypeScript, lint with zero warnings, the local production build and the
-hosted Vercel build. `npm audit` reports zero known dependency vulnerabilities for
-this lockfile. Production subsequently released `5e46951`; its default-branch
-Dependabot alerts were checked again at cutover and showed zero open alerts.
+## Hosted preview isolation
 
-The hosted build uses Node 26 as selected by `package.json`. Its initial build
-noted an override of the older global project setting (22.x). The project setting
-was subsequently aligned to **26.x** on 7 November 2026 and verified after reload;
-this affects new deployments without replacing the running production artifact.
-Build, output, install and development-command overrides remain disabled, the
-root directory is the repository root, and ignored-build behavior is Automatic.
-Vercel reads the repository's configuration by default: Node comes from
-`package.json`, while `vercel.json` controls the function region, cron schedules
-and branch deployment gate. Credentials, domains and deployment protection remain
-in Vercel's settings; `.vercel/project.json` only identifies the linked project.
-See [Vercel's Node version rules](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
-The initial build also reports npm notices about
-Vercel's `cache-dir` environment setting and dependency install-script allowlists.
-These are separate from repository lint warnings; generation and deployment
-succeeded. Build machines run in Vercel's selected build region, independently of
-the application function region configured as Frankfurt in `vercel.json`.
+- Use an independent database and independent authentication/cron secrets.
+- Keep cookies host-only and protect preview access.
+- Keep `DISABLE_OUTBOUND=true`; omit production integration write credentials.
+- Verify every database connection alias points to the isolated database.
+- Confirm provider integrations cannot automatically replace that connection.
+- Keep private records and screenshots out of the public repository.
 
-## Isolation and access
+A restored clone may contain personal data. Access controls and an explicit
+cleanup/retention plan apply even when the preview is temporary.
 
-- The preview uses a separate Neon branch, `v2-preview-20261107`, cloned from
-  production on 7 November 2026. Its database password was changed independently
-  of the parent. Every database connection alias in the branch-specific Vercel
-  settings points to this clone.
-- Authentication and cron secrets are independent. Browser cookies remain
-  host-only. The live authentication secret, main database and canonical domain
-  are unchanged.
-- Vercel Standard Protection requires a signed-in, authorized Vercel team member
-  for preview access. Production custom domains remain public. No bypass token,
-  public share link or protection exception was created.
-- `DISABLE_OUTBOUND=true` suppresses email, push, uploads and scheduled jobs;
-  GitHub report delivery is disabled. Production integration write credentials
-  are absent. Public push and challenge keys are omitted from the client build.
-- Database operations inside the app still write to the clone. Test bookings,
-  profile changes and reports do not synchronize back to the live application.
-- Neon automatic database branching is disabled for both Preview and Production
-  deployments. This prevents the integration from replacing the explicitly
-  prepared connection at deployment time. The dedicated production branch remains
-  `main`; the resource-active deployment check remains enabled.
+## Existing-passkey rehearsal
 
-The clone contains personal data and must remain access protected. Do not copy its
-connection strings, exported data or private screenshots into the public repository.
-The public README gallery uses synthetic private records.
+A protected subdomain such as `preview.example.org` can use parent-domain
+passkeys when the RP is `example.org` and the exact preview origin is expected.
+An unrelated hosting-provider domain cannot use those credentials.
 
-## Existing passkeys
+For a clone retaining production account IDs and the same RP, set
+`GRH_PASSKEY_SIGNIN_ONLY=true`. The application disables registration and
+revocation while allowing existing-passkey authentication. This avoids replacing
+a device credential used by production. Use a separate localhost credential for
+enrollment/revocation tests.
 
-The preview uses `RP_ID=grh-rentals.de` with its **own exact expected origin**,
-`https://preview.grh-rentals.de`. The parent RP is valid from its subdomain under
-[WebAuthn's RP identifier rules](https://www.w3.org/TR/webauthn-3/#relying-party-identifier).
-The clone retains the original user IDs and credential material. An unrelated
-`vercel.app` hostname cannot use these credentials with the same configuration.
+The operator must confirm a real credential on the intended HTTPS origin.
+Successful preview authentication alone does not prove production acceptance.
 
-Set **`GRH_PASSKEY_SIGNIN_ONLY=true`** on this preview. The server rejects passkey
-registration options, registration submissions and revocation, including direct
-credential-store calls. The UI disables the corresponding account controls and
-explains why. Authentication, replay protection and signature-counter updates
-remain enabled on the isolated clone. This prevents an enrollment using the same
-RP/account from replacing a device credential used by production. Do not turn
-the restriction off merely to test enrollment here; use localhost and a separate
-local passkey for that test. Production leaves the flag unset or `false`.
+## Acceptance
 
-Before preview deployment, additive migrations and legacy passkey indexing were
-rehearsed on the hosted clone. Both indexing runs retained all 25 original
-passkeys unchanged, with 25 normalized credentials. All original table counts and
-the ordered user/passkey digest matched before migrations. A fresh production
-backup was independently restored to local PostgreSQL and verified against its
-snapshot; private evidence is retained outside Git.
+Check the catalog, booking request, account settings, messages and relevant
+staff/admin screens. Verify Berlin times, Monday-first weeks and role access.
+Confirm changes affect only the clone and no external notifications are sent.
+Record failures privately without publishing account or booking data.
 
-The owner has now confirmed possession and successful use of an existing passkey
-on the preview and subsequently on the canonical production origin. Preview
-acceptance alone would not establish that production result.
-
-## Manual acceptance
-
-1. Open the HTTPS preview URL. Complete Vercel authentication if prompted. This
-   gateway is separate from signing in to the rental application.
-2. Choose the application's existing-passkey sign-in on the device/browser that
-   holds the production passkey. Complete the device confirmation yourself.
-3. Verify the expected account and permissions, then test the catalog, a booking
-   request, chat, account settings and the relevant staff/admin pages. Changes
-   affect only the clone. Check Berlin dates/hours and a Monday-first calendar.
-4. Confirm that account settings explain why passkey addition/removal is disabled.
-   Do not delete a passkey from the device/password manager during this rehearsal.
-5. Report the failing screen and action if anything fails. Avoid putting account
-   data in a public GitHub issue. The preview's report queue does not deliver issues.
-
-Hosted preview email is disabled, and it does **not** expose OTPs in responses or
-logs. Console OTPs belong exclusively to the guarded localhost workflow described
-in the README. A failed existing-passkey test should be investigated before any
-production migration rather than bypassed by pointing the preview at live data.
-
-## Historical production gates — completed during cutover
-
-The gates below were satisfied during the recorded production cutover. Keep
-the backup and recovery constraints for future work; do not rerun migration or
-restoration commands merely to publish a compatible code update.
-
-- Keep production on its retained deployment while preview acceptance is pending.
-  Code pushes and preview tests do not authorize merging or promoting production.
-- The Bar weekly rule is now restored on the preview with an explicit exception
-  preserving the reviewed pending booking. Only the overlapping part of one
-  occurrence is opened; a one-off replacement retains the remainder. The booking
-  is still pending and its complete row is unchanged. All 25 passkey credential
-  materials remain unchanged. Use the reviewed booking ID with the maintenance
-  command in [recurring-blocks.md](recurring-blocks.md), dry-run again for any new
-  conflicts, and repeat the controlled restoration during production cutover.
-- Follow [the release procedure](upgrade-release.md) and
-  [authentication cutover contract](auth-migration.md): freeze old incompatible
-  writes, take another fresh restore-tested backup, apply additive migrations,
-  backfill and verify credentials, deploy the exact tested revision, and confirm
-  real-device canonical-origin passkey login plus OTP recovery before reopening.
-- Preserve current backup evidence and rollback instructions. A code rollback must
-  not overwrite live data with the preview clone or an older backup.
-
-Configuration references:
-[Vercel environment variables](https://vercel.com/docs/environment-variables),
-[Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication),
-[Neon's Vercel integration](https://neon.com/docs/guides/vercel-managed-integration).
+See [deployment](upgrade-release.md) and the [authentication contract](auth-migration.md).

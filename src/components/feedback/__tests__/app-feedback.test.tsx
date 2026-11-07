@@ -167,8 +167,8 @@ describe("app-wide problem reports", () => {
     await openReport()
     expect(screen.getByText("You can get help even if you can’t sign in.")).toBeTruthy()
     expect(screen.queryByRole("textbox", { name: "Short title" })).toBeNull()
-    expect(screen.getByRole("link", { name: "rentals@grh-hamburg.de" }).getAttribute("href")).toBe(
-      "mailto:rentals@grh-hamburg.de",
+    expect(screen.getByRole("link", { name: "info@grh-rentals.de" }).getAttribute("href")).toBe(
+      "mailto:info@grh-rentals.de",
     )
     await userEvent.click(screen.getByRole("button", { name: "Contact us privately" }))
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/contact")

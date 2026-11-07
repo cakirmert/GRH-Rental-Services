@@ -36,14 +36,21 @@ something that can be calculated objectively from the number of commits.
 Historical features can have been superseded. Voting, for example, was replaced
 by the super-admin flag; this table records development history, not every
 currently enabled feature. Commit dates are not production deployment dates.
-It went live on 7 November 2026 with the owner-confirmed existing-passkey login;
-see [the production record](production-2026-11-07.md).
+See the [release procedure](upgrade-release.md) for validation requirements.
+Deployment acceptance and recovery evidence are kept in private operations records.
 
 ## Future releases
 
 The first compatible follow-up, **1.18.1**, refines the contact form, fixes
 submission without Turnstile, and uses the current account's email on the server.
 It does not change the database schema or passkey storage.
+
+**1.18.2** aligns the public rental contact links with the configured rental inbox
+and documents verified-domain mail configuration. It also makes gallery controls
+quieter, aligns the booking heading and Back action, explains superadmin rights
+in member management, and separates generic public guides from private operations.
+Mail credentials remain deployment secrets; no account or booking migration is
+required. See [email configuration](email-setup.md).
 
 - `1.18.1`, `1.18.2`, …: fixes and small compatible refinements.
 - `1.19.0`, …: a new feature milestone.

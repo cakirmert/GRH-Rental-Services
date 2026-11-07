@@ -52,3 +52,10 @@ prisma/migrations/20250430184116_init/migration.sql
 .agent
 .agents
 .env*.local
+
+# Private operational records; public docs use examples and synthetic data.
+/docs/private/
+/docs/production-*.md
+/docs/*-evidence.*
+/private-docs/
+/ops/private/

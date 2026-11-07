@@ -6,6 +6,7 @@ import { Role } from "@prisma/client"
 import { trpc } from "@/utils/trpc"
 import { useI18n } from "@/locales/i18n"
 import { retentionCopy } from "@/locales/retention"
+import { SuperAdminHelp } from "./SuperAdminHelp"
 import { useSession } from "next-auth/react"
 
 import type { inferRouterOutputs } from "@trpc/server"
@@ -185,7 +186,10 @@ export default function MembersTab({
       <Card>
         <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <CardTitle className="text-xl">{t("adminDashboard.members.title")}</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-xl">{t("adminDashboard.members.title")}</CardTitle>
+              <SuperAdminHelp />
+            </div>
             <CardDescription>{t("adminDashboard.members.description")}</CardDescription>
           </div>
           <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
@@ -285,8 +289,8 @@ export default function MembersTab({
                         </Badge>
                         {member.isSuperAdmin && (
                           <Badge variant="outline" className="ml-1.5 gap-1">
-                            <Crown className="h-3 w-3" />
-                            Super
+                            <Crown aria-hidden="true" className="h-3 w-3" />
+                            {retentionCopy[locale].superAdmin}
                           </Badge>
                         )}
                       </TableCell>
