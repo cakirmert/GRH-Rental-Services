@@ -46,8 +46,30 @@ with `--apply` to insert the rule. Repeating the command preserves the existing
 rule, exceptions, and stop date; it does not restart a series staff have stopped.
 It also refuses to add a second indefinite weekly rule if staff restored one first.
 
-The schedule has been restored in the isolated local database only. The live
-database has not been migrated or changed. The read-only live check found no
+To preserve a specifically reviewed conflicting reservation, pass
+`--preserve-booking REVIEWED_BOOKING_ID` during the dry run, then the same option
+with `--apply`. The script validates that the reservation belongs to the verified
+single-unit Bar and is pending, accepted or borrowed. It creates exceptions only
+for the weekly occurrences overlapping that reservation. One-off replacement
+blocks retain every part of those occurrences outside the booking, rather than
+opening the entire affected week. All other saved bookings are still checked;
+another conflict rejects the whole transaction. The reservation's status, dates,
+notes and ownership are never changed or automatically approved. No booking ID
+or personal data is embedded in the maintenance source.
+
+This is an explicit schedule exception, not a permanent booking whitelist. If the
+reservation is later cancelled or rescheduled, staff should review that occurrence
+and reblock any newly free interval if needed. Other weeks remain unaffected.
+An already restored rule is left untouched even when a preservation option is
+supplied; the command never silently rewrites staff's existing exceptions.
+
+The schedule is restored in the local copy and, as of 7 November 2026, in the
+isolated hosted preview. The hosted rehearsal preserved its reviewed pending
+reservation, shortened only the affected occurrence, and verified the full
+booking row and passkey material were unchanged. Integration tests also verified
+that the preserved request can subsequently be approved, the retained part of
+the block rejects new requests, and a second booking conflict is not bypassed.
+The live database has not been migrated or changed. The read-only live check found no
 future Yoga blocks; the old completed Yoga bookings remain as history.
 
 ## Release and recovery

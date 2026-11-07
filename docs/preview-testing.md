@@ -23,9 +23,18 @@ hosted Vercel build. `npm audit` reports zero known dependency vulnerabilities f
 this lockfile. Production still serves its retained `1feb7de` revision; GitHub's
 default-branch dependency alerts are not cleared by publishing the preview branch.
 
-The hosted build uses Node 26 as selected by `package.json`. Vercel notes that this
-overrides the older global project setting (22.x); that project setting was not
-changed during preview preparation. The build also reports npm notices about
+The hosted build uses Node 26 as selected by `package.json`. Its initial build
+noted an override of the older global project setting (22.x). The project setting
+was subsequently aligned to **26.x** on 7 November 2026 and verified after reload;
+this affects new deployments without replacing the running production artifact.
+Build, output, install and development-command overrides remain disabled, the
+root directory is the repository root, and ignored-build behavior is Automatic.
+Vercel reads the repository's configuration by default: Node comes from
+`package.json`, while `vercel.json` controls the function region, cron schedules
+and branch deployment gate. Credentials, domains and deployment protection remain
+in Vercel's settings; `.vercel/project.json` only identifies the linked project.
+See [Vercel's Node version rules](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
+The initial build also reports npm notices about
 Vercel's `cache-dir` environment setting and dependency install-script allowlists.
 These are separate from repository lint warnings; generation and deployment
 succeeded. Build machines run in Vercel's selected build region, independently of
@@ -108,10 +117,13 @@ production migration rather than bypassed by pointing the preview at live data.
 
 - Keep production on its retained deployment while preview acceptance is pending.
   Code pushes and preview tests do not authorize merging or promoting production.
-- The restored Bar weekly rule (Friday 14:00 to Saturday 14:00 Berlin time) has a
-  pending-booking conflict in the fresh clone. The restoration dry run stopped
-  without changing the booking or adding the rule. Resolve that reservation with
-  the owner before restoring the rule in the controlled production window.
+- The Bar weekly rule is now restored on the preview with an explicit exception
+  preserving the reviewed pending booking. Only the overlapping part of one
+  occurrence is opened; a one-off replacement retains the remainder. The booking
+  is still pending and its complete row is unchanged. All 25 passkey credential
+  materials remain unchanged. Use the reviewed booking ID with the maintenance
+  command in [recurring-blocks.md](recurring-blocks.md), dry-run again for any new
+  conflicts, and repeat the controlled restoration during production cutover.
 - Follow [the release procedure](upgrade-release.md) and
   [authentication cutover contract](auth-migration.md): freeze old incompatible
   writes, take another fresh restore-tested backup, apply additive migrations,

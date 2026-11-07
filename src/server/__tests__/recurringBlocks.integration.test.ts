@@ -5,6 +5,8 @@ import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { localDatabaseUrl } from "../../../scripts/local-database.mjs"
 import { parseBerlinDateTime } from "@/lib/recurring-blocks"
+import { restoreWeeklyBarBlock } from "../../../scripts/bar-restoration"
+import { blockOccurrences } from "@/server/recurringBlocks"
 import type { Context } from "@/server/context"
 
 vi.mock("@/lib/prismadb", () => ({ default: { log: { create: vi.fn() } } }))
@@ -261,5 +263,108 @@ describe.skipIf(!target)("durable blocks in disposable PostgreSQL", () => {
     await expect(asUser(user, "USER").create(bookingInput(item.id))).rejects.toMatchObject({
       code: "BAD_REQUEST",
     })
+  })
+
+  it("restores the Bar schedule around a preserved pending booking without changing it", async () => {
+    const fixture = await makeItem("bar-preservation")
+    const item = await db.item.update({ where: { id: fixture.id }, data: { titleEn: "Bar" } })
+    const booking = await db.booking.create({
+      data: {
+        userId: user,
+        itemId: item.id,
+        startDate: date("2030-01-05T07:00"),
+        endDate: date("2030-01-06T21:00"),
+        notes: "Synthetic booking that predates the restored schedule",
+      },
+    })
+    const options = { itemId: item.id, blockId: `${prefix}-restore-bar`, apply: false }
+    await expect(restoreWeeklyBarBlock(db, options)).rejects.toMatchObject({ code: "CONFLICT" })
+    const preserved = { ...options, preserveBookingId: booking.id }
+    await expect(restoreWeeklyBarBlock(db, preserved)).resolves.toMatchObject({
+      status: "dry run passed",
+      skippedOccurrences: [date("2030-01-04T14:00").toISOString()],
+      replacementBlocks: [
+        { startDate: date("2030-01-04T14:00"), endDate: date("2030-01-05T07:00") },
+      ],
+    })
+    expect(await db.recurringBlock.count({ where: { itemId: item.id } })).toBe(0)
+
+    await restoreWeeklyBarBlock(db, { ...preserved, apply: true })
+    expect(await db.booking.findUnique({ where: { id: booking.id } })).toEqual(booking)
+    expect(await db.recurringBlockException.count({ where: { blockId: options.blockId } })).toBe(1)
+    expect(await db.recurringBlock.count({ where: { itemId: item.id } })).toBe(2)
+    const occurrences = await blockOccurrences(
+      db,
+      date("2030-01-04T00:00"),
+      date("2030-01-13T00:00"),
+      { itemId: item.id },
+    )
+    expect(occurrences.map(({ startDate, endDate }) => ({ startDate, endDate }))).toEqual(
+      expect.arrayContaining([
+        { startDate: date("2030-01-04T14:00"), endDate: date("2030-01-05T07:00") },
+        { startDate: date("2030-01-11T14:00"), endDate: date("2030-01-12T14:00") },
+      ]),
+    )
+    expect(occurrences).toHaveLength(2)
+    await expect(
+      asUser(user, "USER").create({
+        itemId: item.id,
+        start: date("2030-01-04T15:00").toISOString(),
+        end: date("2030-01-04T16:00").toISOString(),
+        notes: "Synthetic blocked request",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+    await asUser(actor, "RENTAL").updateBookingStatusByTeam({
+      bookingId: booking.id,
+      newStatus: "ACCEPTED",
+    })
+    expect(await db.booking.findUnique({ where: { id: booking.id } })).toMatchObject({
+      status: "ACCEPTED",
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      notes: booking.notes,
+    })
+    const rules = await db.recurringBlock.findMany({
+      where: { itemId: item.id },
+      orderBy: { id: "asc" },
+    })
+    await expect(restoreWeeklyBarBlock(db, { ...preserved, apply: true })).resolves.toMatchObject({
+      status: "already present",
+      existingSchedulePreserved: true,
+    })
+    expect(
+      await db.recurringBlock.findMany({ where: { itemId: item.id }, orderBy: { id: "asc" } }),
+    ).toEqual(rules)
+  })
+
+  it("does not bypass a second booking conflict when preserving one Bar request", async () => {
+    const fixture = await makeItem("bar-other-conflict")
+    await db.item.update({ where: { id: fixture.id }, data: { titleEn: "Bar" } })
+    const booking = await db.booking.create({
+      data: {
+        userId: user,
+        itemId: fixture.id,
+        startDate: date("2030-01-05T07:00"),
+        endDate: date("2030-01-06T21:00"),
+      },
+    })
+    await db.booking.create({
+      data: {
+        userId: user,
+        itemId: fixture.id,
+        startDate: date("2030-01-12T10:00"),
+        endDate: date("2030-01-12T11:00"),
+      },
+    })
+    await expect(
+      restoreWeeklyBarBlock(db, {
+        itemId: fixture.id,
+        blockId: `${prefix}-restore-conflict`,
+        apply: true,
+        preserveBookingId: booking.id,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(await db.recurringBlock.count({ where: { itemId: fixture.id } })).toBe(0)
+    expect(await db.booking.findUnique({ where: { id: booking.id } })).toEqual(booking)
   })
 })

@@ -350,6 +350,12 @@ canonical domain and passkey settings during release. Review actual project
 settings as well as `vercel.json`; repository configuration is not evidence that
 a particular deployment ran correctly.
 
+Vercel reads `vercel.json` automatically and selects Node from `package.json`.
+The project dashboard now matches Node 26, with build/install/output/development
+overrides disabled. Keep these aligned when changing runtime versions. The ignored
+`.vercel/project.json` identifies the linked account/project; it is not the
+deployment configuration. Secrets, domains and access protection stay in Vercel.
+
 ## Release, recovery and maintenance
 
 ### Pushing code and testing a hosted preview

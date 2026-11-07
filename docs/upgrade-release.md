@@ -19,6 +19,18 @@ original credential digest. No production schema or account data was modified.
 The Bar-rule restoration dry run found a pending-booking conflict and stopped
 without modifying the reservation or inserting the rule.
 
+The subsequent preservation rehearsal resolved that preview-only conflict using
+an explicit schedule exception and a shortened one-off replacement block. The
+reservation remains pending, and its entire row plus all passkey material were
+verified unchanged. The updated maintenance command passes **866 tests**, lint
+with zero warnings and TypeScript, including integration checks for later booking
+approval, retained blocked hours, idempotence and rejection of other conflicts.
+See [recurring-blocks.md](recurring-blocks.md) before repeating it during cutover.
+
+Vercel's global Node setting now matches the repository's **26.x** engine. Command
+overrides are disabled and automatic configuration remains enabled. No production
+redeployment was performed to change the setting.
+
 The preview safety changes passed **864 tests in 104 files**, all **15 local
 browser checks**, TypeScript, lint with zero warnings and a production build.
 The dependency audit reports zero known vulnerabilities. Vercel's hosted Preview
