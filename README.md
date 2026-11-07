@@ -1,14 +1,54 @@
+<div align="center">
+
+<img src="public/gustav.png" alt="GRH Rental Services" width="72" />
+
 # GRH Rental Services
+
+**Rooms, equipment and games. One place to book and manage them.**
+
+[![Vercel production deployment](https://img.shields.io/github/deployments/cakirmert/GRH-Rental-Services/Production?label=Vercel%20production&logo=vercel&style=flat-square)](https://vercel.com/cakirmerts-projects/grhbooking/deployments?environment=production)
+[![Code version 1.18.0](https://img.shields.io/badge/code-1.18.0-292524?style=flat-square)](docs/release-history.md)
+[![MIT license](https://img.shields.io/badge/license-MIT-57534e?style=flat-square)](LICENSE)
+
+[Visit the website](https://grh-rentals.de) · [Run locally](#safe-local-setup) · [Architecture](#architecture-and-navigation) · [Release guide](docs/upgrade-release.md)
+
+</div>
 
 A bilingual rental service for residents of Gustav-Radbruch-Haus: browse rooms,
 equipment and games, request bookings, and communicate with the responsible team.
 Rental staff manage their items and bookings; administrators manage the service.
 
-The prepared release is **1.18.0**. The V2 rebuild keeps existing accounts,
+The code version is **1.18.0**. The V2 rebuild keeps existing accounts,
 bookings and passkeys while separating the application shell, feature controllers,
-server policies and database services. It is still unpublished at this handover.
-A local build does not mean production has been migrated. Follow the
-[release procedure](docs/upgrade-release.md) before deployment.
+server policies and database services. The production badge tracks the **live
+deployment**, independently of this branch. V2 still awaits its controlled
+production cutover; follow the [release procedure](docs/upgrade-release.md).
+
+## A look around
+
+<a href="docs/screenshots/catalog-desktop.png"><img src="docs/screenshots/catalog-desktop.png" alt="GRH catalog with room photos, search, categories and booking actions" width="1100" /></a>
+
+| For residents                                                             | For the rental team                                                                   | For administrators                                                               |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Find an item, choose available times, request a booking and use its chat. | Manage assigned items, confirm pickups/returns and set recurring availability blocks. | Manage the catalog, responsibilities, staff access and inactive-account reviews. |
+
+English and German · Monday-first calendars · Berlin time through daylight saving ·
+Email codes and passkeys · Mobile and desktop layouts
+
+<details>
+<summary><strong>See booking, calendar and administration screenshots</strong></summary>
+
+| Booking request                                                                                                              | Staff calendar                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![Room booking form with date and time inputs](docs/screenshots/booking-desktop.png)](docs/screenshots/booking-desktop.png) | [![Staff month calendar with a synthetic booking](docs/screenshots/staff-calendar-desktop.png)](docs/screenshots/staff-calendar-desktop.png) |
+
+[![Administrator dashboard with shortcuts and inactive-staff review](docs/screenshots/admin-desktop.png)](docs/screenshots/admin-desktop.png)
+
+</details>
+
+Screenshots show the actual isolated V2 build. Private booking records are
+synthetic, and administrator screens show aggregates. See
+[capture notes](docs/screenshots/README.md) to reproduce them.
 
 ## Start here
 
@@ -310,6 +350,42 @@ settings as well as `vercel.json`; repository configuration is not evidence that
 a particular deployment ran correctly.
 
 ## Release, recovery and maintenance
+
+### Pushing code and testing a hosted preview
+
+`codex/v2-rebuild` explicitly disables automatic Vercel Git deployments in
+`vercel.json`. A push to that branch publishes source without automatically
+running the new application against inherited production credentials. This
+branch rule leaves production's `main` deployments unchanged. Keep the rule until
+preview isolation and the release prerequisites below have been verified; it
+does not prevent a deliberately initiated manual deployment.
+
+A hosted preview must use its own database clone, authentication secret and
+matching preview URL/RP ID/origin, with outbound integrations disabled and no
+production write credentials. Apply migrations/backfill only to that clone and
+verify its legacy credential digest before testing. Limit preview access because
+a clone can contain personal data. Do not point a preview at the live database
+to make production passkeys work.
+
+Use the preview for booking, calendars, roles, feedback and the authentication
+flow. An unrelated preview hostname needs a separate test passkey. An
+owner-controlled subdomain such as `preview.grh-rentals.de` can instead test
+existing credentials with `RP_ID=grh-rentals.de`, its own exact expected origin
+and the copied credential records. Make passkey enrollment unavailable in that
+arrangement so a test cannot replace the real account's authenticator credential.
+This follows [WebAuthn's RP scope rules](https://www.w3.org/TR/webauthn-3/#relying-party-identifier).
+Keep a final real-device sign-in on the canonical production origin as a cutover
+gate, with preserved passkey records and the recovery plan ready. See
+[auth-migration.md](docs/auth-migration.md).
+
+The README's dynamic production badge reads Vercel's public GitHub deployment
+status for the case-sensitive `Production` environment through Shields.io. It
+uses no token and links to production deployment history. It reports deployment
+state rather than uptime or the test result for the V2 branch. This follows
+[Shields' deployment badge](https://shields.io/badges/git-hub-deployments) and
+[Vercel's branch deployment configuration](https://vercel.com/docs/project-configuration/git-configuration).
+
+### Production cutover and recovery
 
 Before production changes: record the running deployment, make a fresh database
 backup, restore-test it, rehearse additive migrations/backfill on a clone, and
