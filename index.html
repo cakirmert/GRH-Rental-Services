@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>Temporary maintenance · Wartung | GRH Rental Services</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #222;
+        background: #f7f7f5;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 3rem 1.5rem; }
+      main { width: min(100%, 52rem); }
+      .eyebrow { margin: 0 0 1rem; color: #555; font-size: .75rem; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 650; letter-spacing: -.04em; line-height: 1.15; }
+      .languages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; margin: 2.5rem 0 2rem; padding: 2rem 0; border-block: 1px solid #d5d5d0; }
+      .language { margin: 0 0 .75rem; color: #555; font-size: .8rem; }
+      h2 { margin: 0 0 1rem; font-size: 1.35rem; font-weight: 600; line-height: 1.35; letter-spacing: -.02em; }
+      p { margin: 0; line-height: 1.65; }
+      .message { max-width: 35ch; color: #454545; }
+      a { display: inline-block; padding: .75rem 1.15rem; border: 1px solid currentColor; border-radius: .5rem; color: inherit; font-size: .9rem; font-weight: 600; line-height: 1.5; text-decoration: none; }
+      a:hover { background: #e9e9e4; }
+      a:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+      @media (max-width: 36rem) {
+        body { padding: 2rem 1.25rem; }
+        .languages { grid-template-columns: 1fr; gap: 2rem; margin-block: 2rem; }
+        .message { max-width: none; }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { color: #f2f2ef; background: #1b1b1b; }
+        .eyebrow, .language { color: #bdbdb7; }
+        .languages { border-color: #444440; }
+        .message { color: #d2d2cd; }
+        a:hover { background: #333330; }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-labelledby="site-title">
+      <p class="eyebrow">Maintenance <span aria-hidden="true">·</span> <span lang="de">Wartung</span></p>
+      <h1 id="site-title">GRH Rental Services</h1>
+      <div class="languages">
+        <section lang="en" aria-labelledby="english-title">
+          <p class="language">English</p>
+          <h2 id="english-title">Temporarily unavailable</h2>
+          <p class="message">We’re carrying out maintenance. Sign-in and access to your existing bookings are briefly unavailable. Please try again shortly.</p>
+        </section>
+        <section lang="de" aria-labelledby="german-title">
+          <p class="language">Deutsch</p>
+          <h2 id="german-title">Vorübergehend nicht verfügbar</h2>
+          <p class="message">Wir führen Wartungsarbeiten durch. Die Anmeldung und der Zugriff auf deine bestehenden Buchungen sind kurzzeitig nicht verfügbar. Bitte versuche es in Kürze erneut.</p>
+        </section>
+      </div>
+      <a href="/">Try again <span aria-hidden="true">/</span> <span lang="de">Erneut versuchen</span></a>
+    </main>
+  </body>
+</html>
