@@ -2,10 +2,11 @@ import { NextResponse } from "next/server"
 import { transporter, isDev, CONTACT_EMAIL, EMAIL_FROM } from "@/lib/mail"
 import { z } from "zod"
 import { consumeBudget, requestAddress } from "@/lib/auth/state"
+import { getCurrentAccount } from "@/features/identity/server"
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
-  email: z.string().email().max(100),
+  email: z.string().email().max(254),
   room: z.string().min(1).max(50),
   issue: z.string().min(1).max(100),
   message: z.string().min(1).max(1000),
@@ -20,18 +21,31 @@ const contactSchema = z.object({
 export async function POST(req: Request) {
   try {
     const clientIp = requestAddress(req)
-    if (!(await consumeBudget("contact-global", "all", 100, 3_600_000)) ||
-        !(await consumeBudget("contact-client", clientIp, 5, 3_600_000))) {
-      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 })
+    if (
+      !(await consumeBudget("contact-global", "all", 100, 3_600_000)) ||
+      !(await consumeBudget("contact-client", clientIp, 5, 3_600_000))
+    ) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      )
     }
     if (Number(req.headers.get("content-length") || 0) > 16_384) {
       return NextResponse.json({ error: "Request too large" }, { status: 413 })
     }
     const body = await req.json()
-    const result = contactSchema.safeParse(body)
+    const account = await getCurrentAccount()
+    const result = contactSchema.safeParse(
+      account && body && typeof body === "object" && !Array.isArray(body)
+        ? { ...body, email: account.email }
+        : body,
+    )
 
     if (!result.success) {
-      return NextResponse.json({ error: "Invalid input", details: result.error.format() }, { status: 400 })
+      return NextResponse.json(
+        { error: "Invalid input", details: result.error.format() },
+        { status: 400 },
+      )
     }
 
     const { name, email, room, issue, message, turnstileToken } = result.data

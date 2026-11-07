@@ -1,10 +1,15 @@
 # Upgrade release procedure
 
+**Production cutover completed on 7 November 2026.** See the
+[production release record](production-2026-11-07.md) for verified preservation,
+manual promotion, the permanent legacy-host API guard and recovery. Historical
+checkpoints below describe their earlier snapshots, not the current live state.
+
 This release targets Node 26, Next.js 16.4.5, React 19.3.1, Auth.js
 5.0.0-beta.32, and Prisma 7.10.1. The Auth.js prerelease is intentional; Prisma
 8 release candidates are excluded. Keep the exact lockfile used for validation.
 
-## Hosted preview preparation — 7 November 2026
+## Historical preview preparation — before cutover, 7 November 2026
 
 Source is published on `codex/v2-rebuild`; production `main` remains unchanged.
 The custom preview domain, branch-only secrets, independent Neon clone and access
@@ -179,18 +184,17 @@ retain that history row. Do not rewrite or delete historical migration metadata.
 
 ## Vercel preview and configuration
 
-The existing preview environment shares production database, authentication,
-storage, email, push, and passkey settings. It must be isolated before preview
-traffic is allowed. Use a separate Neon branch/database and preview-only secrets,
-with `DISABLE_OUTBOUND=true`. Use a stable preview hostname and matching preview
-RP ID/origin for browser passkey tests; production credentials cannot be tested
-on an unrelated preview hostname.
+The approved V2 preview has branch-specific database/authentication credentials
+and `DISABLE_OUTBOUND=true`. Generic preview branches can inherit broader project
+settings; their API hosts are blocked by the permanent firewall rule. Isolate
+them before granting access. See [preview testing](preview-testing.md) for the
+parent RP ID and sign-in-only restriction needed to preserve existing passkeys.
 
 `package.json` selects Node 26. `vercel.json` places functions in Frankfurt
 (`fra1`), near the database. The two schedules remain at 10:00 and 18:00 UTC.
 Preserve the production canonical domain, RP ID, origin, and authentication
-secret. Replace the cron secret with a separate random value as part of the
-tested deployment; it currently shares the authentication secret.
+secret. The production cutover replaced the cron secret with an independent
+random value. Do not reuse the authentication secret for scheduled jobs.
 
 ## Production cutover and recovery
 

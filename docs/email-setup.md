@@ -1,7 +1,18 @@
 # Email configuration
 
-Provider onboarding is paused pending the owner's review. No new provider, DNS
-records, mailbox, forwarding rule, or deployment settings have been enabled.
+Production currently sends through the existing STRATO rental account to
+`rentals@grh-hamburg.de`. A labelled sample booking confirmation was accepted for
+the owner's explicitly requested private address on 7 November 2026, without
+creating or changing a booking. SMTP acceptance does not confirm inbox delivery.
+
+An existing free Dynadot `info@grh-rentals.de` mailbox was found and selected as
+the primary mailbox. Its missing incoming MX record has been added, preserving
+the root A and `www` / `preview` CNAME records. Do not switch the contact recipient
+until receiving is verified and the owner chooses whether to keep the inbox or
+forward to the existing rental team. Verified app sending from the new domain
+still awaits provider sign-in/domain setup; no new SMTP credentials or production
+mail variables have been applied. Do not assume Dynadot's free webmail provides
+SMTP access for the app.
 
 The SMTP login, automated sender, reply address, and contact inbox can be configured
 separately. Existing deployments continue to work with their current
@@ -50,18 +61,18 @@ To use `info@grh-rentals.de` for automated mail:
    grant the existing SMTP login permission to send as another domain.
 4. Keep `CONTACT_EMAIL` as the internal contact-form inbox. For the planned
    automated sender, set `EMAIL_REPLY_TO=""` explicitly to omit the header.
-   Do not configure forwarding to the existing rental inbox.
+   Forwarding is a separate receiving choice; confirm the owner's selected
+   destination before enabling it. It does not authorize outbound app sending.
 5. After configuration is deliberately enabled, check authentication/TLS and send
    an explicitly authorized test message. Inspect its From, Reply-To, SPF, DKIM,
    and DMARC results. SMTP connection verification alone cannot confirm that a
    provider accepts a particular From address.
 
-This code change does not create a mailbox, change DNS or deployed environment
-values, or send mail. Development, Vercel previews, and any environment with
+Development, Vercel previews, and any environment with
 `DISABLE_OUTBOUND=true` still have no mail transporter. The guarded local runner
 also strips production credentials. Do not enable real email for local rehearsals.
 
-## Optional Resend configuration, pending review
+## Resend setup, awaiting provider sign-in
 
 If Resend is selected and `grh-rentals.de` is verified, these settings send
 automated mail from the authorized new address with no Reply-To header. Only
