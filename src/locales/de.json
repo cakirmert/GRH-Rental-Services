@@ -292,6 +292,7 @@
   "security": {
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Passkeys bieten eine sicherere und bequemere Möglichkeit zur Anmeldung mit Biometrie, PIN oder Sicherheitsschlüsseln.",
+    "passkeyPreviewReadOnly": "Mit vorhandenen Passkeys kannst du dich hier anmelden. Füge Passkeys auf der regulären Website hinzu oder entferne sie dort.",
     "passkeyNotSupported": "Dein Browser unterstützt keine Passkeys. Bitte verwende einen modernen Browser wie Chrome, Safari oder Edge.",
     "addPasskey": "Passkey hinzufügen",
     "addPasskeyDesc": "Registriere einen neuen Passkey für sichere Anmeldung.",

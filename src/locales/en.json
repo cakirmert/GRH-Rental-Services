@@ -292,6 +292,7 @@
   "security": {
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Passkeys provide a more secure and convenient way to sign in using biometrics, PIN, or security keys.",
+    "passkeyPreviewReadOnly": "Existing passkeys can sign you in here. Add or remove passkeys on the live website.",
     "passkeyNotSupported": "Your browser doesn't support passkeys. Please use a modern browser like Chrome, Safari, or Edge.",
     "addPasskey": "Add Passkey",
     "addPasskeyDesc": "Register a new passkey for secure sign-in.",

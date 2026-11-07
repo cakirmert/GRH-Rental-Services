@@ -10,7 +10,7 @@
 [![Code version 1.18.0](https://img.shields.io/badge/code-1.18.0-292524?style=flat-square)](docs/release-history.md)
 [![MIT license](https://img.shields.io/badge/license-MIT-57534e?style=flat-square)](LICENSE)
 
-[Visit the website](https://grh-rentals.de) · [Run locally](#safe-local-setup) · [Architecture](#architecture-and-navigation) · [Release guide](docs/upgrade-release.md)
+[Visit the website](https://grh-rentals.de) · [Run locally](#safe-local-setup) · [Architecture](#architecture-and-navigation) · [Preview testing](docs/preview-testing.md) · [Release guide](docs/upgrade-release.md)
 
 </div>
 
@@ -320,6 +320,7 @@ Never give a server credential a `NEXT_PUBLIC_` name.
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`                      | Web Push key pair                                                         |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                 | Public challenge site key and server verification secret                  |
 | `DISABLE_OUTBOUND`                                                       | Set `true` for isolated rehearsals to suppress outbound integrations/jobs |
+| `GRH_PASSKEY_SIGNIN_ONLY`                                                | Set `true` on a preview sharing the live RP to block enrollment/removal   |
 | `GITHUB_REPORTS_ENABLED`, `GITHUB_ISSUES_TOKEN`                          | Explicit production-only public-report delivery                           |
 
 Email is suppressed in development/previews. SMTP supports TLS on 465 and mandatory
@@ -371,12 +372,20 @@ Use the preview for booking, calendars, roles, feedback and the authentication
 flow. An unrelated preview hostname needs a separate test passkey. An
 owner-controlled subdomain such as `preview.grh-rentals.de` can instead test
 existing credentials with `RP_ID=grh-rentals.de`, its own exact expected origin
-and the copied credential records. Make passkey enrollment unavailable in that
-arrangement so a test cannot replace the real account's authenticator credential.
+and the copied credential records. Set `GRH_PASSKEY_SIGNIN_ONLY=true` in that
+arrangement: enrollment and removal are blocked by the API and credential store,
+and the account controls explain the restriction. Existing-passkey sign-in still
+works. This prevents a test enrollment from replacing the real account's device
+credential. Leave the flag unset or `false` on production and ordinary local tests.
 This follows [WebAuthn's RP scope rules](https://www.w3.org/TR/webauthn-3/#relying-party-identifier).
 Keep a final real-device sign-in on the canonical production origin as a cutover
 gate, with preserved passkey records and the recovery plan ready. See
 [auth-migration.md](docs/auth-migration.md).
+
+The protected custom-domain preview uses an independent Neon clone and branch-only
+Vercel secrets. See [preview testing](docs/preview-testing.md) for its configuration,
+manual acceptance steps and remaining production gates. Disabled outbound mode
+also removes public push/challenge widget keys from the client build.
 
 The README's dynamic production badge reads Vercel's public GitHub deployment
 status for the case-sensitive `Production` environment through Shields.io. It
@@ -426,6 +435,7 @@ after verifying the installed graph covers them. See
 - [Authentication and backend changes](docs/auth-backend-summary.md): rationale and remaining limitations.
 - [Authentication release contract](docs/auth-migration.md): passkey preservation, backfill, freeze and rollback.
 - [V2 structure and preview](docs/release-preview.md): implemented scope and validation history.
+- [Hosted preview testing](docs/preview-testing.md): isolation, existing-passkey checks and release boundaries.
 - [Data retention](docs/data-retention.md): every retained category, account deletion and live read-only observations.
 - [Recurring blocks](docs/recurring-blocks.md): Berlin recurrence and controlled Bar-rule restoration.
 - [Problem reporting](docs/problem-reporting.md): queue, consent, GitHub token and failure review.

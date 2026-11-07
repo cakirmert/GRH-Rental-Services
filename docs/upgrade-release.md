@@ -4,7 +4,27 @@ This release targets Node 26, Next.js 16.4.5, React 19.3.1, Auth.js
 5.0.0-beta.32, and Prisma 7.10.1. The Auth.js prerelease is intentional; Prisma
 8 release candidates are excluded. Keep the exact lockfile used for validation.
 
-## V2 verification — 6 November 2026
+## Hosted preview preparation — 7 November 2026
+
+Source is published on `codex/v2-rebuild`; production `main` remains unchanged.
+The custom preview domain, branch-only secrets, independent Neon clone and access
+protection are configured. See [preview testing](preview-testing.md) for exact
+isolation, passkey sign-in-only mode and manual acceptance steps. Automatic Git
+deployment of this branch remains disabled; use a deliberate Preview deployment.
+
+A fresh production snapshot was backed up and restore-tested: all 16 original
+table counts matched, including 83 users, 91 bookings and all 25 passkeys. The
+hosted clone's additive migrations and two passkey-indexing runs preserved its
+original credential digest. No production schema or account data was modified.
+The Bar-rule restoration dry run found a pending-booking conflict and stopped
+without modifying the reservation or inserting the rule.
+
+The preview safety changes passed **864 tests in 104 files**, including the
+database cases and new API/store/UI checks that block passkey management while
+preserving authentication. Build/browser acceptance and an actual owner's
+existing-device passkey test remain separate release gates.
+
+## Historical V2 verification — 6 November 2026
 
 The new `codex/v2-rebuild` worktree implements the [V2 structure](release-preview.md)
 now named `1.18.0`, independently of the retained earlier candidate. The original

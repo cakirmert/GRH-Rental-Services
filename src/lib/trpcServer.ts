@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server"
 import superjson from "superjson"
 import type { Context } from "@/server/context"
+import { assertPasskeyManagementAllowed } from "@/lib/auth/passkey-policy"
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -19,3 +20,8 @@ const enforceAuth = t.middleware(({ ctx, next }) => {
 })
 
 export const protectedProcedure = t.procedure.use(enforceAuth)
+
+export const passkeyManagementProcedure = protectedProcedure.use(({ next }) => {
+  assertPasskeyManagementAllowed()
+  return next()
+})

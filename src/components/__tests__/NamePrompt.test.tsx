@@ -89,7 +89,10 @@ beforeEach(() => {
   })
   HTMLElement.prototype.scrollIntoView = vi.fn()
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllEnvs()
+})
 
 describe("account settings state", () => {
   it("initializes on opening, preserves edits on snapshot refresh, and resets when reopened", () => {
@@ -197,5 +200,16 @@ describe("account settings state", () => {
     render(prompt())
     expect(screen.queryByRole("button", { name: "security.addPasskey" })).toBeNull()
     expect(screen.getByText("security.passkeyNotSupported")).toBeDefined()
+  })
+
+  it("explains sign-in-only previews and cannot open a device enrollment prompt", () => {
+    vi.stubEnv("NEXT_PUBLIC_PASSKEY_SIGNIN_ONLY", "true")
+    render(prompt())
+    const add = screen.getByRole("button", { name: "security.addPasskey" }) as HTMLButtonElement
+    expect(add.disabled).toBe(true)
+    expect(screen.getByText("security.passkeyPreviewReadOnly")).toBeDefined()
+    fireEvent.click(add)
+    expect(mocks.mutations.registerOptions).not.toHaveBeenCalled()
+    expect(mocks.registration).not.toHaveBeenCalled()
   })
 })

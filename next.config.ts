@@ -42,6 +42,15 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: version,
     NEXT_PUBLIC_APP_COMMIT_SHA: commit.sha,
     NEXT_PUBLIC_APP_COMMIT_URL: commit.url,
+    NEXT_PUBLIC_PASSKEY_SIGNIN_ONLY: String(process.env.GRH_PASSKEY_SIGNIN_ONLY === "true"),
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY:
+      process.env.DISABLE_OUTBOUND === "true"
+        ? ""
+        : (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""),
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY:
+      process.env.DISABLE_OUTBOUND === "true"
+        ? ""
+        : (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""),
   },
   agentRules: false,
   images: {

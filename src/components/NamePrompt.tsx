@@ -66,6 +66,7 @@ function AccountSettings({
   update: ReturnType<typeof useSession>["update"]
 }) {
   const { t } = useI18n()
+  const passkeySigninOnly = process.env.NEXT_PUBLIC_PASSKEY_SIGNIN_ONLY === "true"
   const [name, setName] = useState(session.user.name ?? "")
   const isRentalTeam = session?.user?.role === "RENTAL" || session?.user?.role === "ADMIN"
 
@@ -465,7 +466,13 @@ function AccountSettings({
                     <Fingerprint className="h-5 w-5" />
                     {t("security.passkeysTitle")}
                   </CardTitle>
-                  <CardDescription>{t("security.passkeysDescription")}</CardDescription>
+                  <CardDescription>
+                    {t(
+                      passkeySigninOnly
+                        ? "security.passkeyPreviewReadOnly"
+                        : "security.passkeysDescription",
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Passkey Support Check */}
@@ -487,7 +494,7 @@ function AccountSettings({
                         </div>{" "}
                         <Button
                           onClick={handleRegisterPasskey}
-                          disabled={isRegisteringPasskey}
+                          disabled={isRegisteringPasskey || passkeySigninOnly}
                           variant="outline"
                           size="sm"
                           className="h-10 sm:h-9"
@@ -544,7 +551,12 @@ function AccountSettings({
                                 </div>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={passkeySigninOnly}
+                                      aria-label={t("security.deletePasskeyTitle")}
+                                    >
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </AlertDialogTrigger>

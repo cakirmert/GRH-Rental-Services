@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "@/lib/trpcServer"
+import { router, protectedProcedure, passkeyManagementProcedure } from "@/lib/trpcServer"
 import { z } from "zod"
 import { BookingStatus } from "@prisma/client"
 import { TRPCError } from "@trpc/server"
@@ -141,7 +141,7 @@ export const userRouter = router({
       lastUsed: passkey.lastUsed ? new Date(passkey.lastUsed) : undefined,
     }))
   }),
-  deletePasskey: protectedProcedure
+  deletePasskey: passkeyManagementProcedure
     .input(z.object({ credentialId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       await revokePasskey(ctx.session.user.id, input.credentialId)
