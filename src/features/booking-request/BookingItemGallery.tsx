@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react"
 import Image from "next/image"
-import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { AlertCircle } from "lucide-react"
+import { ImageGalleryControls } from "@/components/ImageGalleryControls"
 import { getOptimizedImageUrls } from "@/lib/imageUtils"
 import { useI18n } from "@/locales/i18n"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,6 +22,7 @@ export function BookingItemGallery({ item }: { item: BookingItem }) {
   return (
     <div className="space-y-2">
       <div
+        data-image-gallery
         className="relative w-full overflow-hidden rounded-lg shadow aspect-video select-none group"
         onTouchStart={(event) => {
           touchStart.current = event.touches[0]?.clientX ?? null
@@ -43,28 +45,7 @@ export function BookingItemGallery({ item }: { item: BookingItem }) {
           alt={`${item.name} ${currentImage + 1}`}
         />
         {images.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => move(-1)}
-              aria-label={t("common.previousImage")}
-              className="absolute left-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-r from-black/20 to-transparent focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              <span className="bg-white/90 p-2 rounded-full shadow-lg">
-                <ChevronLeft className="h-5 w-5 text-gray-700" />
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => move(1)}
-              aria-label={t("common.nextImage")}
-              className="absolute right-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-l from-black/20 to-transparent focus-visible:outline-2 focus-visible:outline-ring"
-            >
-              <span className="bg-white/90 p-2 rounded-full shadow-lg">
-                <ChevronRight className="h-5 w-5 text-gray-700" />
-              </span>
-            </button>
-          </>
+          <ImageGalleryControls onPrevious={() => move(-1)} onNext={() => move(1)} />
         )}
       </div>
       {images.length > 1 && (

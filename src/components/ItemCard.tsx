@@ -11,7 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Users, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users } from "lucide-react"
+import { ImageGalleryControls } from "@/components/ImageGalleryControls"
 import { useI18n } from "@/locales/i18n"
 import { useState } from "react"
 import { getOptimizedImageUrls } from "@/lib/imageUtils"
@@ -102,6 +103,7 @@ export function ItemCard({
       {" "}
       <CardHeader className="p-0">
         <div
+          data-image-gallery
           className="relative w-full h-56 overflow-hidden select-none"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -118,28 +120,7 @@ export function ItemCard({
           />{" "}
           {images.length > 1 && (
             <>
-              <button
-                type="button"
-                aria-label={t("common.previousImage")}
-                onClick={prev}
-                className="absolute left-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-r from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity duration-300 hover:from-black/30 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring"
-                disabled={isSliding}
-              >
-                <div className="bg-white/50  p-2 rounded-full shadow-lg transition-all duration-200">
-                  <ChevronLeft className="h-5 w-5 text-gray-700" />
-                </div>
-              </button>
-              <button
-                type="button"
-                aria-label={t("common.nextImage")}
-                onClick={next}
-                className="absolute right-0 top-0 w-16 h-full flex items-center justify-center bg-gradient-to-l from-black/20 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity duration-300 hover:from-black/30 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-ring"
-                disabled={isSliding}
-              >
-                <div className="bg-white/50  p-2 rounded-full shadow-lg transition-all duration-200">
-                  <ChevronRight className="h-5 w-5 text-gray-700" />
-                </div>
-              </button>
+              <ImageGalleryControls onPrevious={prev} onNext={next} disabled={isSliding} />
               {/* Image indicator dots */}
               <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                 {images.map((_, index) => (

@@ -24,15 +24,20 @@ export function BookingItemSummary({
   }, [item.longDescriptionKey, item.description, t])
   return (
     <div className="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start">
-      {" "}
-      <Button variant="outline" size="sm" onClick={onGoBack} className="flex ml-auto gap-2">
-        <ChevronLeft className="h-4 w-4" />
-        {t("common.back")}
-      </Button>
-      <h1 className="text-3xl lg:text-5xl font-bold mb-1">{item.name}</h1>
-      <p className="text-base lg:text-lg leading-relaxed whitespace-pre-line text-foreground/80 dark:text-muted-foreground mb-4">
-        {translatedDescription}
-      </p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="min-w-0 text-3xl lg:text-5xl font-bold [overflow-wrap:anywhere]">
+            {item.name}
+          </h1>
+          <Button variant="ghost" size="sm" onClick={onGoBack} className="shrink-0 gap-1.5">
+            <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+            {t("common.back")}
+          </Button>
+        </div>
+        <p className="text-base lg:text-lg leading-relaxed whitespace-pre-line text-foreground/80 dark:text-muted-foreground">
+          {translatedDescription}
+        </p>
+      </div>
       <BookingItemGallery item={item} />
       <div className="flex flex-wrap items-center gap-3 text-base mt-2">
         {item.capacity && (

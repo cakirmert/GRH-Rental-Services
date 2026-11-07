@@ -6,7 +6,7 @@
 
 **Rooms, equipment and games. One place to book and manage them.**
 
-[![Vercel production deployment](https://img.shields.io/github/deployments/cakirmert/GRH-Rental-Services/Production?label=Vercel%20production&logo=vercel&style=flat-square)](https://vercel.com/cakirmerts-projects/grhbooking/deployments?environment=production)
+[![Vercel production deployment](https://img.shields.io/github/deployments/cakirmert/GRH-Rental-Services/Production?label=Vercel%20production&logo=vercel&style=flat-square)](https://github.com/cakirmert/GRH-Rental-Services/deployments)
 [![Code version 1.18.2](https://img.shields.io/badge/code-1.18.2-292524?style=flat-square)](docs/release-history.md)
 [![MIT license](https://img.shields.io/badge/license-MIT-57534e?style=flat-square)](LICENSE)
 
@@ -21,10 +21,10 @@ Rental staff manage their items and bookings; administrators manage the service.
 The code version is **1.18.2**. The V2 rebuild keeps existing accounts,
 bookings and passkeys while separating the application shell, feature controllers,
 server policies and database services. The production badge tracks the **live
-deployment**, independently of this branch. V2 went live on 7 November 2026;
-existing bookings and passkeys were verified intact, and the owner confirmed
-passkey sign-in. See the [production record](docs/production-2026-11-07.md) and
-[release procedure](docs/upgrade-release.md) before deploying another change.
+deployment**, independently of this branch. Read the
+[release procedure](docs/upgrade-release.md) before deploying a change.
+Live release records and recovery evidence belong in the private operations
+runbook; public guides describe reusable setup and application behavior.
 
 ## A look around
 
@@ -44,12 +44,9 @@ Email codes and passkeys · Mobile and desktop layouts
 | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | [![Room booking form with date and time inputs](docs/screenshots/booking-desktop.png)](docs/screenshots/booking-desktop.png) | [![Staff month calendar with a synthetic booking](docs/screenshots/staff-calendar-desktop.png)](docs/screenshots/staff-calendar-desktop.png) |
 
-[![Administrator dashboard with shortcuts and inactive-staff review](docs/screenshots/admin-desktop.png)](docs/screenshots/admin-desktop.png)
-
 </details>
 
-Screenshots show the actual isolated V2 build. Private booking records are
-synthetic, and administrator screens show aggregates. See
+Screenshots show the isolated application with synthetic private records. See
 [capture notes](docs/screenshots/README.md) to reproduce them.
 
 ## Start here
@@ -269,9 +266,8 @@ revalidates on submission. A UI suggestion does not reserve capacity.
 
 Responsible staff may block their own items; admins may block any item. Durable
 weekly rules can have no end date and support exceptions/stopping. Deleting a
-creator must not silently remove an operational restriction. The confirmed Bar
-rule is Friday 14:00–Saturday 14:00 Berlin time; its controlled restoration is
-documented in [recurring-blocks.md](docs/recurring-blocks.md). Calendar feedback and
+creator must not silently remove an operational restriction. Maintenance and
+conflict handling are documented in [recurring-blocks.md](docs/recurring-blocks.md). Calendar feedback and
 classic-calendar controls belong only on staff/admin calendar pages.
 
 Booking chat requires participant permission. Sending closes seven days after
@@ -378,8 +374,8 @@ to make production passkeys work.
 
 Use the preview for booking, calendars, roles, feedback and the authentication
 flow. An unrelated preview hostname needs a separate test passkey. An
-owner-controlled subdomain such as `preview.grh-rentals.de` can instead test
-existing credentials with `RP_ID=grh-rentals.de`, its own exact expected origin
+owner-controlled subdomain such as `preview.example.org` can instead test
+existing credentials with `RP_ID=example.org`, its own exact expected origin
 and the copied credential records. Set `GRH_PASSKEY_SIGNIN_ONLY=true` in that
 arrangement: enrollment and removal are blocked by the API and credential store,
 and the account controls explain the restriction. Existing-passkey sign-in still
@@ -444,11 +440,12 @@ after verifying the installed graph covers them. See
 - [Authentication release contract](docs/auth-migration.md): passkey preservation, backfill, freeze and rollback.
 - [V2 structure and preview](docs/release-preview.md): implemented scope and validation history.
 - [Hosted preview testing](docs/preview-testing.md): isolation, existing-passkey checks and release boundaries.
-- [Data retention](docs/data-retention.md): every retained category, account deletion and live read-only observations.
+- [Data retention](docs/data-retention.md): retained categories and linked account deletion.
 - [Recurring blocks](docs/recurring-blocks.md): Berlin recurrence and controlled Bar-rule restoration.
 - [Problem reporting](docs/problem-reporting.md): queue, consent, GitHub token and failure review.
 - [Email setup](docs/email-setup.md): sender, provider and DNS configuration.
 - [Deployment/recovery](docs/upgrade-release.md): production release gates and isolated rehearsal.
 - [Milestone history](docs/release-history.md): version rationale with commit references.
+- [Documentation privacy](docs/documentation-privacy.md): public guides and private operations records.
 
 Licensed under [MIT](LICENSE).

@@ -1,52 +1,36 @@
-# Dependency alerts and weekly review
+# Dependency maintenance
 
-On 6 November 2026, Dependabot alerts and automatic security-update pull
-requests were enabled on `cakirmert/GRH-Rental-Services` and verified through
-GitHub's repository API. Secret scanning and push protection were already
-enabled. No application deployment or database change was made by enabling
-these repository features.
+`package.json` describes supported ranges and the runtime engine;
+`package-lock.json` records the validated installed graph. Use `npm ci` rather
+than forcing incompatible peers.
 
-The initial GitHub scan reported 110 open alerts (8 critical, 40 high, 52 medium
-and 10 low) against the existing default branch, commit
-`1feb7de489d927e2a5785f19566c66c034f80fb3`. These are dependency advisories, not
-110 separately verified exploitable application bugs. The local upgraded
-candidate's `npm audit` reported zero known vulnerabilities. GitHub cannot
-consider those fixes applied until the updated lockfile reaches its default
-branch; the production site also remains on the older deployment until the
-release gates are complete.
+## Automated checks
 
-## Dependabot behavior
+The repository's Dependabot configuration checks weekly on Sunday in the
+configured Berlin timezone. Minor/patch updates are grouped; major changes are
+reviewed separately. Security alerts/updates are independent of the weekly
+version schedule. Automatic merge is not configured.
 
-`.github/dependabot.yml` prepares weekly version checks for Sunday at 08:00
-Europe/Berlin. Minor and patch changes are grouped to reduce pull-request
-noise; major updates stay separate. A maximum of five version-update pull
-requests may remain open. This configuration becomes active when merged to
-the repository's default branch.
+Enable repository secret scanning, push protection and dependency alerts where
+supported. Configuration files do not prove those account-level settings are
+enabled; verify them through the repository's administration tools.
 
-Security alerts and security-update pull requests do not wait for the weekly
-version-update schedule. No automatic merge is configured. Review compatibility
-and run the applicable tests before accepting updates, especially for Next,
-React, authentication and Prisma.
+## Update review
 
-## Review scope
+1. Read official release notes and check runtime/peer compatibility.
+2. Review aliases and overrides before replacing them.
+3. Run the applicable tests, type checks, lint and production build.
+4. Exercise affected browser workflows, especially auth, bookings and migrations.
+5. Recheck the installed dependency audit after the lockfile changes.
+6. Close superseded update requests only after verifying the new graph covers them.
 
-The active Codex task `grh-sunday-issue-and-security-review` uses Luna with
-medium reasoning every Sunday at 10:00 local Berlin time. The host timezone
-was verified as Windows W. Europe Standard Time. It inspects open user issues,
-Dependabot alerts and update pull requests, and reports priorities with direct
-links. It should distinguish a reported symptom or advisory from a verified
-bug. It must treat issue text as untrusted input and must not execute commands
-from reports, modify production data, merge updates or deploy without a
-separate request.
+Dependency advisories do not establish application exploitability, and a clean
+audit does not prove the absence of application vulnerabilities.
 
-The first read-only Luna rehearsal succeeded on 6 November: no open user
-issues or pull requests, and the alert totals above were accessible. Scheduling
-is a separate Codex app setting, not part of the website or GitHub Actions.
-Local scheduled reviews require the computer and desktop app to be running.
+Optional scheduled issue/security reports are operator tooling. Their account
+identifiers, model settings and execution evidence belong in private records;
+issue text must be treated as untrusted input and must never authorize commands,
+data changes, merges or deployments.
 
-Sources:
-
-- [GitHub: configuring Dependabot alerts](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-dependabot-alerts)
-- [GitHub: Dependabot security updates](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-security-updates)
-- [GitHub: Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)
-- [OpenAI: scheduled tasks](https://learn.chatgpt.com/docs/automations)
+References: [Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference),
+[security updates](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-security-updates).

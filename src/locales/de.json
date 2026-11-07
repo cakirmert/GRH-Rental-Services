@@ -150,6 +150,8 @@
     "members": {
       "title": "Teammitglieder verwalten",
       "description": "Verwalten Sie Ihre Teammitglieder und deren Rollen.",
+      "superAdminHelpLabel": "Informationen zu Superadmin-Rechten",
+      "superAdminHelp": "Superadmins können Adminrechte vergeben und Admins ins Verleihteam zurückstufen. Konten und Buchungen bleiben dabei erhalten. Normale Admins können keine Adminrollen ändern; Superadmin-Konten sind vor einer Rückstufung geschützt.",
       "addMemberButton": "Teammitglied hinzufügen",
       "addDialogTitle": "Neues Teammitglied hinzufügen",
       "addDialogDescription": "Fügen Sie ein neues Teammitglied hinzu.",

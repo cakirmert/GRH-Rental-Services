@@ -150,6 +150,8 @@
     "members": {
       "title": "Manage Team Members",
       "description": "Manage your team members and their roles.",
+      "superAdminHelpLabel": "About superadmin permissions",
+      "superAdminHelp": "Superadmins can grant admin access and return admins to the rental team. Their accounts and bookings remain. Regular admins cannot change admin roles; superadmin accounts are protected from demotion.",
       "addMemberButton": "Add Team Member",
       "addDialogTitle": "Add New Team Member",
       "addDialogDescription": "Add a new team member to the rental team.",
