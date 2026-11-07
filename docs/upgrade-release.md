@@ -19,10 +19,14 @@ original credential digest. No production schema or account data was modified.
 The Bar-rule restoration dry run found a pending-booking conflict and stopped
 without modifying the reservation or inserting the rule.
 
-The preview safety changes passed **864 tests in 104 files**, including the
-database cases and new API/store/UI checks that block passkey management while
-preserving authentication. Build/browser acceptance and an actual owner's
-existing-device passkey test remain separate release gates.
+The preview safety changes passed **864 tests in 104 files**, all **15 local
+browser checks**, TypeScript, lint with zero warnings and a production build.
+The dependency audit reports zero known vulnerabilities. Vercel's hosted Preview
+build of `c566ecc` is **Ready** at the protected custom domain. The owner confirmed
+successful sign-in using an existing passkey; a subsequent read-only check found
+all 25 credential IDs/public keys still matching the restored backup. The live
+site continues to serve `1feb7de`. Canonical-origin acceptance during production
+cutover remains required.
 
 ## Historical V2 verification — 6 November 2026
 

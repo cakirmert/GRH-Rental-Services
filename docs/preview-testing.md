@@ -6,6 +6,31 @@ The V2 preview is prepared at **https://preview.grh-rentals.de**, on the
 Manual deployment is deliberate while `vercel.json` disables automatic Git
 deployments for this branch.
 
+## Verified deployment — 7 November 2026
+
+Vercel Preview deployment `6sdNRmSNB9rb7StiG77uEefyk5Jr` is **Ready**, built
+from application revision `c566eccdcec318eb987009ec7d35b7e49b313c97`. The custom
+domain serves that revision with valid HTTPS. An unauthenticated request redirects
+to Vercel authentication; the authorized owner's browser loads the application.
+The owner **successfully signed in with an existing production passkey** and
+confirmed the result. The hosted clone records one authenticated credential;
+all 25 credential IDs/public keys still match the independently restored backup.
+No browser console errors were observed during the checked preview session.
+
+The same application source passed 864 tests in 104 files, all 15 local browser
+checks, TypeScript, lint with zero warnings, the local production build and the
+hosted Vercel build. `npm audit` reports zero known dependency vulnerabilities for
+this lockfile. Production still serves its retained `1feb7de` revision; GitHub's
+default-branch dependency alerts are not cleared by publishing the preview branch.
+
+The hosted build uses Node 26 as selected by `package.json`. Vercel notes that this
+overrides the older global project setting (22.x); that project setting was not
+changed during preview preparation. The build also reports npm notices about
+Vercel's `cache-dir` environment setting and dependency install-script allowlists.
+These are separate from repository lint warnings; generation and deployment
+succeeded. Build machines run in Vercel's selected build region, independently of
+the application function region configured as Frankfurt in `vercel.json`.
+
 ## Isolation and access
 
 - The preview uses a separate Neon branch, `v2-preview-20261107`, cloned from
@@ -56,10 +81,9 @@ the ordered user/passkey digest matched before migrations. A fresh production
 backup was independently restored to local PostgreSQL and verified against its
 snapshot; private evidence is retained outside Git.
 
-These checks do not prove possession of an existing physical passkey. The owner
-must confirm a real-device sign-in on the preview and, separately, on the canonical
-production origin during cutover. No successful physical-key test should be
-claimed before it has been observed or confirmed by the owner.
+The owner has now confirmed possession and successful use of an existing passkey
+on the preview. A separate sign-in on the canonical production origin remains
+required during cutover; preview acceptance cannot establish that final result.
 
 ## Manual acceptance
 
