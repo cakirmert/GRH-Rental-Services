@@ -68,38 +68,26 @@ function DashboardHelp({ role }: DashboardHelpSheetProps) {
   const steps =
     role === "rental"
       ? [
-          "helpPage.rentalStep1",
-          "helpPage.rentalStep2",
-          "helpPage.rentalStep3",
-          "helpPage.rentalStep4",
-          "helpPage.rentalStep5",
+          { selector: "#rental-booking-list .accept-btn", text: "helpPage.rentalStep1" },
+          { selector: "#rental-view-tabs", text: "helpPage.rentalStep2" },
+          { selector: "#rental-filter-card", text: "helpPage.rentalStep3" },
+          { selector: "#rental-booking-list .booking-chat-btn", text: "helpPage.rentalStep4" },
+          { selector: "#rental-refresh-btn", text: "helpPage.rentalStep5" },
         ]
       : [
-          "helpPage.adminStep1",
-          "helpPage.adminStep2",
-          "helpPage.adminStep3",
-          "helpPage.adminStep4",
-          "helpPage.adminStep5",
-          "helpPage.adminStep6",
+          { selector: "#admin-dashboard-stats", text: "helpPage.adminStep1" },
+          { selector: "#admin-quick-items", text: "helpPage.adminStep2" },
+          { selector: "#admin-quick-members", text: "helpPage.adminStep3" },
+          { selector: "#admin-quick-inactive", text: "helpPage.adminStepInactive" },
+          { selector: "#admin-quick-assignees", text: "helpPage.adminStep4" },
+          { selector: "#admin-quick-calendar", text: "helpPage.adminStep5" },
+          { selector: "#admin-quick-cancellations", text: "helpPage.adminStep6" },
         ]
 
-  const highlightSteps: OnboardingStep[] =
-    role === "rental"
-      ? [
-          { selector: "#rental-booking-list .accept-btn", index: 1 },
-          { selector: "#rental-view-tabs", index: 2 },
-          { selector: "#rental-filter-card", index: 3 },
-          { selector: "#rental-booking-list .booking-chat-btn", index: 4 },
-          { selector: "#rental-refresh-btn", index: 5 },
-        ]
-      : [
-          { selector: "#admin-dashboard-stats", index: 1 },
-          { selector: "#admin-quick-items", index: 2 },
-          { selector: "#admin-quick-members", index: 3 },
-          { selector: "#admin-quick-assignees", index: 4 },
-          { selector: "#admin-quick-calendar", index: 5 },
-          { selector: "#admin-quick-cancellations", index: 6 },
-        ]
+  const highlightSteps: OnboardingStep[] = steps.map(({ selector }, index) => ({
+    selector,
+    index: index + 1,
+  }))
 
   return (
     <>
@@ -111,11 +99,12 @@ function DashboardHelp({ role }: DashboardHelpSheetProps) {
               <TooltipTrigger asChild>
                 <Button
                   onClick={startTour}
-                  variant="default"
+                  type="button"
+                  variant="ghost"
                   size="sm"
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+                  className="font-normal text-muted-foreground hover:text-foreground"
                 >
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play aria-hidden="true" className="h-4 w-4" />
                   {t("helpPage.quickTour") || "Quick Tour"}
                 </Button>
               </TooltipTrigger>
@@ -132,14 +121,12 @@ function DashboardHelp({ role }: DashboardHelpSheetProps) {
             <TooltipTrigger asChild>
               <Button
                 onClick={showHelp}
+                type="button"
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 relative transition-all duration-200 hover:scale-105 hover:shadow-md border-2"
+                className="h-9 w-9"
               >
                 <HelpCircle className="h-4 w-4" />
-                {!hasSeenTour && (
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-blue-500 rounded-full animate-pulse" />
-                )}
                 <span className="sr-only">{t("common.help")}</span>
               </Button>
             </TooltipTrigger>
@@ -158,7 +145,7 @@ function DashboardHelp({ role }: DashboardHelpSheetProps) {
         mode={helpMode === "help" ? "help" : "tour"}
         title={t(titleKey)}
         description={t(descriptionKey)}
-        helpSteps={steps.map((key) => t(key))}
+        helpSteps={steps.map(({ text }) => t(text))}
         onClose={closeOverlay}
         onStartTour={startTour}
         hasSeenTour={hasSeenTour}

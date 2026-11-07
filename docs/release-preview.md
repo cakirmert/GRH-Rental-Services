@@ -44,7 +44,8 @@ authentication. It is not a discard-and-rewrite of every working component.
   calendar controls appear only above staff/admin calendars. Two catalog results
   fill two columns. Header, footer and FAQ use actual navigation links.
 - Removed 19 unused direct dependencies and unused animation/auth helpers.
-  V2 is `0.3.0-rc.1`. Next 16.4.5 and React 19.3.1 remain current; the final registry
+  The release is now named `1.18.0` (see [milestone history](release-history.md)).
+  Next 16.4.5 and React 19.3.1 remain current; the final registry
   check also updated tRPC 11.25.0, Tailwind 4.3.5, Lucide 1.70.0 and Web Push 4.0.0.
   Web Push's new named exports are adopted and signing/encryption is tested
   without sending a notification.
@@ -130,7 +131,8 @@ can manage blocks for their assigned items, including indefinite weekly repeats;
 admins can manage all items. See [recurring-blocks.md](recurring-blocks.md).
 
 Rental team members and administrators can submit or update one feedback response for version
-`0.3.0-rc.1`: interface choice, experience rating, and an optional comment. The
+`1.18.0`: interface choice, experience rating, and an optional comment. Earlier
+local responses remain under their original `0.3.0-rc.1` release ID. The
 feedback dialog explains storage and visibility before submission. A classic-switch reason
 replaces the current response with the classic view and a mixed rating; the form
 explains this before submission. Administrators can

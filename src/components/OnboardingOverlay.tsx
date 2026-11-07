@@ -117,6 +117,16 @@ function OnboardingSession({
   )
   const targetStore = useMemo(() => createTargetStore(selectorKey), [selectorKey])
   const rects = useSyncExternalStore(targetStore.subscribe, targetStore.getSnapshot, serverRects)
+  const currentSelector = steps[currentStep]?.selector
+
+  useEffect(() => {
+    if (mode !== "tour" || isCompleted || !currentSelector) return
+    const element = document.querySelector(currentSelector)
+    const rect = element?.getBoundingClientRect()
+    if (rect && (rect.top < 24 || rect.bottom > window.innerHeight / 2)) {
+      element?.scrollIntoView?.({ block: "center", behavior: "instant" })
+    }
+  }, [currentSelector, mode, isCompleted])
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -222,11 +232,7 @@ function OnboardingSession({
 
             {/* Start Tour Button */}
             <div className="mb-6">
-              <Button
-                onClick={startTour}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200"
-                size="lg"
-              >
+              <Button onClick={startTour} variant="outline" className="w-full" size="lg">
                 <Play className="mr-2 h-4 w-4" />
                 {hasSeenTour
                   ? t("helpPage.restartTour") || "Restart Interactive Tour"
@@ -234,8 +240,8 @@ function OnboardingSession({
               </Button>
 
               {!hasSeenTour && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-amber-50 dark:bg-amber-950 p-3 rounded-lg border border-amber-200 dark:border-amber-800 mt-4">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                <div className="mt-4 flex items-center gap-2 rounded-lg border bg-muted/50 p-3 text-sm text-muted-foreground">
+                  <Lightbulb className="h-4 w-4 shrink-0" />
                   <span>
                     {t("helpPage.newUserPrompt") ||
                       "New to this dashboard? Try the interactive tour!"}
@@ -315,7 +321,7 @@ function OnboardingSession({
       </div>
 
       {/* Tour control panel */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 pointer-events-auto animate-in slide-in-from-bottom-4 duration-300">
+      <div className="fixed inset-x-3 bottom-3 z-40 pointer-events-auto animate-in slide-in-from-bottom-4 duration-300 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2">
         <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 max-w-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -350,7 +356,7 @@ function OnboardingSession({
             </div>
 
             {/* Keyboard shortcuts hint */}
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 flex items-center gap-4">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-6 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>Use ← → arrows or spacebar to navigate</span>
               <span>Press ESC to close</span>
             </div>

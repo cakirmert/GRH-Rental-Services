@@ -6,7 +6,10 @@ import { useI18n } from "@/locales/i18n"
 import Link from "next/link"
 
 export default function Footer() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const commit = process.env.NEXT_PUBLIC_APP_COMMIT_SHA
+  const commitUrl = process.env.NEXT_PUBLIC_APP_COMMIT_URL
+  const shortCommit = commit?.slice(0, 7)
   return (
     <footer className="backdrop-blur-md bg-background/20 border-t">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -107,14 +110,43 @@ export default function Footer() {
             <div className="w-full sm:w-auto space-y-1.5">
               <p>{t("footer.broughtToYou")}</p>
               {process.env.NEXT_PUBLIC_APP_VERSION && (
-                <p
-                  className="text-xs tracking-wide"
-                  aria-label={`Version ${process.env.NEXT_PUBLIC_APP_VERSION}`}
-                >
+                <p className="text-xs tracking-wide">
                   GRH Rentals <span aria-hidden="true">·</span>{" "}
                   <span className="font-mono tabular-nums">
                     v{process.env.NEXT_PUBLIC_APP_VERSION}
                   </span>
+                  {shortCommit && (
+                    <>
+                      {" "}
+                      <span aria-hidden="true">·</span>{" "}
+                      {commitUrl ? (
+                        <a
+                          href={commitUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={
+                            locale === "de"
+                              ? `Commit ${shortCommit} auf GitHub ansehen`
+                              : `View commit ${shortCommit} on GitHub`
+                          }
+                          className="rounded-sm font-mono underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                        >
+                          {shortCommit}
+                        </a>
+                      ) : (
+                        <span
+                          title={
+                            locale === "de"
+                              ? "Lokaler Build; noch nicht auf GitHub veröffentlicht"
+                              : "Local build; not yet published on GitHub"
+                          }
+                        >
+                          <span className="font-mono">{shortCommit}</span> (
+                          {locale === "de" ? "lokal" : "local"})
+                        </span>
+                      )}
+                    </>
+                  )}
                 </p>
               )}
             </div>

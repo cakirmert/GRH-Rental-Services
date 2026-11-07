@@ -304,6 +304,17 @@ for (const locale of ["en", "de"] as const) {
           ).toBeVisible()
           await expect(page.locator("#admin-dashboard-stats .animate-pulse")).toHaveCount(0)
           await capture(page, `admin-dashboard-${suffix}`, entries)
+          await page.getByRole("button", { name: copy.helpPage.quickTour, exact: true }).click()
+          await page.keyboard.press("ArrowRight")
+          await page.keyboard.press("ArrowRight")
+          await page.keyboard.press("ArrowRight")
+          await expect(page.getByText("4 of 7", { exact: true })).toBeVisible()
+          await expect(
+            page.getByText(copy.helpPage.adminStepInactive, { exact: true }),
+          ).toBeVisible()
+          await expect(page.locator("#admin-quick-inactive")).toHaveClass(/ring-blue-500/)
+          await capture(page, `admin-tour-inactive-${suffix}`, entries)
+          await page.keyboard.press("Escape")
         })
         expect(errors, "Unexpected application runtime error during preview").toEqual([])
       } finally {

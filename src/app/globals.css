@@ -129,7 +129,6 @@ textarea:-webkit-autofill {
 }
 
 @layer components {
-
   /* Floating Label utility */
   .floating-form-item {
     position: relative;
@@ -155,6 +154,13 @@ textarea:-webkit-autofill {
     line-height: 1;
   }
 
+  /* Empty multiline fields start on the first line, independently of any help text. */
+  .floating-form-item:has(textarea) label {
+    top: 1rem;
+    transform: none;
+    background-color: transparent;
+  }
+
   /* Floating state: input focused or has value */
   .floating-form-item:focus-within label,
   .floating-form-item:has(input:not(:placeholder-shown)) label,
@@ -165,6 +171,7 @@ textarea:-webkit-autofill {
     transform: translateY(-50%) scale(0.85);
     color: var(--primary);
     font-weight: 500;
+    background-color: var(--background);
     z-index: 40;
   }
 
@@ -178,7 +185,6 @@ textarea:-webkit-autofill {
      No, label is z-20, input is default. Label is ON TOP. 
      Bg matches container to hide border. */
 }
-
 
 .dark {
   /* Stone Palette for Dark Mode - Harmonized Warm Grays (Valid HSL Strings for V4) */
@@ -258,7 +264,12 @@ textarea:-webkit-autofill {
   /* True neutral space - using Stone for warmth to avoid blue look */
   /* No CSS gradients here to minimize complexity - standard backgrounds */
   /* Gradient with valid colors */
-  --background-gradient: linear-gradient(to right bottom, hsl(24 10% 4%), hsl(24 6% 10%), hsl(24 5% 15%));
+  --background-gradient: linear-gradient(
+    to right bottom,
+    hsl(24 10% 4%),
+    hsl(24 6% 10%),
+    hsl(24 5% 15%)
+  );
 
   /* Glassmorphism: Stone 900 */
   --glass-bg: rgba(28, 25, 23, 0.85);

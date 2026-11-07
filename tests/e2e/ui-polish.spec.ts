@@ -4,6 +4,7 @@ import path from "node:path"
 import { addDays } from "date-fns"
 import { formatInBerlin, toBerlinDate } from "../../src/lib/berlin-time"
 import { localTestDatabase, withLocalAccount } from "./local-fixtures"
+import { version } from "../../package.json"
 
 const gallery = path.resolve("test-results/ui-polish")
 
@@ -68,6 +69,7 @@ for (const view of [
       "rgba(0, 0, 0, 0)",
     )
     await expect(footer).not.toContainText("Calendar feedback")
+    await expect(footer).toContainText(`v${version}`)
     await page.evaluate(() => window.scrollTo(0, 0))
     await capture(page, `home-${view.name}.png`)
     await footer.screenshot({ path: path.join(gallery, `footer-${view.name}.png`) })
@@ -78,7 +80,19 @@ for (const view of [
         page.getByRole("heading", { name: "Select Date and Time", exact: true }),
       ).toBeVisible()
       await expect(page.locator("[data-day]").first()).toBeVisible()
-      const from = addDays(toBerlinDate(), 7)
+      const notes = page.getByRole("textbox", { name: "Notes (Required)", exact: true })
+      await notes
+        .locator("..")
+        .screenshot({ path: path.join(gallery, `notes-empty-${view.name}.png`) })
+      await notes.fill("A private residents' celebration.")
+      await notes.press("Tab")
+      await notes
+        .locator("..")
+        .screenshot({ path: path.join(gallery, `notes-filled-${view.name}.png`) })
+      await notes.fill("")
+      await notes.press("Tab")
+      const today = toBerlinDate()
+      const from = addDays(today, (5 - today.getDay() + 7) % 7 || 7)
       const to = addDays(from, 1)
       // DayPicker's data-day is a Berlin civil date; no browser timezone conversion.
       const fromSelector = `[data-day="${formatInBerlin(from, "yyyy-MM-dd")}"] button`

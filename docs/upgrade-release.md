@@ -7,7 +7,9 @@ This release targets Node 26, Next.js 16.4.5, React 19.3.1, Auth.js
 ## V2 verification — 6 November 2026
 
 The new `codex/v2-rebuild` worktree implements the [V2 structure](release-preview.md)
-at version `0.3.0-rc.1`, independently of the retained earlier candidate.
+now named `1.18.0`, independently of the retained earlier candidate. The original
+verification below used the earlier working label `0.3.0-rc.1`; the release name
+has no prerelease suffix. See [the milestone ledger](release-history.md).
 
 Final checks on this source and lockfile:
 

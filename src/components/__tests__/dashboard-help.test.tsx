@@ -58,11 +58,28 @@ describe("dashboard tour preferences", () => {
     })
     render(page("admin"))
     await userEvent.click(screen.getByRole("button", { name: "Quick Tour" }))
-    expect(screen.getByText("1 of 6")).toBeTruthy()
+    expect(screen.getByText("1 of 7")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Quick Tour" })).toBeNull()
     await userEvent.keyboard("{Escape}")
     await userEvent.click(screen.getByRole("button", { name: "Help" }))
     expect(screen.getByRole("button", { name: "Restart Interactive Tour" })).toBeTruthy()
+  })
+
+  it("explains manual inactive-staff review and highlights its admin entry", async () => {
+    render(
+      <I18nProvider>
+        <button id="admin-quick-inactive">Inactive staff</button>
+        <DashboardHelpSheet role="admin" />
+      </I18nProvider>,
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Quick Tour" }))
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}")
+    expect(screen.getByText("4 of 7")).toBeTruthy()
+    expect(screen.getByText(/Staff accounts are never deleted automatically/)).toBeTruthy()
+    const inactive = screen.getByRole("button", { name: "Inactive staff" })
+    expect(inactive.classList.contains("ring-blue-500")).toBe(true)
+    await userEvent.keyboard("{Escape}")
+    expect(inactive.classList.contains("ring-blue-500")).toBe(false)
   })
 })
 
