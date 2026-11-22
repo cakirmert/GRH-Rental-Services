@@ -7,9 +7,17 @@ than forcing incompatible peers.
 ## Automated checks
 
 The repository's Dependabot configuration checks weekly on Sunday in the
-configured Berlin timezone. Minor/patch updates are grouped; major changes are
-reviewed separately. Security alerts/updates are independent of the weekly
-version schedule. Automatic merge is not configured.
+configured Berlin timezone. Keep `@trpc/client`, `@trpc/react-query` and
+`@trpc/server` pinned to the same release because they declare exact peer
+versions. Dependabot groups tRPC updates in dedicated pull requests. Other
+routine minor and patch updates share a group, with major updates reviewed
+separately. Security updates run independently of the weekly schedule.
+Updates are merged manually.
+
+The **Dependency install** pull request check runs a clean `npm ci` on Linux
+with the repository's Node version. It checks the lockfile and peer dependencies
+with install scripts disabled. The Vercel preview runs Prisma generation and
+the application build.
 
 Enable repository secret scanning, push protection and dependency alerts where
 supported. Configuration files do not prove those account-level settings are

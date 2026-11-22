@@ -9,6 +9,15 @@ updates:
       timezone: Europe/Berlin
     open-pull-requests-limit: 5
     groups:
+      # The first matching group wins. tRPC packages require exact peer versions.
+      trpc:
+        applies-to: version-updates
+        patterns:
+          - "@trpc/*"
+      trpc-security:
+        applies-to: security-updates
+        patterns:
+          - "@trpc/*"
       routine-updates:
         applies-to: version-updates
         patterns:
