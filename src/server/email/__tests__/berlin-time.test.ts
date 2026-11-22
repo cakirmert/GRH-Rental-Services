@@ -13,6 +13,53 @@ vi.mock("@/lib/mail", () => ({
 
 const to = { email: "resident@example.test" }
 
+describe("booking expiry email", () => {
+  const booking = {
+    id: "example",
+    itemTitle: "Volleyball",
+    startDate: new Date("2026-11-19T18:00:00Z"),
+    endDate: new Date("2026-11-19T21:00:00Z"),
+  }
+
+  it("explains an unapproved request in the opening of both email formats", async () => {
+    await sendBookingStatusEmail({ to, booking, status: "CANCELLED", expiredFrom: "REQUESTED" })
+    const message = sendMail.mock.lastCall![0]
+    const explanation =
+      "Your Volleyball request for November 19, 19:00–22:00 Berlin time, was automatically cancelled because the reservation period ended before it was approved."
+    expect(message.text.split("\n")[2]).toBe(explanation)
+    expect(message.html).toContain(explanation)
+  })
+
+  it("explains an accepted booking that spans years and safely displays the item name", async () => {
+    await sendBookingStatusEmail({
+      to,
+      booking: {
+        ...booking,
+        itemTitle: "Table & chairs",
+        startDate: new Date("2026-12-31T22:00:00Z"),
+        endDate: new Date("2027-01-01T01:00:00Z"),
+      },
+      status: "CANCELLED",
+      expiredFrom: "ACCEPTED",
+    })
+    const message = sendMail.mock.lastCall![0]
+    expect(message.text).toContain(
+      "Your Table & chairs booking for December 31, 2026, 23:00 to January 1, 2027, 02:00 Berlin time",
+    )
+    expect(message.html).toContain("Your Table &amp; chairs booking")
+    for (const content of [message.text, message.html]) {
+      expect(content).toContain("the reservation period ended without a checkout being recorded.")
+    }
+  })
+
+  it("keeps the ordinary cancellation opening when a person cancels", async () => {
+    await sendBookingStatusEmail({ to, booking, status: "CANCELLED", performedBy: "Rental Team" })
+    const message = sendMail.mock.lastCall![0]
+    expect(message.text.split("\n")[2]).toBe("Your booking for Volleyball has been cancelled.")
+    expect(message.html).toContain("Your booking has been cancelled. The details are below.")
+  })
+})
+
 describe.each(["UTC", "America/New_York", "Asia/Tokyo"])(
   "Berlin booking email dates on a %s host",
   (hostZone) => {

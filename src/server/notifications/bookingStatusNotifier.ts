@@ -1,7 +1,10 @@
 ﻿import { BookingStatus, NotificationType } from "@prisma/client"
 import type { PrismaClient } from "@prisma/client"
 import { notificationEmitter } from "@/lib/notifications"
-import { sendBookingStatusEmail } from "@/server/email/sendBookingStatusEmail"
+import {
+  sendBookingStatusEmail,
+  type ExpiredBookingStatus,
+} from "@/server/email/sendBookingStatusEmail"
 
 interface Recipient {
   id: string
@@ -17,6 +20,7 @@ interface NotifyBookingStatusChangeArgs {
   startDate: Date
   endDate: Date
   notes?: string | null
+  expiredFrom?: ExpiredBookingStatus
   recipients: Recipient[]
   performedBy?: {
     id: string
@@ -86,6 +90,7 @@ export async function notifyBookingStatusChange({
   startDate,
   endDate,
   notes,
+  expiredFrom,
   recipients,
   performedBy,
 }: NotifyBookingStatusChangeArgs) {
@@ -140,6 +145,7 @@ export async function notifyBookingStatusChange({
           booking: { id: bookingId, itemTitle, startDate, endDate },
           status,
           notes,
+          expiredFrom,
           performedBy: actorName ?? undefined,
         })
       } catch (error) {
