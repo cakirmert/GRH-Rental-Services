@@ -1,10 +1,18 @@
 // @vitest-environment node
 import type { NextRequest } from "next/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { runCronTasks } from "@/app/api/cron/utils"
 import config from "../../../vercel.json"
 import { GET } from "./[period]/route"
 
-const fetchJob = vi.fn<typeof fetch>()
+vi.mock("@/app/api/cron/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/api/cron/utils")>()),
+  runCronTasks: vi.fn(),
+}))
+vi.mock("@/lib/prismadb", () => ({ default: {} }))
+
+const runTasks = vi.mocked(runCronTasks)
+const fetchSpy = vi.fn<typeof fetch>()
 
 function invoke(path: string, token = "test-secret", method = "GET") {
   const req = new Request(`https://example-deployment.test${path}?ignored=1`, {
@@ -19,7 +27,8 @@ describe("Vercel scheduled cleanup", () => {
     vi.stubEnv("VERCEL_ENV", "production")
     vi.stubEnv("DISABLE_OUTBOUND", "false")
     vi.stubEnv("CRON_SECRET", "test-secret")
-    vi.stubGlobal("fetch", fetchJob.mockReset())
+    vi.stubGlobal("fetch", fetchSpy.mockReset())
+    runTasks.mockReset()
   })
   afterEach(() => {
     vi.unstubAllEnvs()
@@ -27,23 +36,27 @@ describe("Vercel scheduled cleanup", () => {
   })
 
   it.each([
-    ["/scheduled/morning", "0 10 * * *", "/api/cron/morning"],
-    ["/scheduled/evening", "0 18 * * *", "/api/cron/evening"],
-  ])("dispatches %s to the active production handler", async (path, schedule, handler) => {
+    ["/scheduled/morning", "0 10 * * *", "deleteOldBookings"],
+    ["/scheduled/evening", "0 18 * * *", "cleanExpiredAuthRecords"],
+  ])("runs %s in the invoked function", async (path, schedule, periodTask) => {
     expect(config.crons).toContainEqual({ path, schedule })
-    fetchJob.mockResolvedValue(Response.json({ ok: true }))
+    const report = { ok: true, finishedAt: "2026-11-22T18:00:00Z", results: [] }
+    runTasks.mockResolvedValue(report)
     const result = await invoke(path)
-    expect(fetchJob).toHaveBeenCalledExactlyOnceWith(`https://grh-rentals.de${handler}`, {
-      headers: { authorization: "Bearer test-secret" },
-      cache: "no-store",
-      redirect: "error",
-    })
-    expect(await result.json()).toEqual({ ok: true })
+    expect(runTasks).toHaveBeenCalledExactlyOnceWith(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "cancelExpiredBookings" }),
+        expect.objectContaining({ name: periodTask }),
+      ]),
+    )
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(result.status).toBe(200)
+    expect(await result.json()).toEqual(report)
     expect(result.headers.get("cache-control")).toBe("no-store")
   })
 
   it("propagates a production job failure to the scheduler", async () => {
-    fetchJob.mockResolvedValue(Response.json({ ok: false }, { status: 500 }))
+    runTasks.mockResolvedValue({ ok: false, finishedAt: "2026-11-22T18:00:00Z", results: [] })
     expect((await invoke("/scheduled/evening")).status).toBe(500)
   })
 
@@ -58,6 +71,6 @@ describe("Vercel scheduled cleanup", () => {
       vi.stubEnv("VERCEL_ENV", environment)
       expect((await invoke("/scheduled/evening")).status).toBe(403)
     }
-    expect(fetchJob).not.toHaveBeenCalled()
+    expect(runTasks).not.toHaveBeenCalled()
   })
 })
