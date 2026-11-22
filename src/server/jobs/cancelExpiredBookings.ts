@@ -18,27 +18,29 @@ export async function cancelExpiredBookings() {
       endDate: { lt: now },
       status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED] },
     },
-    include: {
-      item: { select: { titleEn: true } },
-      user: { select: { id: true, email: true, name: true } },
-      assignedTo: { select: { id: true, email: true, name: true } },
-    },
+    select: { id: true },
   })
 
+  let cancelled = 0
   for (const booking of expired) {
     const timestamp = formatInBerlin(now, "yyyy-MM-dd HH:mm")
     const autoNote = `System (${timestamp}):\n${AUTO_CANCEL_REASON}`
 
-    const updated = await bookingTransaction(prisma, async (tx) => {
+    const change = await bookingTransaction(prisma, async (tx) => {
       const current = await tx.booking.findFirst({
         where: {
           id: booking.id,
           endDate: { lt: now },
-          status: { in: [BookingStatus.REQUESTED, BookingStatus.ACCEPTED] },
         },
+        select: { status: true, notes: true },
       })
-      if (!current) return null
-      return tx.booking.update({
+      if (
+        !current ||
+        (current.status !== BookingStatus.REQUESTED && current.status !== BookingStatus.ACCEPTED)
+      ) {
+        return null
+      }
+      const updated = await tx.booking.update({
         where: { id: booking.id },
         data: {
           status: BookingStatus.CANCELLED,
@@ -50,8 +52,11 @@ export async function cancelExpiredBookings() {
           assignedTo: { select: { id: true, email: true, name: true } },
         },
       })
+      return { updated, expiredFrom: current.status, notes: customerNotes(current.notes) }
     })
-    if (!updated) continue
+    if (!change) continue
+    cancelled++
+    const { updated, expiredFrom, notes } = change
 
     const recipients = [
       { id: updated.userId, email: updated.user.email, name: updated.user.name },
@@ -73,8 +78,10 @@ export async function cancelExpiredBookings() {
       itemTitle: updated.item.titleEn,
       startDate: updated.startDate,
       endDate: updated.endDate,
-      notes: customerNotes(updated.notes),
+      expiredFrom,
+      notes,
       recipients,
     })
   }
+  return { cancelled }
 }

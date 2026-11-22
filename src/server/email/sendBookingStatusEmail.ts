@@ -15,12 +15,15 @@ interface BookingSummary {
   endDate: Date
 }
 
+export type ExpiredBookingStatus = Extract<BookingStatus, "REQUESTED" | "ACCEPTED">
+
 interface SendBookingStatusEmailArgs {
   to: Recipient
   booking: BookingSummary
   status: BookingStatus
   notes?: string | null
   performedBy?: string
+  expiredFrom?: ExpiredBookingStatus
 }
 
 const statusSubjectMap: Record<BookingStatus, string> = {
@@ -118,18 +121,31 @@ const formatNotesHtml = (notes?: string | null) => {
   `
 }
 
+function expiryExplanation(booking: BookingSummary, previousStatus: ExpiredBookingStatus) {
+  const { itemTitle, startDate, endDate } = booking
+  const sameDay = formatInBerlin(startDate, "yyyy-MM-dd") === formatInBerlin(endDate, "yyyy-MM-dd")
+  const period = sameDay
+    ? `${formatInBerlin(startDate, "MMMM d, HH:mm")}–${formatInBerlin(endDate, "HH:mm")}`
+    : `${formatInBerlin(startDate, "MMMM d, yyyy, HH:mm")} to ${formatInBerlin(endDate, "MMMM d, yyyy, HH:mm")}`
+  const pending = previousStatus === BookingStatus.REQUESTED
+  const reason = pending ? "before it was approved" : "without a checkout being recorded"
+  return `Your ${itemTitle} ${pending ? "request" : "booking"} for ${period} Berlin time, was automatically cancelled because the reservation period ended ${reason}.`
+}
+
 function buildEmailContent({
   recipientName,
   booking,
   status,
   notes,
   handledBy,
+  expiredFrom,
 }: {
   recipientName?: string | null
   booking: BookingSummary
   status: BookingStatus
   notes?: string | null
   handledBy?: string
+  expiredFrom?: ExpiredBookingStatus
 }) {
   const greetingName = recipientName ? recipientName.split(" ")[0] : undefined
   const greeting = greetingName ? `Hello ${greetingName},` : "Hello,"
@@ -142,11 +158,15 @@ function buildEmailContent({
   const notesText = notes?.trim()
   const handledByText = handledBy?.trim()
   const appUrl = emailAppUrl({ type: "booking", bookingId: booking.id })
+  const explanation =
+    status === BookingStatus.CANCELLED && expiredFrom
+      ? expiryExplanation(booking, expiredFrom)
+      : null
 
   const textLines = [
     greeting,
     "",
-    `Your booking for ${booking.itemTitle} has been ${statusLabel}.`,
+    explanation ?? `Your booking for ${booking.itemTitle} has been ${statusLabel}.`,
     `Reserved period: ${startLabel} to ${endLabel}.`,
   ]
 
@@ -179,7 +199,7 @@ function buildEmailContent({
             <h1 style="margin: 18px 0 12px; font-size: 28px; color: ${accent?.text ?? "#1f2937"}; font-weight: 700;">${escapeHtml(
               booking.itemTitle,
             )}</h1>
-            <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6;">Your booking has been ${statusLabel}. The details are below.</p>
+            <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6;">${escapeHtml(explanation ?? `Your booking has been ${statusLabel}. The details are below.`)}</p>
           </div>
           <div style="padding: 0 36px 32px;">
             <div style="display: grid; gap: 20px;">
@@ -216,6 +236,7 @@ export async function sendBookingStatusEmail({
   status,
   notes,
   performedBy,
+  expiredFrom,
 }: SendBookingStatusEmailArgs) {
   const subjectStatus = statusSubjectMap[status] ?? "updated"
   const subject = `Booking ${subjectStatus}: ${booking.itemTitle}`
@@ -225,6 +246,7 @@ export async function sendBookingStatusEmail({
     status,
     notes,
     handledBy: performedBy,
+    expiredFrom,
   })
 
   if (!transporter || isDev) {
@@ -239,4 +261,7 @@ export async function sendBookingStatusEmail({
     text,
     html,
   })
+  if (status === BookingStatus.CANCELLED && expiredFrom) {
+    console.info("[mail] Booking expiry email accepted by SMTP")
+  }
 }
