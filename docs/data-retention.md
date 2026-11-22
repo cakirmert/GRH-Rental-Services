@@ -50,5 +50,9 @@ access, deletion and rotation policy. See [email configuration](email-setup.md).
 Do not restore previously deleted accounts from an old backup during routine
 recovery.
 
-The job schedules are configured in `vercel.json`. Changing a schedule does not
-change the policy's elapsed-time thresholds.
+Vercel calls `/scheduled/morning` at 10:00 UTC and `/scheduled/evening` at
+18:00 UTC, as configured in `vercel.json`. These entry points verify the cron
+secret and forward the job to the release serving `grh-rentals.de`. This keeps
+cleanup working across promotions while the firewall blocks API access on
+retired deployment URLs. The handlers on the production domain verify the
+secret again before running the tasks.
