@@ -293,7 +293,7 @@ anonymization, preserved operational rules, external copies and remaining policy
 decisions. Do not assume deleting an account recalls delivered email, GitHub
 issues, provider logs or backups. Protect restored personal data like live data.
 
-Vercel invokes `/api/cron/morning` at **10:00 UTC** and `/api/cron/evening` at
+Vercel invokes `/scheduled/morning` at **10:00 UTC** and `/scheduled/evening` at
 **18:00 UTC**, as explicitly chosen by the owner. These scheduler times stay UTC
 even though application times use Berlin. `CRON_SECRET` must be separate from
 `AUTH_SECRET`. Jobs report bounded per-task counts and failures. Returning a
